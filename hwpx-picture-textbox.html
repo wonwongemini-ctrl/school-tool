@@ -147,6 +147,9 @@ button{cursor:pointer}
 .bx .tx{position:absolute;inset:0;display:flex;flex-direction:column;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere;pointer-events:none;overflow:hidden}
 .bx.ell .tx{border-radius:50%}
 .bx .tx.ph{color:rgba(47,128,255,.75)!important;font-weight:400!important}
+.bx .tx.one,.bx textarea.one{white-space:pre;overflow-wrap:normal;word-break:normal}
+.bx .tx.one>div{overflow:visible}
+.bx.over{outline:2px dashed #e03131!important}
 .stage.noguides .bx:not(.sel) .tx.ph{color:transparent!important}
 .bx textarea{position:absolute;inset:0;width:100%;height:100%;border:none;resize:none;background:rgba(255,255,255,.35);outline:none;overflow:hidden;margin:0;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere;cursor:text}
 .bx.ell textarea{border-radius:50%}
@@ -157,6 +160,20 @@ button{cursor:pointer}
 .hd[data-h=e],.hd[data-h=w]{cursor:ew-resize}
 .ghost{position:absolute;border:1.5px dashed var(--guide);background:rgba(47,128,255,.08);pointer-events:none;z-index:6}
 .ghost.ell{border-radius:50%}
+.slotghost{position:absolute;border:2px dashed #e8590c;background:rgba(232,89,12,.10);pointer-events:none;z-index:6;border-radius:2px}
+.slotghost.ell{border-radius:50%}
+.bx.msel{outline:2px solid var(--guide);outline-offset:-1px;box-shadow:0 0 0 3px rgba(47,128,255,.18)}
+.bx.msel.mref{outline:2.5px solid #12a594;box-shadow:0 0 0 3px rgba(18,165,148,.25)}
+.bx.msel.mref::after{content:'기준';position:absolute;left:-1px;top:-17px;background:#12a594;color:#fff;font:600 10px/15px sans-serif;padding:0 5px;border-radius:3px 3px 0 0;pointer-events:none}
+.mgrid{display:grid;gap:2px;align-content:center}
+.mgrid.c3{grid-template-columns:repeat(3,28px)}
+.mgrid.c1{grid-template-columns:28px}
+.rbm{width:28px;height:24px;border:1px solid transparent;border-radius:3px;background:none;display:grid;place-items:center;padding:0;color:var(--ink-2)}
+.rbm svg{width:18px;height:18px}
+.rbm:hover:not(:disabled){background:var(--brand-soft);border-color:var(--line)}
+.rbm:disabled{opacity:.35}
+.slotbtn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:6px}
+.slotbtn svg{width:20px;height:20px}
 .hint{position:absolute;left:50%;top:-30px;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:12px;padding:4px 10px;border-radius:4px;white-space:nowrap;pointer-events:none}
 .thumb .tw .ob{position:absolute;outline:1.5px dashed var(--guide);outline-offset:-1px}
 .thumb .tw .ob.ell{border-radius:50%}
@@ -407,6 +424,9 @@ body{background:var(--chrome)}
 .objlist .oname svg{width:16px;height:16px;flex:none;color:var(--ink-2)}
 .objlist li.on .oname{color:var(--brand);font-weight:700}
 .objlist li.locked .oname{color:var(--ink-3)}
+.objlist .oz{border:none;background:none;width:24px;align-self:stretch;color:var(--brand);font-size:11px;padding:0}
+.objlist .oz:hover:not(:disabled){background:var(--chrome)}
+.objlist .oz:disabled{color:var(--line-2)}
 .objlist .olock{border:none;background:none;width:30px;align-self:stretch;display:grid;place-items:center;color:var(--ink-3);padding:0}
 .objlist .olock svg{width:14px;height:14px}
 .objlist .olock[aria-pressed="true"]{color:var(--ctx)}
@@ -530,6 +550,7 @@ const textBoxes = it => it.boxes.filter(isText);
    doc.items[i] = { id, img:{dataUrl,mime,ext,pw,ph}, w, h (mm), boxes:[{ id, shape:'rect'|'ell', fx,fy,fw,fh (그림 대비 비율 0~1), text, ...글자 모양, padL.. (mm) }] } */
 let doc, cur = 0, curTab = 'input';
 let selId = null, editId = null, tool = null;     // tool: null | 'rect' | 'ell'
+let multi = new Set();   // 여러 개 선택(Shift·Ctrl 클릭, Ctrl+A, 칸마다 넣기). selId는 그중 기준 개체
 let zoom = 1, autoFit = true, showGuides = true;
 let lastStyle = { ...STYLE_DEFAULT };
 let undoStack = [], redoStack = [];
@@ -545,6 +566,14 @@ const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>
 const uid = () => 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const item = () => doc.items[cur];
 const selBox = () => item()?.boxes.find(b => b.id === selId) || null;
+/* 선택된 개체 모두 (여러 개 선택이면 그 묶음, 아니면 하나) */
+function selBoxes() {
+  const it = item(); if (!it || !selId) return [];
+  if (multi.size > 1 && multi.has(selId)) return it.boxes.filter(b => multi.has(b.id));
+  const b = selBox(); return b ? [b] : [];
+}
+const isMulti = () => selBoxes().length > 1;
+const selTexts = () => selBoxes().filter(isText);
 const mmBox = (it, b) => ({ x:b.fx * it.w, y:b.fy * it.h, w:b.fw * it.w, h:b.fh * it.h });
 
 /* 되돌리기 */
@@ -552,7 +581,7 @@ const snap = () => JSON.stringify({ doc, cur });
 function pushUndo() { undoStack.push(snap()); if (undoStack.length > 60) undoStack.shift(); redoStack = []; }
 function undo() { if (!undoStack.length) return; redoStack.push(snap()); load(undoStack.pop()); }
 function redo() { if (!redoStack.length) return; undoStack.push(snap()); load(redoStack.pop()); }
-function load(s) { const o = JSON.parse(s); doc = o.doc; cur = clamp(o.cur, 0, Math.max(0, doc.items.length - 1)); selId = editId = null; renderAll(); persist(); }
+function load(s) { const o = JSON.parse(s); doc = o.doc; cur = clamp(o.cur, 0, Math.max(0, doc.items.length - 1)); selId = editId = null; multi.clear(); renderAll(); persist(); }
 
 /* 저장소: 작업 상태와 보관함은 브라우저의 IndexedDB에 (용량이 커서 그림도 넉넉히 들어감) */
 let dbp = null, library = [];
@@ -591,6 +620,7 @@ function migrate(d) {
     it.checked = it.checked !== false;
   });
   if (d.shrink === undefined) d.shrink = true;
+  if (d.dpi === undefined) d.dpi = 150;   // 용량 줄이기 기준 해상도 (150: 화면·일반 인쇄, 300: 고품질 인쇄)
   if (!d.view) d.view = 'img';
   return d;
 }
@@ -616,7 +646,7 @@ function sampleDoc() {
   g.beginPath(); g.roundRect(70, 70, 470, 190, 28); g.fill(); g.stroke();
   g.beginPath(); g.moveTo(170, 256); g.lineTo(150, 320); g.lineTo(225, 258); g.closePath(); g.fill(); g.stroke();
   g.fillStyle = '#fff'; g.fillRect(168, 252, 56, 9);
-  return { title:'그림글상자', inline:true, shrink:true, items:[{ checked:true,
+  return { title:'그림글상자', inline:true, shrink:true, dpi:150, items:[{ checked:true,
     id:uid(), img:{ dataUrl:c.toDataURL('image/png'), mime:'image/png', ext:'png', pw:W, ph:H }, w:120, h:r1(120 * H / W),
     boxes:[
       { ...STYLE_DEFAULT, ...PAD.rect, ...DECO_DEFAULT, id:uid(), shape:'rect', fx:r4(90/W), fy:r4(88/H), fw:r4(430/W), fh:r4(154/H),
@@ -671,11 +701,11 @@ function renderStage() {
   st.style.width = it.w * s + 'px'; st.style.height = it.h * s + 'px';
   const im = document.createElement('img'); im.src = it.img.dataUrl; im.alt = ''; im.draggable = false;
   st.appendChild(im);
-  // 쌓이는 순서: 모자이크(그림에 입혀짐) → 얹은 그림 → 글상자
-  [...it.boxes.filter(b => b.shape === 'mos'), ...stickers(it), ...textBoxes(it)].forEach(b => st.appendChild(boxEl(it, b, s)));
+  // 쌓이는 순서: 모자이크(그림에 입혀짐)가 맨 아래, 그 위로 글상자·얹은 그림이 목록 순서대로
+  [...it.boxes.filter(b => b.shape === 'mos'), ...layers(it)].forEach(b => st.appendChild(boxEl(it, b, s)));
   if (tool) {
     const h = document.createElement('span'); h.className = 'hint';
-    h.textContent = `그림 위를 끌어서 ${SHAPE_NAME[tool]}를 그리세요 · Esc 취소`;
+    h.textContent = tool === 'mos' ? `그림 위를 끌어서 ${SHAPE_NAME[tool]}를 그리세요 · Esc 취소` : `칸을 클릭하면 칸에 맞춰 넣고, 끌면 원하는 크기로 그립니다 · Esc 취소`;
     st.appendChild(h);
   }
   const dm = document.createElement('span'); dm.className = 'dims';
@@ -708,7 +738,7 @@ function renderStage() {
 function boxEl(it, b, s) {
   const m = mmBox(it, b);
   const el = document.createElement('div');
-  el.className = 'bx' + (b.shape === 'ell' ? ' ell' : '') + (b.id === selId ? ' sel' : '');
+  el.className = 'bx' + (b.shape === 'ell' ? ' ell' : '') + (b.id === selId || (multi.size > 1 && multi.has(selId) && multi.has(b.id)) ? ' sel' : '');
   el.dataset.id = b.id;
   if (b.locked) el.dataset.locked = '1';
   Object.assign(el.style, { left:m.x * s + 'px', top:m.y * s + 'px', width:m.w * s + 'px', height:m.h * s + 'px' });
@@ -729,21 +759,48 @@ function boxEl(it, b, s) {
   if (b.id === editId) {
     const ta = document.createElement('textarea');
     ta.spellcheck = false; ta.value = b.text;
+    if (b.oneLine) { ta.wrap = 'off'; ta.classList.add('one'); }
     Object.assign(ta.style, textCss(b, s));
     ta.addEventListener('pointerdown', e => e.stopPropagation());
-    ta.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); ta.blur(); } e.stopPropagation(); });
-    ta.addEventListener('input', () => { b.text = ta.value; fitVertical(ta, b, s); const pc = $('#pText'); if (pc) pc.value = b.text; persist(); });
+    ta.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { e.preventDefault(); ta.blur(); }
+      else if (e.key === 'Tab' && !e.isComposing) { e.preventDefault(); editNext(b, e.shiftKey ? -1 : 1); }
+      e.stopPropagation(); });
+    ta.addEventListener('input', () => { b.text = ta.value;
+      const ch = refit(it, b);
+      if (ch.length) { ch.forEach(x => { if (x === b) ta.style.fontSize = (b.size * 25.4 / 72 * s) + 'px';
+          else { const t = stageEl?.querySelector(`.bx[data-id="${x.id}"] .tx`); if (t && x.text) t.style.fontSize = (x.size * 25.4 / 72 * s) + 'px'; } });
+        if (selId === b.id) renderFormat(); }
+      fitVertical(ta, b, s); const pc = $('#pText'); if (pc) pc.value = b.text; persist(); });
     ta.addEventListener('blur', () => { if (editId === b.id) { editId = null; renderStage(); renderList(); renderStatus(); if (!selBox() || true) renderPanel(); } });
     el.appendChild(ta);
     requestAnimationFrame(() => { fitVertical(ta, b, s); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); });
   } else {
     const tx = document.createElement('div');
-    tx.className = 'tx' + (b.text ? '' : ' ph');
+    tx.className = 'tx' + (b.text ? '' : ' ph') + (b.oneLine && b.text ? ' one' : '');
     Object.assign(tx.style, textCss(b, s));
+    if (!b.text) {   // 빈 칸 안내 글자는 칸에 들어가게 줄여서
+      const room = Math.max(8, (m.w - b.padL - b.padR) * s), fit = room / 8.2;
+      tx.style.fontSize = Math.min(parseFloat(tx.style.fontSize), fit, m.h * s * 0.7) + 'px'; tx.style.lineHeight = '1.2'; tx.style.whiteSpace = 'nowrap'; tx.style.overflow = 'hidden';
+    }
     (b.text || '두 번 눌러 입력').split('\n').forEach(l => { const d = document.createElement('div'); d.textContent = l || '​'; tx.appendChild(d); });
     el.appendChild(tx);
+    if (b.oneLine && b.text) requestAnimationFrame(() => squeezeLines(el, tx));
   }
   return el;
+}
+/* 한 줄로 입력: 한글처럼 줄을 바꾸지 않고 글자 사이를 좁혀 한 줄에 넣음. 너무 길면(10% 넘게) 빨간 점선으로 알림 */
+function squeezeLines(el, tx) {
+  let over = false;
+  tx.querySelectorAll(':scope>div').forEach(d => {
+    d.style.letterSpacing = '';
+    const cw = tx.clientWidth - parseFloat(getComputedStyle(tx).paddingLeft) - parseFloat(getComputedStyle(tx).paddingRight);
+    const r = document.createRange(); r.selectNodeContents(d); const nw = r.getBoundingClientRect().width;
+    const n = [...d.textContent].length;
+    if (nw > cw + 0.5 && n > 1) { d.style.letterSpacing = -((nw - cw) / (n - 1)) + 'px'; if (nw > cw * 1.1) over = true; }
+  });
+  el.classList.toggle('over', over);
+  if (over) el.title = '한 줄에 다 들어가지 않습니다. 글자를 줄이거나 글상자를 넓히세요';
 }
 function applyDeco(el, b, s) {
   const fillA = b.fill && b.fill !== 'none' ? hexA(b.fill, 1 - (b.fillT || 0) / 100) : 'transparent';
@@ -775,13 +832,185 @@ function drawMosaic(cv, it, b) {
   pixelate(ctx, im, sx, sy, sw, sh, 0, 0, cv.width, cv.height, mosaicCell(it, b));
 }
 
+/* ===== 칸 찾기: 빈 체계도 그림에서 글상자를 넣을 칸(같은 색으로 이어진 사각·원 영역)을 찾음 =====
+   포토샵 마술봉처럼 '처음 찍은 색'과 비교해 영역을 나누고, 사각형(둥근 모서리 포함)이나 원에 가까운 것만 칸으로 봄 */
+const SLOT = { maxSide:1200, tol:14, minArea:0.002, minSide:0.035, fill:0.8, inset:0.5 };
+const slotMaps = {};
+function loadImg(url) { return new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = url; }); }
+const slotKey = it => it.id + ':' + it.img.pw + 'x' + it.img.ph + ':' + it.img.dataUrl.length;
+async function slotMap(it) {
+  const key = slotKey(it);
+  if (slotMaps[key]) return slotMaps[key];
+  const im = await loadImg(it.img.dataUrl);
+  const k = Math.min(1, SLOT.maxSide / Math.max(im.naturalWidth, im.naturalHeight));
+  const W = Math.max(1, Math.round(im.naturalWidth * k)), H = Math.max(1, Math.round(im.naturalHeight * k));
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const cx = cv.getContext('2d', { willReadFrequently:true });
+  cx.fillStyle = '#fff'; cx.fillRect(0, 0, W, H); cx.drawImage(im, 0, 0, W, H);
+  const raw = cx.getImageData(0, 0, W, H).data, N = W * H;
+  // 3×3 평균으로 압축 얼룩을 누름
+  const px = new Uint8Array(N * 3);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let r = 0, g = 0, b = 0, n = 0;
+    for (let dy = -1; dy <= 1; dy++) { const yy = y + dy; if (yy < 0 || yy >= H) continue;
+      for (let dx = -1; dx <= 1; dx++) { const xx = x + dx; if (xx < 0 || xx >= W) continue; const o = (yy * W + xx) * 4; r += raw[o]; g += raw[o + 1]; b += raw[o + 2]; n++; } }
+    const o = (y * W + x) * 3; px[o] = r / n; px[o + 1] = g / n; px[o + 2] = b / n;
+  }
+  const lab = new Int32Array(N).fill(-1), regs = [], stack = new Int32Array(N), t = SLOT.tol;
+  for (let s0 = 0; s0 < N; s0++) {
+    if (lab[s0] >= 0) continue;
+    const id = regs.length, sr = px[s0 * 3], sg = px[s0 * 3 + 1], sb = px[s0 * 3 + 2];
+    const R = { n:0, x0:W, y0:H, x1:0, y1:0, r:0, g:0, b:0 };
+    let sp = 0; stack[sp++] = s0; lab[s0] = id;
+    while (sp) {
+      const p = stack[--sp], x = p % W, y = (p - x) / W;
+      R.n++; R.r += px[p * 3]; R.g += px[p * 3 + 1]; R.b += px[p * 3 + 2];
+      if (x < R.x0) R.x0 = x; if (x > R.x1) R.x1 = x; if (y < R.y0) R.y0 = y; if (y > R.y1) R.y1 = y;
+      for (let d = 0; d < 4; d++) {
+        const q = d === 0 ? (x > 0 ? p - 1 : -1) : d === 1 ? (x < W - 1 ? p + 1 : -1) : d === 2 ? (y > 0 ? p - W : -1) : (y < H - 1 ? p + W : -1);
+        if (q < 0 || lab[q] >= 0) continue;
+        const o = q * 3;
+        if (Math.abs(px[o] - sr) <= t && Math.abs(px[o + 1] - sg) <= t && Math.abs(px[o + 2] - sb) <= t) { lab[q] = id; stack[sp++] = q; }
+      }
+    }
+    R.x1++; R.y1++; regs.push(R);
+  }
+  const m = { W, H, lab, regs, px, fits:{} };
+  slotMaps[key] = m;
+  return m;
+}
+/* 영역 하나를 칸 모양으로: 구멍(남은 글자) 메우기 → 화살표처럼 튀어나온 좁은 부분 잘라내기 → 둥근 모서리 피한 안쪽 사각형 */
+function regionFit(m, id) {
+  if (m.fits[id]) return m.fits[id];
+  const R = m.regs[id], { W, lab } = m;
+  const x0 = Math.max(0, R.x0 - 1), y0 = Math.max(0, R.y0 - 1), x1 = Math.min(W, R.x1 + 1), y1 = Math.min(m.H, R.y1 + 1);
+  const w = x1 - x0, h = y1 - y0, inR = new Uint8Array(w * h), out = new Uint8Array(w * h), st = [];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) inR[y * w + x] = lab[(y + y0) * W + x + x0] === id ? 1 : 0;
+  for (let x = 0; x < w; x++) { st.push(x, (h - 1) * w + x); } for (let y = 0; y < h; y++) { st.push(y * w, y * w + w - 1); }
+  while (st.length) { const p = st.pop(); if (out[p] || inR[p]) continue; out[p] = 1; const x = p % w, y = (p - x) / w;
+    if (x > 0) st.push(p - 1); if (x < w - 1) st.push(p + 1); if (y > 0) st.push(p - w); if (y < h - 1) st.push(p + w); }
+  const filled = p => !out[p];
+  const rowW = y => { let c = 0; for (let x = 0; x < w; x++) c += filled(y * w + x); return c; };
+  let rw = []; for (let y = 0; y < h; y++) rw.push(rowW(y));
+  const rmax = Math.max(...rw); let ty0 = rw.findIndex(v => v >= rmax * 0.5), ty1 = h - [...rw].reverse().findIndex(v => v >= rmax * 0.5);
+  let cw = []; for (let x = 0; x < w; x++) { let c = 0; for (let y = ty0; y < ty1; y++) c += filled(y * w + x); cw.push(c); }
+  const cmax = Math.max(...cw); let tx0 = cw.findIndex(v => v >= cmax * 0.5), tx1 = w - [...cw].reverse().findIndex(v => v >= cmax * 0.5);
+  const bw = tx1 - tx0, bh = ty1 - ty0;
+  let nf = 0, nr = 0, ink = 0;
+  const mr = R.r / R.n, mg = R.g / R.n, mb = R.b / R.n, px = m.px;
+  for (let y = ty0; y < ty1; y++) for (let x = tx0; x < tx1; x++) { const p = y * w + x; if (filled(p)) { nf++; nr += inR[p];
+    if (!inR[p]) { const o = ((y + y0) * W + x + x0) * 3; if (Math.abs(px[o] - mr) + Math.abs(px[o + 1] - mg) + Math.abs(px[o + 2] - mb) > 90) ink++; } } }
+  const fill = nf / Math.max(1, bw * bh), ar = bw / Math.max(1, bh);
+  const ell = fill > 0.72 && fill < 0.82 && ar > 0.85 && ar < 1.18;
+  // 안쪽 사각형: 90% 넘게 채워진 줄·칸만
+  let iy0 = ty0, iy1 = ty1, ix0 = tx0, ix1 = tx1;
+  if (!ell) {
+    const rows = [], cols = [];
+    for (let y = ty0; y < ty1; y++) { let c = 0; for (let x = tx0; x < tx1; x++) c += filled(y * w + x); if (c > 0.9 * bw) rows.push(y); }
+    for (let x = tx0; x < tx1; x++) { let c = 0; for (let y = ty0; y < ty1; y++) c += filled(y * w + x); if (c > 0.9 * bh) cols.push(x); }
+    if (rows.length) { iy0 = rows[0]; iy1 = rows[rows.length - 1] + 1; }
+    if (cols.length) { ix0 = cols[0]; ix1 = cols[cols.length - 1] + 1; }
+  }
+  const f = { id, x0:x0 + ix0, y0:y0 + iy0, x1:x0 + ix1, y1:y0 + iy1, ox0:x0 + tx0, oy0:y0 + ty0, ox1:x0 + tx1, oy1:y0 + ty1,
+    shape:ell ? 'ell' : 'rect', fill, hole:nf - nr, ink, area:R.n, col:[R.r / R.n, R.g / R.n, R.b / R.n],
+    edge:R.x0 === 0 || R.y0 === 0 || R.x1 === W || R.y1 === m.H };
+  return (m.fits[id] = f);
+}
+const slotMM = (it, m, f) => {
+  const sx = it.w / m.W, sy = it.h / m.H, e = SLOT.inset;
+  const [a, b, c, d] = f.shape === 'ell' ? [f.ox0, f.oy0, f.ox1, f.oy1] : [f.x0, f.y0, f.x1, f.y1];
+  const x = a * sx + e, y = b * sy + e;
+  return { x, y, w:Math.max(2, (c - a) * sx - 2 * e), h:Math.max(2, (d - b) * sy - 2 * e) };
+};
+const hasText = (m, f) => f.ink > Math.max(30, m.W * m.H * 0.0003);   // 칸 색과 뚜렷이 다른 구멍 = 남아 있는 글자
+/* 그림 전체에서 칸 찾기: 읽는 순서(위→아래, 같은 줄은 왼쪽→오른쪽) */
+async function findSlots(it) {
+  const m = await slotMap(it), N = m.W * m.H, minSide = SLOT.minSide * Math.min(m.W, m.H);
+  let out = [];
+  m.regs.forEach((R, id) => {
+    if (R.n < SLOT.minArea * N) return;
+    const f = regionFit(m, id);
+    if (f.edge || Math.min(f.ox1 - f.ox0, f.oy1 - f.oy0) < minSide) return;
+    if (f.fill < SLOT.fill && f.shape !== 'ell') return;
+    const r = slotMM(it, m, f); if (r.w < 8 || r.h < 4) return;   // 문서에서 너무 작은 조각(그라데이션 띠·얇은 줄)은 칸이 아님
+    out.push(f);
+  });
+  // 다른 칸을 둘 이상 품은 큰 판(바탕 테두리 등)은 빼기
+  out = out.filter(a => out.filter(b => b !== a && b.ox0 >= a.ox0 && b.oy0 >= a.oy0 && b.ox1 <= a.ox1 && b.oy1 <= a.oy1).length < 2);
+  return { m, slots:readingOrder(out, f => [f.ox0, f.oy0, f.ox1, f.oy1]) };
+}
+function readingOrder(list, box) {
+  const rows = [];
+  [...list].sort((a, b) => box(a)[1] - box(b)[1]).forEach(d => {
+    const [, y0, , y1] = box(d), cy = (y0 + y1) / 2;
+    const r = rows.find(r => r.some(o => { const [, a0, , a1] = box(o); return (a0 <= cy && cy <= a1) || (y0 <= (a0 + a1) / 2 && (a0 + a1) / 2 <= y1); }));
+    r ? r.push(d) : rows.push([d]);
+  });
+  return rows.flatMap(r => r.sort((a, b) => box(a)[0] - box(b)[0]));
+}
+/* 한 점의 칸: 글자 조각을 눌렀으면 그 글자를 둘러싼 칸으로 */
+function slotAtMap(it, m, p) {
+  const x = clamp(Math.floor(p.x / it.w * m.W), 0, m.W - 1), y = clamp(Math.floor(p.y / it.h * m.H), 0, m.H - 1);
+  let id = m.lab[y * m.W + x], R = m.regs[id];
+  const N = m.W * m.H;
+  if (R.n < SLOT.minArea * N) {
+    // 둘레에서 가장 많이 닿는 큰 영역
+    const cnt = {}, pad = 3;
+    for (let yy = Math.max(0, R.y0 - pad); yy < Math.min(m.H, R.y1 + pad); yy++) for (let xx = Math.max(0, R.x0 - pad); xx < Math.min(m.W, R.x1 + pad); xx++) {
+      const k = m.lab[yy * m.W + xx]; if (k !== id && m.regs[k].n >= SLOT.minArea * N) cnt[k] = (cnt[k] || 0) + 1;
+    }
+    const best = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
+    if (!best) return null;
+    id = +best[0];
+  }
+  const f = regionFit(m, id);
+  if (f.edge || f.area > 0.6 * N) return null;   // 바깥 바탕
+  if (Math.min(f.ox1 - f.ox0, f.oy1 - f.oy0) < 6) return null;
+  return f;
+}
+/* 칸 색에 맞춘 글자 서식: 어두운 칸은 흰 글씨, 세로로 긴 밝은 칸은 왼쪽 위부터 쓰는 목록 */
+function slotStyle(it, m, f, r) {
+  const [R, G, B] = f.col, lum = 0.299 * R + 0.587 * G + 0.114 * B;
+  const tall = r.h > r.w * 0.9 && lum > 200;
+  const font = FONT.malgun ? 'malgun' : lastStyle.font;
+  if (tall) { const size = Math.min(lastStyle.size || 10, 10); return { font, color:'#000000', align:'LEFT', valign:'TOP', bold:false, size, line:150, fit:size }; }
+  const size = clamp(Math.round(r.h * 72 / 25.4 * 0.5), 8, 20);
+  return { font, color:lum < 150 ? '#FFFFFF' : '#000000', align:'CENTER', valign:'CENTER', bold:true, size, line:130, fit:size };
+}
+/* 칸에 맞춰 넣은 글상자(fit = 처음 크기): 글이 넘치면 들어갈 때까지 글자 크기를 줄임 (최소 6pt) */
+function idealSize(it, b) {
+  const m = mmBox(it, b), K = 4;   // mm당 4px로 재기
+  const w = Math.max(1, (m.w - b.padL - b.padR) * K * 0.96), h = Math.max(1, (m.h - b.padT - b.padB) * K);
+  const d = document.createElement('div'), f = FONT[b.font] || FONTS[0];
+  Object.assign(d.style, { position:'absolute', visibility:'hidden', left:'-9999px', top:'0', width:w + 'px', fontFamily:f.css,
+    fontWeight:b.bold ? '700' : '400', lineHeight:String(b.line / 100), whiteSpace:b.oneLine ? 'pre' : 'pre-wrap', wordBreak:'keep-all', overflowWrap:b.oneLine ? 'normal' : 'anywhere' });
+  d.textContent = fillVars(b.text) || ' ';
+  document.body.appendChild(d);
+  let size = b.fit;
+  const fits = sz => { d.style.fontSize = sz * 25.4 / 72 * K + 'px'; return d.scrollHeight <= h + 0.5 && d.scrollWidth <= w + 0.5; };
+  while (size > 6 && !fits(size)) size = Math.round((size - 0.5) * 2) / 2;
+  d.remove();
+  return size;
+}
+/* 같은 모양 칸끼리(fitGroup)는 가장 작은 크기에 맞춰 글자 크기를 통일. 바뀐 글상자 목록을 돌려줌 */
+function refit(it, b) {
+  if (!b || !b.fit || !isText(b)) return [];
+  b.ideal = b.text ? idealSize(it, b) : b.fit;
+  const grp = b.fitGroup ? textBoxes(it).filter(x => x.fitGroup === b.fitGroup && x.fit) : [b];
+  const size = Math.min(...grp.map(x => x === b ? b.ideal : (x.ideal || x.fit)));
+  const changed = grp.filter(x => x.size !== size);
+  changed.forEach(x => x.size = size);
+  return changed;
+}
+const fitTextSize = (it, b) => refit(it, b).length > 0;
+
 function fitVertical(ta, b, s) {
   ta.style.paddingTop = b.padT * s + 'px';
   if (b.valign === 'TOP') return;
   const cs = getComputedStyle(ta), m = document.createElement('div');
   Object.assign(m.style, { position:'absolute', visibility:'hidden', left:'-9999px', top:'0', boxSizing:'border-box',
     width:ta.clientWidth + 'px', padding:`0 ${cs.paddingRight} 0 ${cs.paddingLeft}`, font:cs.font, lineHeight:cs.lineHeight,
-    whiteSpace:'pre-wrap', wordBreak:'keep-all', overflowWrap:'anywhere' });
+    whiteSpace:b.oneLine ? 'pre' : 'pre-wrap', wordBreak:'keep-all', overflowWrap:b.oneLine ? 'normal' : 'anywhere' });
   m.textContent = (ta.value || ' ') + '​';
   document.body.appendChild(m);
   const need = m.offsetHeight; m.remove();
@@ -792,8 +1021,9 @@ function drawHandles() {
   if (!stageEl) return;
   if (typeof drawRulers === 'function' && ui) drawRulers();
   stageEl.querySelectorAll('.hd').forEach(h => h.remove());
-  stageEl.querySelectorAll('.bx').forEach(e => e.classList.toggle('sel', e.dataset.id === selId));
-  const b = selBox(); if (!b || editId || b.locked) return;
+  const ids = new Set(selBoxes().map(b => b.id));
+  stageEl.querySelectorAll('.bx').forEach(e => { e.classList.toggle('sel', ids.has(e.dataset.id)); e.classList.toggle('msel', ids.size > 1 && ids.has(e.dataset.id)); e.classList.toggle('mref', ids.size > 1 && e.dataset.id === selId); });
+  const b = selBox(); if (!b || editId || b.locked || ids.size > 1) return;
   const m = mmBox(item(), b), s = scale();
   const pts = { nw:[0,0], n:[.5,0], ne:[1,0], e:[1,.5], se:[1,1], s:[.5,1], sw:[0,1], w:[0,.5] };
   for (const [k, [fx, fy]] of Object.entries(pts)) {
@@ -808,8 +1038,117 @@ function selectBase(on = true) {
   renderStage(); renderFormat(); renderPanel(); renderRibbon(); renderStatus();
 }
 function select(id) {
-  selId = id; if (id) baseSel = false;
+  selId = id; multi.clear(); if (id) baseSel = false;
   drawHandles(); renderFormat(); renderPanel(); renderRibbon(); renderStatus();
+}
+/* 여러 개 선택: Shift·Ctrl 클릭으로 더하거나 빼기 */
+function selectMany(ids, ref) {
+  ids = ids.filter(Boolean);
+  multi = new Set(ids); selId = ids.includes(ref) ? ref : ids.includes(selId) ? selId : ids[0] || null; editId = null; if (selId) baseSel = false;
+  if (ids.length < 2) multi.clear();
+  renderStage(); renderFormat(); renderPanel(); renderRibbon(); renderStatus();
+}
+function toggleMulti(b) {
+  const cur = selBoxes().map(x => x.id);
+  // 한글처럼: 처음 고른 개체가 기준 개체. 기준을 바꾸려면 고른 개체 중 하나를 그냥 클릭
+  selectMany(cur.includes(b.id) ? cur.filter(i => i !== b.id) : [...cur, b.id], cur.length ? (cur.includes(b.id) && b.id === selId ? null : selId) : b.id);
+}
+function selectAll() {
+  const it = item(); if (!it) return;
+  selectMany(readingOrder(it.boxes.filter(b => !b.locked && b.shape !== 'mos'), b => [b.fx, b.fy, b.fx + b.fw, b.fy + b.fh]).map(b => b.id));
+}
+/* 칸 미리 보기 */
+function clearSlotHint() { document.querySelectorAll('.slotghost').forEach(e => e.remove()); }
+function showSlotHint(st, p) {
+  const it = item(); if (!it || !st.isConnected) return;
+  const m = slotMaps[slotKey(it)];
+  if (!m) { slotMap(it).catch(() => {}); return; }
+  const f = slotAtMap(it, m, p);
+  let g = st.querySelector('.slotghost');
+  if (!f) { if (g) g.remove(); $('#stHint').textContent = '여기는 칸이 아닙니다 · 끌어서 원하는 크기로 그리세요 · Esc 취소'; return; }
+  const r = slotMM(it, m, f), s = scale();
+  if (!g) { g = document.createElement('div'); g.className = 'slotghost'; st.appendChild(g); }
+  g.classList.toggle('ell', tool === 'ell');
+  Object.assign(g.style, { left:r.x * s + 'px', top:r.y * s + 'px', width:r.w * s + 'px', height:r.h * s + 'px' });
+  $('#stHint').textContent = `클릭: 이 칸에 맞춰 넣기 (${r1(r.w)}×${r1(r.h)}mm) · 끌기: 직접 그리기 · Esc 취소`;
+}
+/* 글자 입력 중 Tab: 읽는 순서로 다음 글상자 입력 */
+function editNext(b, dir) {
+  const it = item();
+  const list = readingOrder(textBoxes(it).filter(x => !x.locked), x => [x.fx, x.fy, x.fx + x.fw, x.fy + x.fh]);
+  const i = list.indexOf(b); if (list.length < 2 || i < 0) return;
+  startEdit(list[(i + dir + list.length) % list.length].id);
+}
+function setOneLine(on) {
+  const it = item(), bs = selTexts(); if (!bs.length) return;
+  pushUndo(); bs.forEach(b => { b.oneLine = on; refit(it, b); });
+  renderStage(); renderPanel(); renderRibbon(); renderFormat(); persist();
+}
+/* 개체 맞춤·배분·크기 맞춤 (한글 '도형 › 맞춤'과 같은 규칙: 기준 개체에 맞춤, 간격은 양 끝 개체 고정) */
+function alignObjs(kind) {
+  const it = item(), bs = selBoxes().filter(b => !b.locked), ref = selBox();
+  if (!it || bs.length < 2 || !ref) return;
+  const R = mmBox(it, ref), M = bs.map(b => ({ b, m:mmBox(it, b) }));
+  if ((kind === 'distH' || kind === 'distV') && bs.length < 3) { toast('간격을 같게 하려면 개체를 3개 이상 고르세요'); return; }
+  pushUndo();
+  const H = kind === 'distH';
+  if (kind === 'distH' || kind === 'distV') {
+    const k = H ? 'x' : 'y', L = H ? 'w' : 'h';
+    M.sort((a, c) => a.m[k] - c.m[k]);
+    const first = M[0].m, last = M[M.length - 1].m;
+    const inner = M.slice(1, -1).reduce((t, o) => t + o.m[L], 0);
+    const gap = (last[k] - (first[k] + first[L]) - inner) / (M.length - 1);
+    let pos = first[k] + first[L] + gap;
+    M.slice(1, -1).forEach(o => { o.m[k] = pos; pos += o.m[L] + gap; });
+  } else M.forEach(({ b, m }) => {
+    if (b === ref && !['sameW', 'sameH', 'sameWH'].includes(kind)) return;
+    if (kind === 'L') m.x = R.x; if (kind === 'C') m.x = R.x + (R.w - m.w) / 2; if (kind === 'R') m.x = R.x + R.w - m.w;
+    if (kind === 'T') m.y = R.y; if (kind === 'M') m.y = R.y + (R.h - m.h) / 2; if (kind === 'B') m.y = R.y + R.h - m.h;
+    if (kind === 'sameW' || kind === 'sameWH') m.w = R.w;
+    if (kind === 'sameH' || kind === 'sameWH') m.h = R.h;
+  });
+  M.forEach(({ b, m }) => {
+    m.w = Math.min(m.w, it.w); m.h = Math.min(m.h, it.h);
+    m.x = clamp(m.x, 0, it.w - m.w); m.y = clamp(m.y, 0, it.h - m.h);
+    Object.assign(b, { fx:r4(m.x / it.w), fy:r4(m.y / it.h), fw:r4(m.w / it.w), fh:r4(m.h / it.h) });
+    if (kind.startsWith('same')) refit(it, b);
+  });
+  renderStage(); renderPanel(); renderRibbon(); persist();
+}
+/* 칸마다 넣기: 그림에서 칸을 찾아 빈 칸마다 글상자를 한 번에 */
+async function fillSlots() {
+  const it = item(); if (!it) return;
+  finishTyping(); tool = null; clearSlotHint();
+  $('#stHint').textContent = '칸을 찾는 중…';
+  let res;
+  try { res = await findSlots(it); } catch (e) { toast('칸을 찾지 못했습니다'); renderStatus(); return; }
+  if (item() !== it) return;
+  const { m, slots } = res;
+  const have = textBoxes(it).map(b => mmBox(it, b));
+  let withText = 0, dup = 0; const add = [];
+  for (const f of slots) {
+    if (hasText(m, f)) { withText++; continue; }
+    const r = slotMM(it, m, f), cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+    if (have.some(o => cx >= o.x && cx <= o.x + o.w && cy >= o.y && cy <= o.y + o.h)) { dup++; continue; }
+    add.push({ f, r });
+  }
+  if (!add.length) {
+    renderStatus();
+    toast(slots.length ? '찾은 칸에 모두 글상자가 있거나 글자가 들어 있습니다. 필요한 칸은 글상자 도구로 클릭하세요' : '칸을 찾지 못했습니다. 글상자 도구로 칸을 클릭하거나 끌어서 넣으세요', 4200);
+    return;
+  }
+  pushUndo();
+  // 크기가 거의 같은 칸끼리 한 묶음: 글이 넘쳐 줄일 때 같이 줄어 글자 크기가 통일됨
+  const batch = Date.now().toString(36), reps = [];
+  const ids = add.map(({ f, r }) => {
+    const b = makeBox(f.shape === 'ell' ? 'ell' : 'rect', r, slotStyle(it, m, f, r));
+    let g = reps.findIndex(q => Math.abs(q.w - r.w) <= q.w * 0.08 && Math.abs(q.h - r.h) <= q.h * 0.08);
+    if (g < 0) { reps.push(r); g = reps.length - 1; }
+    b.fitGroup = batch + '-' + g;
+    it.boxes.push(b); return b.id; });
+  baseSel = false;
+  selectMany(ids, ids[0]); renderList(); persist();
+  toast(`칸 ${ids.length}개에 글상자를 넣었습니다` + (withText ? ` · 글자가 이미 있는 칸 ${withText}개는 건너뜀(클릭하면 넣을 수 있음)` : '') + ' · 더블클릭해 입력하고 Tab으로 다음 칸', 5200);
 }
 
 /* ===== 그림 위 마우스 조작 ===== */
@@ -831,6 +1170,12 @@ function bindStage(st) {
       drag = { kind:'draw', start:p, moved:false };
     } else if (hd) {
       const b = selBox(); drag = { kind:'resize', h:hd.dataset.h, b, o:mmBox(it, b), moved:false };
+    } else if (hits.length && (e.shiftKey || e.ctrlKey || e.metaKey)) {
+      toggleMulti(hits[0]); lastTap = null; e.preventDefault(); return;
+    } else if (hits.length && isMulti() && selBoxes().includes(hits[0])) {
+      // 여러 개 선택된 묶음 위를 누르면 함께 옮김. 끌지 않고 떼면 그 개체 하나만 선택
+      const bs = selBoxes().filter(b => !b.locked);
+      drag = { kind:'gmove', bs, os:bs.map(b => mmBox(it, b)), start:p, moved:false, one:hits[0] };
     } else if (hits.length) {
       // 이미 선택한 개체 위를 누르면 그 개체를 옮길 수 있게 둠.
       // 끌지 않고 클릭만 하면: 더 작은 개체가 있으면 그쪽으로, 같은 자리를 다시 클릭하면 아래 개체로.
@@ -854,6 +1199,7 @@ function bindStage(st) {
       lastTap = null;
       return;
     }
+    clearSlotHint();
     st.setPointerCapture(e.pointerId); e.preventDefault();
     $('#desk').focus({ preventScroll:true });
   });
@@ -872,6 +1218,16 @@ function bindStage(st) {
       drag.rect = { x:x1, y:y1, w, h };
       if (!drag.el) { drag.el = document.createElement('div'); drag.el.className = 'ghost' + (tool === 'ell' ? ' ell' : ''); st.appendChild(drag.el); }
       Object.assign(drag.el.style, { left:x1 * s + 'px', top:y1 * s + 'px', width:w * s + 'px', height:h * s + 'px' });
+      return;
+    }
+    if (drag.kind === 'gmove') {
+      const os = drag.os;
+      let dx = p.x - drag.start.x, dy = p.y - drag.start.y;
+      dx = clamp(dx, -Math.min(...os.map(o => o.x)), it.w - Math.max(...os.map(o => o.x + o.w)));
+      dy = clamp(dy, -Math.min(...os.map(o => o.y)), it.h - Math.max(...os.map(o => o.y + o.h)));
+      drag.bs.forEach((b, i) => { const o = os[i]; b.fx = r4((o.x + dx) / it.w); b.fy = r4((o.y + dy) / it.h);
+        const el = st.querySelector(`.bx[data-id="${b.id}"]`); if (el) { el.style.left = (o.x + dx) * s + 'px'; el.style.top = (o.y + dy) * s + 'px'; const cv = el.querySelector('canvas'); if (cv) drawMosaic(cv, it, b); } });
+      $('#stSize').textContent = `${drag.bs.length}개 함께 옮기는 중`;
       return;
     }
     const b = drag.b, o = drag.o;
@@ -907,20 +1263,45 @@ function bindStage(st) {
       if (d.el) d.el.remove();
       const it = item();
       let r = d.rect;
-      if (!d.moved || !r || r.w < 3 || r.h < 3) {   // 클릭만 하면 기본 크기로
-        const sz = tool === 'ell' ? 20 : tool === 'mos' ? 25 : 40, hh = tool === 'ell' ? 20 : tool === 'mos' ? 15 : 15;
-        const w = Math.min(sz, it.w), h = Math.min(hh, it.h);
-        r = { x:clamp(d.start.x - w / 2, 0, it.w - w), y:clamp(d.start.y - h / 2, 0, it.h - h), w, h };
+      if (!d.moved || !r || r.w < 3 || r.h < 3) {
+        // 클릭만 하면: 그 자리 칸에 맞춰 넣고, 칸이 없으면 기본 크기로
+        const t0 = tool;
+        const deflt = () => { const sz = t0 === 'ell' ? 20 : t0 === 'mos' ? 25 : 40, hh = t0 === 'ell' ? 20 : 15;
+          const w = Math.min(sz, it.w), h = Math.min(hh, it.h);
+          return { x:clamp(d.start.x - w / 2, 0, it.w - w), y:clamp(d.start.y - h / 2, 0, it.h - h), w, h }; };
+        if (t0 === 'mos') { addBox(t0, deflt()); return; }
+        clearSlotHint();
+        slotMap(it).then(m => {
+          if (item() !== it || tool !== t0) return;
+          const f = slotAtMap(it, m, d.start);
+          if (!f) { addBox(t0, deflt()); toast('이 자리에서 칸을 찾지 못해 기본 크기로 넣었습니다. 끌어서 크기를 정할 수도 있습니다', 3000); return; }
+          const rr = slotMM(it, m, f);
+          addBox(t0, rr, slotStyle(it, m, f, rr));
+        }).catch(() => addBox(t0, deflt()));
+        return;
       }
       addBox(tool, r);
       return;
     }
-    if (d.moved) { renderList(); renderPanel(); renderStatus(); persist(); lastTap = null; return; }
+    if (d.kind === 'gmove') {
+      if (d.moved) { renderList(); renderPanel(); renderStatus(); persist(); }
+      else if (d.one.id !== selId) { selId = d.one.id; drawHandles(); renderFormat(); renderPanel(); renderRibbon(); renderStatus(); toast('기준 개체를 바꿨습니다 · 맞춤은 이 개체에 맞춰집니다', 1800); }
+      lastTap = null; return;
+    }
+    if (d.moved) { if (d.kind === 'resize' && fitTextSize(item(), d.b)) { renderStage(); renderFormat(); } renderList(); renderPanel(); renderStatus(); persist(); lastTap = null; return; }
     if (d.kind === 'move') {
       if (d.switchTo) { select(d.switchTo.id); if (d.cycled) toast(`겹친 개체: ${objName(d.switchTo)}`, 1600); }
       lastTap = { p:d.start, t:Date.now(), id:selId };
     }
   });
+  /* 글상자 도구를 고른 채 그림 위에 올리면, 클릭했을 때 들어갈 칸을 점선으로 미리 보여 줌 */
+  let hov = null;
+  st.addEventListener('pointermove', e => {
+    if (drag || (tool !== 'rect' && tool !== 'ell')) return;
+    const p = pt(e); if (hov) { hov.p = p; return; }
+    hov = { p }; requestAnimationFrame(() => { const q = hov.p; hov = null; showSlotHint(st, q); });
+  });
+  st.addEventListener('pointerleave', () => clearSlotHint());
   /* 끌기용 포인터 캡처 때문에 더블클릭 대상이 그림 전체로 잡히므로, 누른 위치로 글상자를 찾음 */
   st.addEventListener('dblclick', e => {
     if (tool || e.target.closest('textarea')) return;
@@ -1012,10 +1393,11 @@ function hitsAt(p, withLocked) {
     .map((b, z) => ({ b, z, a:b.fw * b.fh }))
     .sort((u, v) => u.a - v.a || u.z - v.z).map(o => o.b);
 }
-/* 화면에서 앞에 있는 것부터: 글상자 → 얹은 그림 → 모자이크 (같은 종류는 나중 것이 앞) */
-function objOrder(it) {
-  return [...textBoxes(it).slice().reverse(), ...stickers(it).reverse(), ...it.boxes.filter(b => b.shape === 'mos').reverse()];
-}
+/* 글상자와 얹은 그림은 한 줄로 쌓임(배열 앞이 뒤쪽). 모자이크는 그림에 입혀지므로 늘 맨 아래 */
+const layers = it => it.boxes.filter(b => b.shape !== 'mos');
+const mosaics = it => it.boxes.filter(b => b.shape === 'mos');
+/* 화면에서 앞에 있는 것부터 */
+function objOrder(it) { return [...layers(it).reverse(), ...mosaics(it).reverse()]; }
 const isFull = b => b.fx <= 0.002 && b.fy <= 0.002 && b.fw >= 0.996 && b.fh >= 0.996;
 function objKind(b) { return b.shape === 'rect' && isFull(b) ? '그림 전체 글상자' : SHAPE_NAME[b.shape]; }
 function objName(b) {
@@ -1023,12 +1405,25 @@ function objName(b) {
   const t = (b.text || '').split('\n').map(l => l.trim()).find(Boolean);
   return t ? `${objKind(b)} ‘${t.length > 12 ? t.slice(0, 12) + '…' : t}’` : `${objKind(b)} (빈 칸)`;
 }
-/* 순서 바꾸기: 같은 종류 안에서 맨 앞/맨 뒤 */
-function reorder(b, front) {
-  const it = item(); pushUndo();
-  it.boxes = it.boxes.filter(x => x !== b);
-  front ? it.boxes.push(b) : it.boxes.unshift(b);
+/* 순서 바꾸기: 맨 앞으로 / 앞으로 / 뒤로 / 맨 뒤로 (모자이크는 모자이크끼리) */
+function orderInfo(b) {
+  const it = item(); if (!it || !b) return { i:-1, n:0 };
+  const g = b.shape === 'mos' ? mosaics(it) : layers(it);
+  return { g, i:g.indexOf(b), n:g.length };
+}
+const canFront = b => { const o = orderInfo(b); return o.i >= 0 && o.i < o.n - 1; };
+const canBack = b => { const o = orderInfo(b); return o.i > 0; };
+function reorder(b, mode) {
+  const it = item(); if (!it || !b) return;
+  const { g, i, n } = orderInfo(b);
+  if (i < 0) return;
+  const to = mode === 'front' ? n - 1 : mode === 'back' ? 0 : mode === 'up' ? i + 1 : i - 1;
+  if (to < 0 || to >= n || to === i) { toast(mode === 'front' || mode === 'up' ? '이미 맨 앞에 있습니다' : '이미 맨 뒤에 있습니다', 1500); return; }
+  pushUndo();
+  g.splice(i, 1); g.splice(to, 0, b);
+  it.boxes = b.shape === 'mos' ? [...g, ...layers(it)] : [...mosaics(it), ...g];
   renderAll(); persist();
+  toast({ front:'맨 앞으로 보냈습니다', back:'맨 뒤로 보냈습니다', up:'한 칸 앞으로 보냈습니다', down:'한 칸 뒤로 보냈습니다' }[mode], 1300);
 }
 function toggleLock(b) {
   pushUndo(); b.locked = !b.locked;
@@ -1040,7 +1435,7 @@ function openBoxMenu(b, x, y, all = [b]) {
   const m = document.createElement('div');
   m.className = 'ctxmenu'; m.id = 'ctxmenu'; m.setAttribute('role', 'menu');
   const lock = b.locked ? [['lock', '잠금 풀기', '']] : [['lock', '잠그기', '']];
-  const order = [['front', '맨 앞으로', ''], ['back', '맨 뒤로', '']];
+  const order = [['front', '맨 앞으로', 'Ctrl+Shift+]'], ['up', '앞으로', 'Ctrl+]'], ['down', '뒤로', 'Ctrl+['], ['back', '맨 뒤로', 'Ctrl+Shift+[']];
   const items = isText(b)
     ? [['edit', '글자 입력', 'Enter'], ['register', '보관함에 등록', ''], ['dup', '복제', 'Ctrl+D'], ['-'], ...order, ...lock, ['-'], ['del', '지우기', 'Delete']]
     : b.shape === 'pic'
@@ -1049,7 +1444,7 @@ function openBoxMenu(b, x, y, all = [b]) {
   const pick = all.length > 1
     ? `<div class="mcap">여기 겹친 개체 (작은 것부터)</div>` + all.map(o => `<button type="button" role="menuitemradio" aria-checked="${o === b}" data-pick="${o.id}"><span class="mi">${o === b ? '✓' : '<i></i>'}${esc(objName(o))}</span><kbd>${o.locked ? '잠김' : ''}</kbd></button>`).join('') + '<hr>'
     : '';
-  m.innerHTML = pick + items.map(([k, label, key]) => k === '-' ? '<hr>' : `<button type="button" role="menuitem" data-m="${k}"${k === 'del' ? ' class="danger"' : ''} ${b.locked && ['edit', 'del', 'dup'].includes(k) ? 'disabled' : ''}><span>${label}</span><kbd>${key}</kbd></button>`).join('');
+  m.innerHTML = pick + items.map(([k, label, key]) => k === '-' ? '<hr>' : `<button type="button" role="menuitem" data-m="${k}"${k === 'del' ? ' class="danger"' : ''} ${(b.locked && ['edit', 'del', 'dup'].includes(k)) || (['front', 'up'].includes(k) && !canFront(b)) || (['back', 'down'].includes(k) && !canBack(b)) ? 'disabled' : ''}><span>${label}</span><kbd>${key}</kbd></button>`).join('');
   document.body.appendChild(m);
   const r = m.getBoundingClientRect();
   m.style.left = Math.min(x, innerWidth - r.width - 6) + 'px';
@@ -1066,8 +1461,7 @@ function openBoxMenu(b, x, y, all = [b]) {
     if (k === 'dup') duplicateBox(b);
     if (k === 'erase') editSticker(b, 'erase');
     if (k === 'crop') editSticker(b, 'crop');
-    if (k === 'front') reorder(b, true);
-    if (k === 'back') reorder(b, false);
+    if (['front', 'up', 'down', 'back'].includes(k)) reorder(b, k);
     if (k === 'lock') toggleLock(b);
     if (k === 'del') deleteBox();
   });
@@ -1083,7 +1477,7 @@ function closeMenu() { $('#ctxmenu')?.remove(); }
 document.addEventListener('pointerdown', e => { if (!e.target.closest('#ctxmenu')) closeMenu(); }, true);
 window.addEventListener('blur', closeMenu);
 document.addEventListener('scroll', closeMenu, true);
-function startEdit(id) { const b = item()?.boxes.find(x => x.id === id); if (!isText(b) || b.locked) { select(id); if (b?.locked) toast('잠긴 글상자입니다. 오른쪽 버튼 → 잠금 풀기'); return; } selId = id; editId = id; renderStage(); renderFormat(); renderPanel(); renderRibbon(); renderStatus(); }
+function startEdit(id) { const b = item()?.boxes.find(x => x.id === id); if (!isText(b) || b.locked) { select(id); if (b?.locked) toast('잠긴 글상자입니다. 오른쪽 버튼 → 잠금 풀기'); return; } selId = id; editId = id; multi.clear(); renderStage(); renderFormat(); renderPanel(); renderRibbon(); renderStatus(); }
 
 /* ===== 목록 · 서식 · 패널 ===== */
 const XSVG = '<svg viewBox="0 0 10 10"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" stroke-width="1.8"/></svg>';
@@ -1581,8 +1975,8 @@ function renderFormat() {
 }
 function applyStyle(patch) {
   Object.assign(lastStyle, patch);
-  const b = selBox();
-  if (isText(b)) { pushUndo(); Object.assign(b, patch); renderStage(); persist(); }
+  const bs = selTexts();
+  if (bs.length) { pushUndo(); bs.forEach(b => { Object.assign(b, patch); if ('size' in patch) b.fit = 0; else fitTextSize(item(), b); }); renderStage(); persist(); }
   renderFormat(); renderRibbon();
 }
 
@@ -1596,7 +1990,7 @@ const SHAPE_ICONS = {
 function renderPanel() {
   const p = $('#panel'), it = item();
   const b0 = it ? selBox() : null;
-  $('#paneTitle').textContent = b0 ? `개체 속성 · ${SHAPE_NAME[b0.shape]}` : baseSel ? '개체 속성 · 바탕 그림' : '따라하기';
+  $('#paneTitle').textContent = b0 && isMulti() ? `개체 속성 · ${selBoxes().length}개` : b0 ? `개체 속성 · ${SHAPE_NAME[b0.shape]}` : baseSel ? '개체 속성 · 바탕 그림' : '따라하기';
   if (!it) { p.innerHTML = guideHtml(); bindGuide(p); return; }
   const b = selBox();
   const pick = `<section class="picksec"><h3>글상자 넣기</h3>
@@ -1607,9 +2001,66 @@ function renderPanel() {
         <button type="button" data-shape="mos" aria-pressed="${tool === 'mos'}" title="그림 위를 끌어서 가릴 곳 모자이크">${svg(SHAPE_ICONS.mos)}모자이크</button>
         <button type="button" data-shape="sticker" title="화살표·도장 같은 그림 파일을 이 그림 위에 얹기">${svg(ICONS_STICKER)}그림 얹기</button>
       </div>
-      <p class="note">${tool ? '그림 위를 끌어서 그리세요. 한 번 누르기만 해도 기본 크기로 생깁니다.' : '글상자와 얹은 그림은 바탕 그림과 하나로 묶여 저장됩니다. 모자이크는 그림에 입혀집니다.'}</p>
+      <button type="button" class="btn slotbtn" data-g-act="autoSlots" title="칸이 나뉜 그림에서 빈 칸마다 글상자를 한 번에 넣기">${svg(ICONS.slots)}칸마다 넣기</button>
+      <p class="note">${tool === 'rect' || tool === 'ell' ? '칸을 <b>클릭</b>하면 칸에 맞춰 들어가고, <b>끌면</b> 원하는 크기로 그립니다.' : tool ? '그림 위를 끌어서 그리세요. 한 번 누르기만 해도 기본 크기로 생깁니다.' : '글상자와 얹은 그림은 바탕 그림과 하나로 묶여 저장됩니다. 모자이크는 그림에 입혀집니다.'}</p>
     </section>`;
-  if (b && b.shape === 'pic') {
+  if (isMulti()) {
+    const bs = selBoxes(), tx = bs.filter(isText), m = mmBox(it, b);
+    const same = (k, d) => tx.every(x => x[k] === tx[0][k]) ? tx[0][k] : d;
+    const fill = tx.length ? same('fill', '') : 'none', stroke = tx.length ? same('stroke', '') : 'none';
+    p.innerHTML = pick + `
+      <section><h3>개체 ${bs.length}개 선택됨</h3>
+        <p class="note">위쪽 <b>서식 도구 상자</b>와 아래 꾸미기·크기를 바꾸면 선택한 개체에 <b>모두</b> 적용됩니다. Shift나 Ctrl을 누른 채 클릭하면 더하거나 뺍니다.</p>
+        <div class="grid2">${fld('w','너비 (모두)',m.w)}${fld('h','높이 (모두)',m.h)}</div>
+      </section>
+      ${tx.length ? `<section><h3>꾸미기 (글상자 ${tx.length}개)</h3>
+        <div class="deco">
+          <span>채우기</span>
+          <div class="row">
+            <span class="seg"><button type="button" data-fillnone aria-pressed="${fill === 'none'}">없음</button><button type="button" data-fillon aria-pressed="${fill !== 'none' && fill !== ''}">색</button></span>
+            <input type="color" class="sw" id="pFill" value="${fill && fill !== 'none' ? fill : '#ffffff'}" title="채우기 색">
+          </div>
+          <span></span>
+          <div class="chips">${SWATCHES.map(c => `<button type="button" class="chip" data-chip="${c}" style="background:${c}" title="${c}" aria-label="채우기 ${c}"></button>`).join('')}</div>
+          <span>테두리</span>
+          <div class="row">
+            <span class="seg"><button type="button" data-strokenone aria-pressed="${stroke === 'none'}">없음</button><button type="button" data-strokeon aria-pressed="${stroke !== 'none' && stroke !== ''}">선</button></span>
+            <input type="color" class="sw" id="pStroke" value="${stroke && stroke !== 'none' ? stroke : '#333333'}" title="테두리 색">
+          </div>
+        </div>
+      </section>
+      <section><label class="lockrow"><input type="checkbox" id="pOneM" ${tx.every(x => x.oneLine) ? 'checked' : ''}> 한 줄로 입력 (모두)</label></section>
+      <section><h3>안쪽 여백 (mm, 모두)</h3>
+        <div class="grid4">${pad('padL','왼쪽',tx[0].padL)}${pad('padR','오른쪽',tx[0].padR)}${pad('padT','위',tx[0].padT)}${pad('padB','아래',tx[0].padB)}</div>
+      </section>` : ''}
+      <section><div class="btnrow"><button class="btn" type="button" id="pOne">하나만 선택</button><button class="btn danger" type="button" id="pDelBox">${bs.length}개 모두 지우기</button></div></section>`;
+    p.querySelectorAll('input[data-g]').forEach(inp => {
+      inp.addEventListener('focus', () => pushUndo(), { once:true });
+      inp.addEventListener('input', () => {
+        const v = parseFloat(inp.value); if (!(v >= 2)) return;
+        bs.forEach(x => { const mm = mmBox(it, x);
+          if (inp.dataset.g === 'w') mm.w = Math.min(v, it.w - mm.x); else mm.h = Math.min(v, it.h - mm.y);
+          x.fw = r4(mm.w / it.w); x.fh = r4(mm.h / it.h); });
+        renderStage(); persist();
+      });
+    });
+    p.querySelectorAll('input[data-k]').forEach(inp => {
+      inp.addEventListener('focus', () => pushUndo(), { once:true });
+      inp.addEventListener('input', () => { const v = parseFloat(inp.value); if (isNaN(v) || v < 0) return; tx.forEach(x => x[inp.dataset.k] = v); renderStage(); persist(); });
+    });
+    if (tx.length) {
+      p.querySelector('[data-fillnone]').onclick = () => decoPatch({ fill:'none' });
+      p.querySelector('[data-fillon]').onclick = () => decoPatch({ fill:$('#pFill').value.toUpperCase() });
+      liveColor($('#pFill'), (v, f) => decoLive('fill', v, f));
+      p.querySelectorAll('[data-chip]').forEach(c => c.onclick = () => decoPatch({ fill:c.dataset.chip }));
+      p.querySelector('[data-strokenone]').onclick = () => decoPatch({ stroke:'none' });
+      p.querySelector('[data-strokeon]').onclick = () => decoPatch({ stroke:$('#pStroke').value.toUpperCase() });
+      liveColor($('#pStroke'), (v, f) => decoLive('stroke', v, f));
+    }
+    $('#pOne').onclick = () => select(selId);
+    const om = $('#pOneM'); if (om) om.onchange = e => setOneLine(e.target.checked);
+    $('#pDelBox').onclick = deleteBox;
+  } else if (b && b.shape === 'pic') {
     const m = mmBox(it, b);
     p.innerHTML = pick + `
       <section><h3>얹은 그림</h3>
@@ -1649,6 +2100,7 @@ function renderPanel() {
     p.innerHTML = pick + `
       <section><h3>${SHAPE_NAME[b.shape]}</h3>
         <textarea class="content" id="pText" spellcheck="false" placeholder="글상자에 들어갈 글자">${esc(b.text)}</textarea>
+        <label class="lockrow" data-tip-title="한 줄로 입력" data-tip="줄을 바꾸지 않고 글자 사이를 좁혀 한 줄로 넣습니다 (한글 글상자 속성과 같음)"><input type="checkbox" id="pOne1" ${b.oneLine ? 'checked' : ''}> 한 줄로 입력</label>
         <div class="grid2">
           ${fld('x','가로 위치',m.x)}${fld('y','세로 위치',m.y)}
           ${fld('w','너비',m.w)}${fld('h','높이',m.h)}
@@ -1680,7 +2132,7 @@ function renderPanel() {
       <section><div class="btnrow"><button class="btn" type="button" id="pRegBox">보관함에 등록</button><button class="btn danger" type="button" id="pDelBox">이 글상자 지우기</button></div></section>`;
     const ta = $('#pText');
     ta.addEventListener('focus', () => pushUndo(), { once:true });
-    ta.addEventListener('input', () => { b.text = ta.value; renderStage(); persist(); });
+    ta.addEventListener('input', () => { b.text = ta.value; if (fitTextSize(it, b)) renderFormat(); renderStage(); persist(); });
     p.querySelectorAll('input[data-g]').forEach(inp => {
       inp.addEventListener('focus', () => pushUndo(), { once:true });
       inp.addEventListener('input', () => {
@@ -1697,6 +2149,7 @@ function renderPanel() {
       inp.addEventListener('input', () => { const v = parseFloat(inp.value); if (isNaN(v) || v < 0) return; b[inp.dataset.k] = v; renderStage(); persist(); });
     });
     $('#pDelBox').onclick = deleteBox;
+    $('#pOne1').onchange = e => setOneLine(e.target.checked);
     $('#pRegBox').onclick = () => registerBox(b);
     const deco = patch => { pushUndo(); Object.assign(b, patch); renderStage(); renderPanel(); persist(); };
     p.querySelector('[data-fillnone]').onclick = () => deco({ fill:'none' });
@@ -1729,6 +2182,7 @@ function renderPanel() {
     bindGuide(p);
   }
   p.querySelectorAll('[data-shape]').forEach(btn => btn.onclick = () => shapeAction(btn.dataset.shape));
+  p.querySelectorAll('.slotbtn').forEach(btn => btn.onclick = () => act('autoSlots'));
   const ol = objListHtml();
   if (ol) { p.insertAdjacentHTML('beforeend', ol); bindObjList(p); }
 }
@@ -1747,10 +2201,10 @@ function guideHtml() {
       <span class="gd">사진 파일을 화면에 끌어 놓거나 Ctrl+V로 붙여 넣어도 됩니다.</span>
       <span class="ga"><button type="button" class="btn${now === 0 ? ' primary' : ''}" data-g-act="openImg">그림 넣기</button></span></li>
     <li class="${st(1)}"><span class="num">${num(1)}</span><span class="gt">글상자 넣기</span>
-      <span class="gd">단추를 누르고 그림 위를 끌면 투명 글상자가 생깁니다.</span>
-      <span class="ga"><button type="button" class="btn${now === 1 ? ' primary' : ''}" data-g-act="rect" ${it ? '' : 'disabled'}>글상자</button><button type="button" class="btn" data-g-act="ell" ${it ? '' : 'disabled'}>원형</button><button type="button" class="btn" data-g-act="full" ${it ? '' : 'disabled'}>그림 전체</button></span></li>
+      <span class="gd">글상자 단추를 누르고 칸을 <b>클릭</b>하거나, 원하는 크기로 <b>끌어서</b> 넣습니다. 칸이 많으면 <b>칸마다 넣기</b>.</span>
+      <span class="ga"><button type="button" class="btn${now === 1 ? ' primary' : ''}" data-g-act="rect" ${it ? '' : 'disabled'}>글상자</button><button type="button" class="btn" data-g-act="ell" ${it ? '' : 'disabled'}>원형</button><button type="button" class="btn" data-g-act="full" ${it ? '' : 'disabled'}>그림 전체</button><button type="button" class="btn" data-g-act="autoSlots" ${it ? '' : 'disabled'}>칸마다 넣기</button></span></li>
     <li class="${st(2)}"><span class="num">${num(2)}</span><span class="gt">글자 쓰기</span>
-      <span class="gd">글상자를 <b>더블클릭</b>하고 글자를 입력합니다. 위쪽 서식 도구 상자에서 글꼴·크기·색을 바꿉니다.</span></li>
+      <span class="gd">글상자를 <b>더블클릭</b>하고 글자를 입력합니다. <b>Tab</b>을 누르면 다음 칸으로 넘어갑니다. 여러 개를 Shift+클릭이나 Ctrl+A로 고르면 서식을 한 번에 바꿉니다.</span></li>
     <li class="${st(3)}"><span class="num">${num(3)}</span><span class="gt">한글 파일로 저장</span>
       <span class="gd">저장한 파일을 한글에서 열고, 그림을 클릭해 Ctrl+C → 작업 문서에 Ctrl+V 하면 됩니다.</span>
       <span class="ga"><button type="button" class="btn${now === 3 ? ' primary' : ''}" data-g-act="export" ${it ? '' : 'disabled'}>한글 파일로 저장</button></span></li>
@@ -1772,17 +2226,21 @@ const LOCK_ON = '<svg viewBox="0 0 16 16"><rect x="3.5" y="7" width="9" height="
 const LOCK_OFF = '<svg viewBox="0 0 16 16"><rect x="3.5" y="7" width="9" height="6.5" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 7V5a2.5 2.5 0 0 1 4.8-1" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>';
 function objListHtml() {
   const it = item(); if (!it || (!it.boxes.length && doc.view !== 'a4')) return '';
-  const rows = objOrder(it).map(b => `<li class="${b.id === selId ? 'on' : ''}${b.locked ? ' locked' : ''}">
+  const sids = new Set(selBoxes().map(b => b.id));
+  const rows = objOrder(it).map(b => `<li class="${sids.has(b.id) ? 'on' : ''}${b.locked ? ' locked' : ''}">
       <button type="button" class="oname" data-oid="${b.id}"><svg viewBox="0 0 16 16" aria-hidden="true">${OBJ_ICON[b.shape === 'rect' && isFull(b) ? 'full' : b.shape]}</svg><span>${esc(objName(b))}</span></button>
+      ${b.id === selId && sids.size < 2 ? `<button type="button" class="oz" data-oz="up" ${canFront(b) ? '' : 'disabled'} aria-label="앞으로" data-tip-title="앞으로" data-key="Ctrl+]">▲</button><button type="button" class="oz" data-oz="down" ${canBack(b) ? '' : 'disabled'} aria-label="뒤로" data-tip-title="뒤로" data-key="Ctrl+[">▼</button>` : ''}
       <button type="button" class="olock" data-olock="${b.id}" aria-pressed="${!!b.locked}" data-tip-title="${b.locked ? '잠금 풀기' : '잠그기'}" data-tip="잠근 개체는 그림 위에서 클릭해도 잡히지 않습니다. 목록에서는 고를 수 있습니다." aria-label="${b.locked ? '잠금 풀기' : '잠그기'}">${b.locked ? LOCK_ON : LOCK_OFF}</button></li>`).join('');
   const baseRow = doc.view === 'a4' ? `<li class="${baseSel ? 'on' : ''}"><button type="button" class="oname" data-obase="1"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="5.5" cy="6.5" r="1.3" fill="currentColor"/><path d="M2 12l4-3.5 3 2.5 2-1.5 3 2.5" fill="none" stroke="currentColor" stroke-width="1.1"/></svg><span>바탕 그림 (쪽에서 옮기기·크기)</span></button><span class="olock"></span></li>` : '';
   return `<section class="objsec"><h3>이 그림의 개체 <span class="badge">${it.boxes.length}</span></h3>
     <ul class="objlist">${rows}${baseRow}</ul>
-    <p class="note">위에 있는 것이 앞쪽입니다. 겹쳐서 고르기 어려우면 여기서 누르거나, 그림 위에서 <b>Tab</b>·<b>오른쪽 버튼</b>을 쓰세요.</p></section>`;
+    <p class="note">위에 있는 것이 앞쪽입니다. 선택한 줄의 ▲▼로 순서를 바꿉니다. 겹쳐서 고르기 어려우면 여기서 누르거나, 그림 위에서 <b>Tab</b>·<b>오른쪽 버튼</b>을 쓰세요.</p></section>`;
 }
 function bindObjList(p) {
-  p.querySelectorAll('[data-oid]').forEach(b => b.onclick = () => select(b.dataset.oid));
+  p.querySelectorAll('[data-oid]').forEach(b => b.onclick = e => { const o = item().boxes.find(x => x.id === b.dataset.oid);
+    if ((e.shiftKey || e.ctrlKey || e.metaKey) && o) toggleMulti(o); else select(b.dataset.oid); });
   p.querySelectorAll('[data-obase]').forEach(b => b.onclick = () => selectBase(true));
+  p.querySelectorAll('[data-oz]').forEach(b => b.onclick = () => reorder(selBox(), b.dataset.oz));
   p.querySelectorAll('[data-olock]').forEach(b => b.onclick = () => { const o = item().boxes.find(x => x.id === b.dataset.olock); if (o) toggleLock(o); });
 }
 function bindGuide(p) { p.querySelectorAll('[data-g-act]').forEach(b => b.onclick = () => act(b.dataset.gAct)); }
@@ -1793,9 +2251,13 @@ function renderStatus() {
   $('#stSize').textContent = it && baseSel ? `쪽 위치: 본문 왼쪽에서 ${offOf(it).x}mm, 위에서 ${offOf(it).y}mm · 크기 ${r1(it.w)}×${r1(it.h)}mm` : it ? `원본 ${it.img.pw}×${it.img.ph}px · ${fmtBytes(imgBytes(it))} → 문서에서 ${r1(it.w)}×${r1(it.h)}mm${doc.shrink && it.img.pw > targetPx(it).w * 1.1 && it.img.ph > targetPx(it).h * 1.1 ? ` (저장 시 ${targetPx(it).w}×${targetPx(it).h}px로 줄임)` : ''}` : '';
   $('#stZoom').textContent = Math.round(zoom * 100) + '%';
   const sb = it ? selBox() : null;
-  $('#stHint').textContent = !it ? '그림을 넣어 시작하세요' : baseSel ? '바탕 그림 선택됨 · 끌기: 쪽에서 옮기기 · 테두리 손잡이: 크기 · 방향키: 0.5mm씩' : tool ? `그림 위를 끌어서 ${SHAPE_NAME[tool]}를 그리세요 · Esc 취소`
+  const nSel = it ? selBoxes().length : 0;
+  $('#stHint').textContent = !it ? '그림을 넣어 시작하세요' : baseSel ? '바탕 그림 선택됨 · 끌기: 쪽에서 옮기기 · 테두리 손잡이: 크기 · 방향키: 0.5mm씩'
+    : tool === 'rect' || tool === 'ell' ? `칸을 클릭하면 칸에 맞춰 넣고, 끌면 원하는 크기로 ${SHAPE_NAME[tool]}를 그립니다 · Esc 취소`
+    : tool ? `그림 위를 끌어서 ${SHAPE_NAME[tool]}를 그리세요 · Esc 취소`
+    : nSel > 1 ? `${nSel}개 선택됨 · 서식·채우기·선·크기를 한 번에 바꿉니다 · 끌기: 함께 옮기기 · Shift/Ctrl+클릭: 더하기·빼기 · Esc: 선택 풀기`
     : editId ? '글자 입력 중 · 바깥을 클릭하면 끝납니다'
-    : sb ? (sb.locked ? '잠긴 개체 · 오른쪽 버튼이나 개체 목록의 자물쇠로 잠금을 풀 수 있습니다' : isText(sb) ? '더블클릭: 글자 입력 · 끌기: 옮기기 · 같은 자리 다시 클릭/Tab: 겹친 개체' : '끌기: 옮기기 · 모서리: 크기 · 같은 자리 다시 클릭/Tab: 겹친 개체')
+    : sb ? (sb.locked ? '잠긴 개체 · 오른쪽 버튼이나 개체 목록의 자물쇠로 잠금을 풀 수 있습니다' : isText(sb) ? '더블클릭: 글자 입력 · 끌기: 옮기기 · Shift/Ctrl+클릭: 여러 개 선택 · 같은 자리 다시 클릭/Tab: 겹친 개체' : '끌기: 옮기기 · 모서리: 크기 · Shift/Ctrl+클릭: 여러 개 선택 · 같은 자리 다시 클릭/Tab: 겹친 개체')
     : doc.view === 'a4' ? '글상자를 클릭하면 선택됩니다 · 개체가 없는 곳을 누르면 바탕 그림을 옮길 수 있습니다' : '글상자를 클릭하면 선택됩니다';
   document.querySelectorAll('#viewSeg [data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === (doc.view === 'a4' ? 'a4' : 'img') ? 'true' : 'false'));
   $('#zoomRange').value = Math.round(zoom * 100);
@@ -1803,7 +2265,8 @@ function renderStatus() {
 
 function imgBytes(it) { const u = it.img.dataUrl; return Math.round((u.length - u.indexOf(',') - 1) * 0.75); }
 function fmtBytes(n) { return n >= 1048576 ? (n / 1048576).toFixed(1) + 'MB' : Math.max(1, Math.round(n / 1024)) + 'KB'; }
-function targetPx(it) { return { w:Math.round(it.w / 25.4 * 300), h:Math.round(it.h / 25.4 * 300) }; }
+const DPI = () => doc.dpi || 150;
+function targetPx(it) { return { w:Math.round(it.w / 25.4 * DPI()), h:Math.round(it.h / 25.4 * DPI()) }; }
 
 /* ===== 리본 ===== */
 const ICONS = {
@@ -1834,6 +2297,10 @@ const ICONS = {
 };
 const ic = k => svg(ICONS[k]);
 Object.assign(ICONS, {
+  zFront:'<rect x="4" y="12" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".5"/><rect x="12" y="5" width="16" height="16" fill="currentColor"/><path d="M20 30V24" stroke="currentColor" stroke-width="0"/>',
+  zUp:'<rect x="4" y="12" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".5"/><rect x="12" y="5" width="16" height="16" fill="var(--brand-soft)" stroke="currentColor" stroke-width="1.8"/><path d="M20 17v-8M16.5 12.5L20 9l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  zDown:'<rect x="12" y="5" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".5"/><rect x="4" y="12" width="16" height="16" fill="var(--brand-soft)" stroke="currentColor" stroke-width="1.8"/><path d="M12 16v8M8.5 20.5L12 24l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  zBack:'<rect x="12" y="5" width="16" height="16" fill="currentColor" opacity=".9"/><rect x="4" y="12" width="14" height="14" fill="#fff" stroke="currentColor" stroke-width="1.8"/>',
   dup:'<rect x="5" y="5" width="15" height="15" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="12" y="12" width="15" height="15" rx="1" fill="var(--brand-soft)" stroke="currentColor" stroke-width="1.6"/>',
   bold:'<path d="M9 5h8a5 5 0 0 1 3.2 8.8A5.4 5.4 0 0 1 17 27H9zm4 4v5h4a2.5 2.5 0 0 0 0-5zm0 9v5h4.6a2.5 2.5 0 0 0 0-5z" fill="currentColor"/>',
   alL:'<path d="M5 7h22M5 12.5h14M5 18h22M5 23.5h14" stroke="currentColor" stroke-width="2.2"/>',
@@ -1849,6 +2316,20 @@ Object.assign(ICONS, {
   paneL:'<rect x="4" y="6" width="24" height="20" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="4" y="6" width="8" height="20" fill="currentColor" opacity=".35"/>',
   paneR:'<rect x="4" y="6" width="24" height="20" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="20" y="6" width="8" height="20" fill="currentColor" opacity=".35"/>',
   crop:'<path d="M9 3v20h20" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 9h20v20" fill="none" stroke="currentColor" stroke-width="2"/><rect x="9" y="9" width="14" height="14" fill="var(--brand-soft)"/>',
+  aL:'<path d="M5 3v26" stroke="currentColor" stroke-width="2"/><rect x="7" y="7" width="18" height="6" fill="currentColor" opacity=".85"/><rect x="7" y="18" width="11" height="6" fill="currentColor" opacity=".55"/>',
+  aC:'<path d="M16 3v26" stroke="currentColor" stroke-width="2"/><rect x="6" y="7" width="20" height="6" fill="currentColor" opacity=".85"/><rect x="10" y="18" width="12" height="6" fill="currentColor" opacity=".55"/>',
+  aR:'<path d="M27 3v26" stroke="currentColor" stroke-width="2"/><rect x="7" y="7" width="18" height="6" fill="currentColor" opacity=".85"/><rect x="14" y="18" width="11" height="6" fill="currentColor" opacity=".55"/>',
+  aT:'<path d="M3 5h26" stroke="currentColor" stroke-width="2"/><rect x="7" y="7" width="6" height="18" fill="currentColor" opacity=".85"/><rect x="18" y="7" width="6" height="11" fill="currentColor" opacity=".55"/>',
+  aM:'<path d="M3 16h26" stroke="currentColor" stroke-width="2"/><rect x="7" y="6" width="6" height="20" fill="currentColor" opacity=".85"/><rect x="18" y="10" width="6" height="12" fill="currentColor" opacity=".55"/>',
+  aB:'<path d="M3 27h26" stroke="currentColor" stroke-width="2"/><rect x="7" y="7" width="6" height="18" fill="currentColor" opacity=".85"/><rect x="18" y="14" width="6" height="11" fill="currentColor" opacity=".55"/>',
+  dH:'<rect x="3" y="9" width="6" height="14" fill="currentColor" opacity=".8"/><rect x="13" y="9" width="6" height="14" fill="currentColor" opacity=".8"/><rect x="23" y="9" width="6" height="14" fill="currentColor" opacity=".8"/><path d="M9.5 27h3M19.5 27h3" stroke="currentColor" stroke-width="1.6"/>',
+  dV:'<rect x="9" y="3" width="14" height="6" fill="currentColor" opacity=".8"/><rect x="9" y="13" width="14" height="6" fill="currentColor" opacity=".8"/><rect x="9" y="23" width="14" height="6" fill="currentColor" opacity=".8"/><path d="M27 9.5v3M27 19.5v3" stroke="currentColor" stroke-width="1.6"/>',
+  sW:'<rect x="5" y="6" width="22" height="7" fill="currentColor" opacity=".85"/><rect x="5" y="19" width="22" height="7" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  sH:'<rect x="6" y="5" width="7" height="22" fill="currentColor" opacity=".85"/><rect x="19" y="5" width="7" height="22" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  sWH:'<rect x="4" y="6" width="11" height="11" fill="currentColor" opacity=".85"/><rect x="17" y="15" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  oneline:'<rect x="3" y="8" width="26" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2.5 1.8"/><path d="M7 16h18" stroke="currentColor" stroke-width="2.2"/><path d="M10 12.5l-3 3.5 3 3.5M22 12.5l3 3.5-3 3.5" fill="none" stroke="currentColor" stroke-width="1.5"/>',
+  slots:'<rect x="3" y="5" width="26" height="22" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".45"/><rect x="6" y="8" width="7" height="5" rx="1" fill="currentColor" opacity=".8"/><rect x="15" y="8" width="11" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 1.5"/><rect x="6" y="16" width="7" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 1.5"/><rect x="15" y="16" width="11" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 1.5"/>',
+  selall:'<rect x="4" y="5" width="11" height="9" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="17" y="5" width="11" height="9" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="4" y="17" width="24" height="10" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2 3h28v26H2z" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="2 2"/>',
   help:'<circle cx="16" cy="16" r="12" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 12.5a4 4 0 1 1 5.2 3.8c-.8.3-1.2 1-1.2 1.8V20" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="16" cy="24" r="1.4" fill="currentColor"/>',
 });
 
@@ -1882,10 +2363,24 @@ const CMD = {
   panePanel: { label:'작업 창', icon:'paneR', tip:'오른쪽 따라하기·개체 속성 창을 보이거나 숨깁니다.', run:() => { ui.right = !ui.right; applyUi(); }, pressed:() => ui.right },
 
   openImg:   { label:'그림 넣기', icon:'image', tip:'바탕이 될 사진이나 그림을 불러옵니다. 파일을 끌어 놓거나 Ctrl+V로 붙여 넣어도 됩니다.', run:() => $('#fileImg').click() },
-  rect:      { label:'글상자', icon:'rect', tip:'그림 위를 끌어서 사각 글상자를 그립니다. 말풍선 안처럼 원하는 자리에 쓰세요.', run:() => shapeAction('rect'), enabled:hasItem, pressed:() => tool === 'rect' },
-  ell:       { label:'원형 글상자', icon:'ell', tip:'그림 위를 끌어서 원형 글상자를 그립니다. Shift를 누르면 정원이 됩니다.', run:() => shapeAction('ell'), enabled:hasItem, pressed:() => tool === 'ell' },
+  rect:      { label:'글상자', icon:'rect', tip:'그림 위를 끌어서 사각 글상자를 그립니다. 칸 안을 클릭만 하면 그 칸에 꼭 맞게 들어갑니다.', run:() => shapeAction('rect'), enabled:hasItem, pressed:() => tool === 'rect' },
+  ell:       { label:'원형 글상자', icon:'ell', tip:'그림 위를 끌어서 원형 글상자를 그립니다. 동그란 칸을 클릭하면 그 칸에 맞게 들어갑니다. Shift를 누르면 정원이 됩니다.', run:() => shapeAction('ell'), enabled:hasItem, pressed:() => tool === 'ell' },
   full:      { label:'그림 전체 글상자', icon:'full', tip:'그림과 크기가 같은 투명 글상자를 바로 만듭니다.', run:() => shapeAction('full'), enabled:hasItem },
   sticker:   { label:'그림 얹기', icon:'sticker', tip:'화살표·도장·서명 같은 그림을 사진 위에 얹습니다.', run:() => $('#fileSticker').click(), enabled:hasItem },
+  alL2:  { label:'왼쪽 맞춤', icon:'aL', tip:'고른 개체들의 왼쪽 끝을 기준 개체에 맞춥니다. 기준 개체는 고른 개체 중 하나를 클릭해 바꿉니다(초록 테두리).', run:() => alignObjs('L'), enabled:() => isMulti() },
+  alC2:  { label:'가운데 맞춤', icon:'aC', tip:'고른 개체들의 가로 가운데를 기준 개체에 맞춥니다.', run:() => alignObjs('C'), enabled:() => isMulti() },
+  alR2:  { label:'오른쪽 맞춤', icon:'aR', tip:'고른 개체들의 오른쪽 끝을 기준 개체에 맞춥니다.', run:() => alignObjs('R'), enabled:() => isMulti() },
+  alT2:  { label:'위쪽 맞춤', icon:'aT', tip:'고른 개체들의 위쪽 끝을 기준 개체에 맞춥니다.', run:() => alignObjs('T'), enabled:() => isMulti() },
+  alM2:  { label:'중간 맞춤', icon:'aM', tip:'고른 개체들의 세로 가운데를 기준 개체에 맞춥니다.', run:() => alignObjs('M'), enabled:() => isMulti() },
+  alB2:  { label:'아래쪽 맞춤', icon:'aB', tip:'고른 개체들의 아래쪽 끝을 기준 개체에 맞춥니다.', run:() => alignObjs('B'), enabled:() => isMulti() },
+  distH: { label:'가로 간격을 동일하게', icon:'dH', tip:'3개 이상 고르면 가장 왼쪽·오른쪽 개체는 그대로 두고 사이 개체를 옮겨 가로 간격을 같게 합니다.', run:() => alignObjs('distH'), enabled:() => selBoxes().length > 2 },
+  distV: { label:'세로 간격을 동일하게', icon:'dV', tip:'3개 이상 고르면 가장 위·아래 개체는 그대로 두고 사이 개체를 옮겨 세로 간격을 같게 합니다.', run:() => alignObjs('distV'), enabled:() => selBoxes().length > 2 },
+  sameW: { label:'너비를 같게', icon:'sW', tip:'고른 개체들의 너비를 기준 개체와 같게 합니다.', run:() => alignObjs('sameW'), enabled:() => isMulti() },
+  sameH: { label:'높이를 같게', icon:'sH', tip:'고른 개체들의 높이를 기준 개체와 같게 합니다.', run:() => alignObjs('sameH'), enabled:() => isMulti() },
+  sameWH:{ label:'너비/높이를 같게', icon:'sWH', tip:'고른 개체들의 너비와 높이를 기준 개체와 같게 합니다.', run:() => alignObjs('sameWH'), enabled:() => isMulti() },
+  oneLine: { label:'한 줄로 입력', icon:'oneline', tip:'글상자 너비를 넘어도 줄을 바꾸지 않고 글자 사이를 좁혀 한 줄로 넣습니다. 한글의 개체 속성 › 글상자 › 한 줄로 입력과 같습니다. 칸에 맞춰 넣은 글상자는 넘치면 글자 크기도 줄어듭니다.', run:() => setOneLine(!selTexts().every(b => b.oneLine)), enabled:() => selTexts().length > 0, pressed:() => selTexts().length > 0 && selTexts().every(b => b.oneLine) },
+  autoSlots: { label:'칸마다 넣기', icon:'slots', tip:'빈 체계도처럼 칸이 나뉜 그림에서 칸을 찾아 칸마다 글상자를 한 번에 넣습니다. 칸 색에 맞춰 글자색·정렬도 정합니다. 칸 하나만 넣으려면 글상자 도구로 그 칸을 클릭하세요.', run:fillSlots, enabled:hasItem },
+  selAll:    { label:'모두 선택', icon:'selall', key:'Ctrl+A', tip:'이 그림의 글상자와 얹은 그림을 모두 선택합니다. 서식을 한 번에 바꿀 때 씁니다.', run:selectAll, enabled:() => hasItem() && item().boxes.some(b => !b.locked && b.shape !== 'mos') },
   mos:       { label:'모자이크', icon:'mos', tip:'그림 위를 끌어서 가릴 곳을 모자이크합니다.', run:() => shapeAction('mos'), enabled:hasItem, pressed:() => tool === 'mos' },
 
   bold:      { label:'진하게', icon:'bold', key:'Ctrl+B', tip:'선택한 글상자의 글자를 굵게 합니다.', run:() => applyStyle({ bold:!selBox().bold }), enabled:selText, pressed:() => selText() && selBox().bold },
@@ -1903,6 +2398,10 @@ const CMD = {
   moveDown:  { label:'뒤로', icon:'down', tip:'목록에서 이 그림을 한 칸 뒤로 옮깁니다.', run:() => moveItem(1), enabled:() => hasItem() && cur < doc.items.length - 1 },
   delItem:   { label:'그림 지우기', icon:'del', tip:'지금 보고 있는 그림을 목록에서 지웁니다. 되돌리기로 되살릴 수 있습니다.', run:deleteItem, enabled:hasItem },
 
+  zFront:    { label:'맨 앞으로', icon:'zFront', key:'Ctrl+Shift+]', tip:'선택한 개체를 가장 앞에 놓습니다.', run:() => reorder(selBox(), 'front'), enabled:() => canFront(selBox()) },
+  zUp:       { label:'앞으로', icon:'zUp', key:'Ctrl+]', tip:'선택한 개체를 한 칸 앞으로 보냅니다.', run:() => reorder(selBox(), 'up'), enabled:() => canFront(selBox()) },
+  zDown:     { label:'뒤로', icon:'zDown', key:'Ctrl+[', tip:'선택한 개체를 한 칸 뒤로 보냅니다.', run:() => reorder(selBox(), 'down'), enabled:() => canBack(selBox()) },
+  zBack:     { label:'맨 뒤로', icon:'zBack', key:'Ctrl+Shift+[', tip:'선택한 개체를 가장 뒤에 놓습니다. 모자이크는 늘 그림에 붙어 있어 그보다 뒤로 가지는 않습니다.', run:() => reorder(selBox(), 'back'), enabled:() => canBack(selBox()) },
   erase:     { label:'배경 지우기', icon:'erase', tip:'흰 종이나 단색 배경을 투명하게 지웁니다.', run:() => editSticker(selBox(), 'erase'), enabled:() => selBox()?.shape === 'pic' },
   cropPic:   { label:'자르기', icon:'crop', tip:'얹은 그림에서 필요한 부분만 남깁니다. 다시 열면 범위를 바꿀 수 있습니다.', run:() => editSticker(selBox(), 'crop'), enabled:() => selBox()?.shape === 'pic' },
   posL:      { label:'왼쪽', icon:'alL', tip:'그림을 본문 왼쪽에 붙입니다. A4 쪽 보기에서 보입니다.', run:() => setPos('L'), enabled:hasItem },
@@ -1927,7 +2426,8 @@ const TABS = [
     { cap:'도움말', cmds:['help'] } ] },
   { id:'edit', label:'편집', groups:[
     { cap:'실행 취소', cmds:['undo', 'redo'] },
-    { cap:'개체', cmds:['dup', 'delBox'] },
+    { cap:'개체', cmds:['selAll', 'dup', 'delBox'] },
+    { cap:'순서', cmds:['zFront', 'zUp', 'zDown', 'zBack'] },
     { cap:'보관함', cmds:['register'] } ] },
   { id:'view', label:'보기', groups:[
     { cap:'편집 화면', cmds:['viewImg', 'viewA4'] },
@@ -1936,7 +2436,7 @@ const TABS = [
     { cap:'창', cmds:['paneList', 'panePanel'] } ] },
   { id:'input', label:'입력', groups:[
     { cap:'그림', cmds:['openImg'] },
-    { cap:'글상자', cmds:['rect', 'ell', 'full'] },
+    { cap:'글상자', cmds:['rect', 'ell', 'full', 'autoSlots'] },
     { cap:'꾸미기', cmds:['sticker', 'mos'] },
     { cap:'저장', cmds:['export'] } ] },
   { id:'format', label:'서식', groups:[
@@ -1944,6 +2444,7 @@ const TABS = [
       bind:() => liveColor($('#rgColor'), textColorLive) },
     { cap:'문단 정렬', cmds:['alL', 'alC', 'alR', 'alJ'] },
     { cap:'세로 정렬', cmds:['vT', 'vM', 'vB'] },
+    { cap:'글상자', cmds:['oneLine'] },
     { cap:'줄 간격', html:() => `<div class="mini"><div class="row"><select id="rgLine" ${selText() ? '' : 'disabled'}>${[100,130,160,180,200,250].map(v => `<option value="${v}" ${(selText() ? selBox() : lastStyle).line === v ? 'selected' : ''}>${v}%</option>`).join('')}</select></div></div>`,
       bind:() => { const l = $('#rgLine'); if (l) l.onchange = e => applyStyle({ line:+e.target.value }); } },
     { html:() => selText() ? '' : '<p class="note">그림 위의 글상자를 클릭해 선택하면 서식을 바꿀 수 있습니다.</p>' } ] },
@@ -1962,12 +2463,13 @@ const TABS = [
     { cap:'쪽 위치 (A4)', cmds:['posL', 'posC', 'posR', 'posReset'] },
     { cap:'저장 방식', html:() => `<div class="mini">
         <label class="row" data-tip-title="글자처럼 취급" data-tip="켜 두면 한글에 붙여 넣은 자리의 글 흐름에 맞춰 들어갑니다."><input type="checkbox" id="rInline" ${doc.inline ? 'checked' : ''}> 글자처럼 취급</label>
-        <label class="row" data-tip-title="용량 줄이기" data-tip="한글 문서에 놓이는 크기 기준 300dpi로 줄여 저장합니다. 인쇄 품질은 그대로입니다."><input type="checkbox" id="rShrink" ${doc.shrink ? 'checked' : ''}> 용량 줄이기</label></div>`,
-      bind:() => { $('#rInline').onchange = e => { doc.inline = e.target.checked; persist(); }; $('#rShrink').onchange = e => { doc.shrink = e.target.checked; renderStatus(); persist(); }; } },
+        <div class="row" data-tip-title="용량 줄이기" data-tip="그림을 한글 문서에 놓이는 크기에 맞춰 줄여 저장합니다. 150dpi는 화면과 일반 인쇄에 충분하고 파일이 가장 작습니다. 300dpi는 고품질 인쇄용입니다. 사진은 JPG로, 투명한 그림은 PNG로 저장합니다.">용량 <select id="rDpi">${[[150,'150dpi (권장)'],[300,'300dpi (고품질 인쇄)'],[0,'줄이지 않음']].map(([v,t]) => `<option value="${v}" ${(doc.shrink ? DPI() : 0) === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div></div>`,
+      bind:() => { $('#rInline').onchange = e => { doc.inline = e.target.checked; persist(); }; $('#rDpi').onchange = e => { const v = +e.target.value; doc.shrink = v > 0; if (v) doc.dpi = v; renderStatus(); persist(); }; } },
     { cap:'순서', cmds:['moveUp', 'moveDown', 'delItem'] } ] },
 
   /* 개체를 선택하면 나타나는 탭 (한글의 ‘도형’ 탭처럼) */
   { id:'shape', label:'도형', ctx:true, groups:[
+    { cap:'글상자', cmds:['oneLine'] },
     { cap:'채우기', html:() => { const b = selBox(); return `<div class="mini">
         <div class="row"><span class="seg"><button type="button" data-rfill="none" aria-pressed="${b.fill === 'none'}">없음</button><button type="button" data-rfill="on" aria-pressed="${b.fill !== 'none'}">색</button></span><input type="color" id="rgFill" value="${b.fill === 'none' ? '#ffffff' : b.fill}"></div>
         <div class="row">투명도 <select id="rgFillT" ${b.fill === 'none' ? 'disabled' : ''}>${[0,20,40,60,80].map(v => `<option value="${v}" ${(b.fillT||0)===v?'selected':''}>${v}%</option>`).join('')}</select></div></div>`; },
@@ -1985,15 +2487,24 @@ const TABS = [
         liveColor($('#rgStroke'), (v, f) => decoLive('stroke', v, f));
         $('#rgStrokeW').onchange = e => decoPatch({ strokeW:+e.target.value }); } },
     { cap:'크기 (mm)', html:sizeHtml, bind:sizeBind },
+    { cap:'맞춤', small:3, cmds:['alL2', 'alC2', 'alR2', 'alT2', 'alM2', 'alB2'] },
+    { cap:'배분', small:1, cmds:['distH', 'distV'] },
+    { cap:'크기 맞춤', small:1, cmds:['sameW', 'sameH', 'sameWH'] },
+    { cap:'순서', cmds:['zFront', 'zUp', 'zDown', 'zBack'] },
     { cap:'개체', cmds:['register', 'dup', 'delBox'] } ] },
   { id:'sticker', label:'얹은 그림', ctx:true, groups:[
     { cap:'다듬기', cmds:['cropPic', 'erase', 'ratio'] },
     { cap:'크기 (mm)', html:sizeHtml, bind:sizeBind },
+    { cap:'맞춤', small:3, cmds:['alL2', 'alC2', 'alR2', 'alT2', 'alM2', 'alB2'] },
+    { cap:'배분', small:1, cmds:['distH', 'distV'] },
+    { cap:'크기 맞춤', small:1, cmds:['sameW', 'sameH', 'sameWH'] },
+    { cap:'순서', cmds:['zFront', 'zUp', 'zDown', 'zBack'] },
     { cap:'개체', cmds:['register', 'dup', 'delBox'] } ] },
   { id:'mosaic', label:'모자이크', ctx:true, groups:[
     { cap:'거칠기', html:() => `<div class="mini"><div class="row">곱게 <input type="range" id="rgLevel" min="1" max="12" value="${selBox().level || 4}">거칠게</div></div>`,
       bind:() => { const lv = $('#rgLevel'); lv.addEventListener('pointerdown', () => pushUndo(), { once:true });
         lv.oninput = () => { const b = selBox(), it = item(); b.level = +lv.value; const cv = stageEl?.querySelector(`.bx[data-id="${b.id}"] canvas`); if (cv) drawMosaic(cv, it, b); persist(); }; } },
+    { cap:'순서', cmds:['zFront', 'zUp', 'zDown', 'zBack'] },
     { cap:'개체', cmds:['dup', 'delBox'] } ] },
 ];
 function sizeHtml() { const it = item(), m = mmBox(it, selBox()); return `<div class="mini">
@@ -2003,10 +2514,10 @@ function sizeBind() {
   ['rgW', 'rgH'].forEach(id => { const inp = $('#' + id);
     inp.addEventListener('focus', () => pushUndo(), { once:true });
     inp.addEventListener('input', () => {
-      const v = parseFloat(inp.value), b = selBox(), it = item(); if (!(v >= 2) || !b) return;
-      const mm = mmBox(it, b);
-      if (id === 'rgW') mm.w = Math.min(v, it.w - mm.x); else mm.h = Math.min(v, it.h - mm.y);
-      b.fw = r4(mm.w / it.w); b.fh = r4(mm.h / it.h);
+      const v = parseFloat(inp.value), it = item(), bs = selBoxes(); if (!(v >= 2) || !bs.length) return;
+      bs.forEach(b => { const mm = mmBox(it, b);
+        if (id === 'rgW') mm.w = Math.min(v, it.w - mm.x); else mm.h = Math.min(v, it.h - mm.y);
+        b.fw = r4(mm.w / it.w); b.fh = r4(mm.h / it.h); });
       renderStage(); renderList(); persist();
     });
   });
@@ -2020,15 +2531,15 @@ function liveColor(el, apply) {
 }
 function textColorLive(v, final) {
   lastStyle.color = v; $('#fColorSw').style.background = v;
-  const b = selBox(); if (isText(b)) { b.color = v; renderStage(); persist(); }
+  const bs = selTexts(); if (bs.length) { bs.forEach(b => b.color = v); renderStage(); persist(); }
   if (final) { renderFormat(); renderRibbon(); }
 }
 function decoLive(key, v, final) {
-  const b = selBox(); if (!b) return;
-  b[key] = v; renderStage(); persist();
+  const bs = selTexts(); if (!bs.length) return;
+  bs.forEach(b => b[key] = v); renderStage(); persist();
   if (final) { renderPanel(); renderRibbon(); }
 }
-function decoPatch(patch) { const b = selBox(); if (!b) return; pushUndo(); Object.assign(b, patch); renderStage(); renderPanel(); renderRibbon(); persist(); }
+function decoPatch(patch) { const bs = selTexts(); if (!bs.length) return; pushUndo(); bs.forEach(b => Object.assign(b, patch)); renderStage(); renderPanel(); renderRibbon(); persist(); }
 
 const CTX_OF = b => !b ? null : b.shape === 'pic' ? 'sticker' : b.shape === 'mos' ? 'mosaic' : 'shape';
 let prevTab = 'input', lastCtx = null;
@@ -2037,6 +2548,11 @@ function cmdBtn(id) {
   const dis = c.enabled && !c.enabled(), pr = c.pressed ? c.pressed() : undefined;
   return `<button class="rb${c.primary ? ' primary big' : ''}" type="button" data-act="${id}" ${pr !== undefined ? `aria-pressed="${!!pr}"` : ''} ${dis ? 'disabled' : ''}
     data-tip-title="${esc(c.label)}" data-tip="${esc(c.tip || '')}" ${c.key ? `data-key="${c.key}"` : ''} aria-label="${esc(c.label)}">${ic(c.icon)}<span>${c.label}</span></button>`;
+}
+function cmdMini(id) {
+  const c = CMD[id]; if (!c) return '';
+  const dis = c.enabled && !c.enabled();
+  return `<button class="rbm" type="button" data-act="${id}" ${dis ? 'disabled' : ''} data-tip-title="${esc(c.label)}" data-tip="${esc(c.tip || '')}" aria-label="${esc(c.label)}">${ic(c.icon)}</button>`;
 }
 function renderRibbon() {
   // 개체를 선택하면 그 개체 탭으로, 선택을 풀면 원래 탭으로
@@ -2048,13 +2564,13 @@ function renderRibbon() {
   }
   if (TABS.find(t => t.id === curTab)?.ctx && curTab !== c) curTab = prevTab;
   const tabs = TABS.filter(t => !t.ctx || t.id === c);
-  $('#menutabs').innerHTML = tabs.map(t => `${t.ctx ? `<span class="ctxlabel">${SHAPE_NAME[selBox().shape] || '개체'} 선택됨 ›</span>` : ''}<div class="mtab${t.id === curTab ? ' on' : ''}${t.ctx ? ' ctx' : ''}" role="presentation">
+  $('#menutabs').innerHTML = tabs.map(t => `${t.ctx ? `<span class="ctxlabel">${isMulti() ? `개체 ${selBoxes().length}개` : SHAPE_NAME[selBox().shape] || '개체'} 선택됨 ›</span>` : ''}<div class="mtab${t.id === curTab ? ' on' : ''}${t.ctx ? ' ctx' : ''}" role="presentation">
       <button type="button" role="tab" data-tab="${t.id}" aria-selected="${t.id === curTab}">${t.label}</button><button type="button" class="caret" data-menu="${t.id}" aria-label="${t.label} 메뉴 펼치기" tabindex="-1">▾</button></div>`).join('');
   const tab = TABS.find(t => t.id === curTab) || TABS[3];
   const r = $('#ribbon');
   r.classList.toggle('ctx', !!tab.ctx);
   r.innerHTML = tab.groups.map(g => {
-    const body = (g.cmds || []).map(cmdBtn).join('') + (g.html ? g.html() : '');
+    const body = (g.small ? `<div class="mgrid c${g.small}">${(g.cmds || []).map(cmdMini).join('')}</div>` : (g.cmds || []).map(cmdBtn).join('')) + (g.html ? g.html() : '');
     return body ? `<div class="grp"><div class="gbody">${body}</div>${g.cap ? `<div class="gcap">${g.cap}</div>` : ''}</div>` : '';
   }).join('');
   tab.groups.forEach(g => g.bind && g.bind());
@@ -2193,7 +2709,7 @@ function openHelp() {
       <section><h4>네 단계면 끝납니다 (오른쪽 ‘따라하기’ 창과 같은 순서)</h4>
         <ol class="guide">
           <li><span class="num">1</span><span class="gt">그림 넣기</span><span class="gd">입력 탭의 <b>그림 넣기</b>를 누르거나, 사진 파일을 화면에 끌어 놓거나, Ctrl+V로 붙여 넣습니다.</span></li>
-          <li><span class="num">2</span><span class="gt">글상자 넣기</span><span class="gd">입력 탭의 <b>글상자</b>를 누른 뒤 그림 위를 끌면 투명 글상자가 생깁니다.</span></li>
+          <li><span class="num">2</span><span class="gt">글상자 넣기</span><span class="gd">입력 탭의 <b>글상자</b>를 누른 뒤 칸을 <b>클릭</b>하면 칸에 꼭 맞게, 그림 위를 <b>끌면</b> 원하는 크기로 생깁니다.</span></li>
           <li><span class="num">3</span><span class="gt">글자 쓰기</span><span class="gd">글상자가 생기면 바로 입력합니다. 다시 고칠 때는 글상자를 더블클릭합니다.</span></li>
           <li><span class="num">4</span><span class="gt">한글 파일로 저장</span><span class="gd"><b>한글 파일로 저장</b>(Ctrl+S)을 누르면 .hwpx 파일이 받아집니다.</span></li>
         </ol></section>
@@ -2204,6 +2720,18 @@ function openHelp() {
         <dt>더블클릭</dt><dd>글자 입력</dd>
         <dt>끌기</dt><dd>옮기기, 네모 손잡이는 크기 바꾸기</dd>
         <dt>오른쪽 버튼</dt><dd>겹친 개체 고르기 · 보관함에 등록 · 자르기 · 배경 지우기 · 맨 앞/맨 뒤 · 잠그기</dd></dl></section>
+      <section><h4>칸이 나뉜 그림 (비전 체계도처럼)</h4><dl class="keys">
+        <dt>칸마다 넣기</dt><dd>입력 탭의 <b>칸마다 넣기</b>를 누르면 그림에서 빈 칸을 찾아 칸마다 글상자를 넣습니다. 어두운 칸은 흰 글씨, 긴 흰 칸은 왼쪽 위부터 쓰는 목록으로 정해집니다. 글자가 이미 있는 칸은 건너뜁니다.</dd>
+        <dt>칸 클릭</dt><dd>글상자 도구를 고르고 칸 위에 올리면 들어갈 자리가 주황 점선으로 보이고, 클릭하면 그 칸에 맞춰 들어갑니다.</dd>
+        <dt>글자 크기</dt><dd>칸에 맞춰 넣은 글상자는 글이 넘치면 크기가 저절로 줄고, 같은 모양 칸끼리는 같은 크기로 맞춰집니다. 서식 도구 상자에서 크기를 직접 정하면 그 뒤로는 줄지 않습니다.</dd>
+        <dt>입력 중 Tab</dt><dd>다음 칸으로 넘어가 이어서 입력 (Shift+Tab: 앞 칸)</dd></dl></section>
+      <section><h4>여러 개를 한 번에</h4><dl class="keys">
+        <dt>Shift·Ctrl+클릭</dt><dd>선택에 더하거나 빼기 (작업 창 개체 목록에서도 됨)</dd>
+        <dt>Ctrl+A</dt><dd>이 그림의 글상자·얹은 그림 모두 선택</dd>
+        <dt>함께 바꾸기</dt><dd>여러 개를 고른 채 글꼴·크기·색·정렬·채우기·선·너비·높이를 바꾸면 모두에 적용</dd>
+        <dt>끌기 · 방향키</dt><dd>고른 개체를 함께 옮기기</dd>
+        <dt>맞춤 · 배분</dt><dd>도형 탭의 <b>맞춤</b>(왼쪽·가운데·오른쪽·위쪽·중간·아래쪽), <b>배분</b>(가로·세로 간격을 동일하게), <b>크기 맞춤</b>(너비·높이를 같게). 한글처럼 <b>기준 개체</b>에 맞춥니다. 처음 고른 개체가 기준이고, 고른 개체 중 하나를 그냥 클릭하면 기준이 바뀝니다(초록 테두리 ‘기준’). 간격 맞춤은 3개 이상에서, 양 끝 개체는 그대로 둡니다.</dd></dl></section>
+      <section><h4>한 줄로 입력</h4><p style="margin:0">도형·서식 탭의 <b>한 줄로 입력</b>을 켜면 글이 길어도 줄을 바꾸지 않고 글자 사이를 좁혀 한 줄에 넣습니다. 한글의 글상자 속성 ‘한 줄로 입력’과 같아서 한글에서도 그대로 유지됩니다. 너무 길어 많이 겹치면 빨간 점선으로 알려 줍니다.</p></section>
       <section><h4>그림 자르기</h4><p style="margin:0">바탕 그림은 <b>그림</b> 탭의 <b>그림 다듬기</b>, 얹은 그림은 오른쪽 버튼의 <b>자르기</b>를 누릅니다. 원본은 그대로 남아 있어서 다시 열면 자른 범위를 넓히거나 되돌릴 수 있습니다. 바탕 그림을 자르면 사진 속 크기는 그대로이고 잘라 낸 만큼 그림이 작아집니다. 크게 쓰려면 <b>본문 폭에 맞춤</b>을 누르세요.</p></section>
       <section><h4>개체가 겹쳐서 고르기 어려울 때</h4><dl class="keys">
         <dt>클릭</dt><dd>겹친 곳에서는 <b>작은 개체</b>가 먼저 잡힙니다</dd>
@@ -2213,7 +2741,7 @@ function openHelp() {
         <dt>잠그기</dt><dd>다 만든 큰 글상자를 잠그면 클릭이 통과합니다 (작업 창의 자물쇠)</dd></dl></section>
       <section><h4>단축키</h4><dl class="keys">
         <dt>Ctrl+S</dt><dd>한글 파일로 저장</dd><dt>Ctrl+Z / Ctrl+Y</dt><dd>되돌리기 / 다시 실행</dd>
-        <dt>Ctrl+D</dt><dd>복제</dd><dt>Delete</dt><dd>지우기</dd><dt>Ctrl+B</dt><dd>진하게</dd>
+        <dt>Ctrl+D</dt><dd>복제</dd><dt>Delete</dt><dd>지우기</dd><dt>Ctrl+B</dt><dd>진하게</dd><dt>Ctrl+A</dt><dd>모두 선택</dd>
         <dt>방향키</dt><dd>0.5mm씩 옮기기 (Shift: 5mm)</dd><dt>Tab</dt><dd>다음 개체 선택</dd><dt>Esc</dt><dd>선택 풀기 · 그리기 취소</dd><dt>F1</dt><dd>도움말</dd></dl></section>
       <section><h4>작업 내용은 어디에 남나요?</h4><p style="margin:0">이 PC의 이 브라우저에 자동으로 저장됩니다. 다른 PC로 옮기려면 파일 탭의 <b>작업 저장</b>과 <b>보관함 내보내기</b>를 쓰세요.</p></section>
     </div>
@@ -2240,29 +2768,32 @@ function shapeAction(kind) {
   editId = null;
   if (kind === 'full') { tool = null; addBox('rect', { x:0, y:0, w:it.w, h:it.h }); return; }
   tool = tool === kind ? null : kind;
-  selId = null;
-  renderStage(); renderRibbon(); renderPanel(); renderFormat();
+  selId = null; multi.clear();
+  if (tool === 'rect' || tool === 'ell') slotMap(it).catch(() => {});   // 칸 미리 보기를 위해 미리 계산
+  renderStage(); renderRibbon(); renderPanel(); renderFormat(); renderStatus();
 }
-function addBox(shape, r) {
+function makeBox(shape, r, style) {
   const it = item();
-  pushUndo();
   const geo = { id:uid(), shape, fx:r4(r.x / it.w), fy:r4(r.y / it.h), fw:r4(r.w / it.w), fh:r4(r.h / it.h) };
-  if (shape === 'mos') {
-    const b = { ...geo, level:4 };
-    it.boxes.push(b); tool = null; selId = b.id; editId = null;
-    renderAll(); persist(); return;
-  }
+  if (shape === 'mos') return { ...geo, level:4 };
   const b = { ...STYLE_DEFAULT, ...lastStyle, ...PAD[shape], ...DECO_DEFAULT, ...geo, text:'' };
   if (shape === 'ell') { b.align = 'CENTER'; b.valign = 'CENTER'; }
+  return Object.assign(b, style || {});
+}
+function addBox(shape, r, style) {
+  const it = item();
+  pushUndo();
+  const b = makeBox(shape, r, style);
   it.boxes.push(b);
-  tool = null; selId = b.id; editId = b.id;
+  tool = null; selId = b.id; multi.clear(); editId = shape === 'mos' ? null : b.id;
   renderAll(); persist();
 }
 function deleteBox() {
-  const it = item(), b = selBox(); if (!b) return;
+  const it = item(), bs = selBoxes().filter(b => !b.locked); if (!bs.length) return;
   pushUndo();
-  it.boxes = it.boxes.filter(x => x !== b); selId = editId = null;
+  it.boxes = it.boxes.filter(x => !bs.includes(x)); selId = editId = null; multi.clear();
   renderAll(); persist();
+  if (bs.length > 1) toast(`${bs.length}개를 지웠습니다 (Ctrl+Z로 되돌리기)`);
 }
 /* 그림 크기: 비율 유지면 한쪽을 바꿀 때 다른 쪽이 원본 비율로 따라감 */
 function setSize(which, v) {
@@ -2295,7 +2826,7 @@ function moveItem(d) {
 }
 function newDoc() {
   pushUndo();
-  doc = { title:'그림글상자', inline:doc.inline, shrink:doc.shrink, items:[] }; cur = 0; selId = editId = null; tool = null; autoFit = true;
+  doc = { title:'그림글상자', inline:doc.inline, shrink:doc.shrink, dpi:doc.dpi || 150, items:[] }; cur = 0; selId = editId = null; tool = null; autoFit = true;
   renderAll(); persist(); toast('새 문서를 열었습니다. Ctrl+Z로 이전 작업을 되살릴 수 있습니다');
 }
 
@@ -2317,13 +2848,15 @@ document.addEventListener('keydown', e => {
   if (mod && k === 's') { e.preventDefault(); exportHwpx(); return; }
   if (e.key === 'F1') { e.preventDefault(); openHelp(); return; }
   if (mod && k === 'b' && isText(selBox())) { e.preventDefault(); applyStyle({ bold:!selBox().bold }); return; }
+  if (mod && k === 'a' && item() && !(e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT')) { e.preventDefault(); tool = null; selectAll(); return; }
   const t = e.target, typing = t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || (t.tagName === 'INPUT' && !['checkbox','range'].includes(t.type));
   if (typing) return;
   const b = selBox(), it = item();
-  if (mod && k === 'd' && b) { e.preventDefault(); duplicateBox(b); }
+  if (mod && b && (e.code === 'BracketRight' || e.code === 'BracketLeft')) { e.preventDefault(); reorder(b, e.code === 'BracketRight' ? (e.shiftKey ? 'front' : 'up') : (e.shiftKey ? 'back' : 'down')); }
+  else if (mod && k === 'd' && b) { e.preventDefault(); duplicateBox(b); }
   else if (mod && k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
   else if (mod && (k === 'y' || (k === 'z' && e.shiftKey))) { e.preventDefault(); redo(); }
-  else if (k === 'escape') { if (tool) { tool = null; renderStage(); renderRibbon(); renderPanel(); } else if (selId) select(null); else if (baseSel) selectBase(false); }
+  else if (k === 'escape') { if (tool) { tool = null; clearSlotHint(); renderStage(); renderRibbon(); renderPanel(); renderStatus(); } else if (selId) select(null); else if (baseSel) selectBase(false); }
   else if (k.startsWith('arrow') && baseSel && !b) {
     e.preventDefault(); if (!e.repeat) pushUndo();
     const st = e.shiftKey ? 5 : 0.5, o = offOf(it);
@@ -2336,14 +2869,15 @@ document.addEventListener('keydown', e => {
     const nb = list[(i + (e.shiftKey ? -1 : 1) + list.length + (i < 0 && e.shiftKey ? 1 : 0)) % list.length];
     select(nb.id);
   }
-  else if ((k === 'delete' || k === 'backspace') && b) { e.preventDefault(); if (b.locked) toast('잠긴 개체입니다. 오른쪽 버튼 → 잠금 풀기'); else deleteBox(); }
+  else if ((k === 'delete' || k === 'backspace') && b) { e.preventDefault(); if (!selBoxes().some(x => !x.locked)) toast('잠긴 개체입니다. 오른쪽 버튼 → 잠금 풀기'); else deleteBox(); }
   else if ((k === 'enter' || k === 'f2') && b) { e.preventDefault(); startEdit(b.id); }
-  else if (k.startsWith('arrow') && b && !b.locked) {
+  else if (k.startsWith('arrow') && b && selBoxes().some(x => !x.locked)) {
     e.preventDefault();
     if (!e.repeat) pushUndo();
-    const st = e.shiftKey ? 5 : 0.5, m = mmBox(it, b);
-    if (k === 'arrowleft') m.x -= st; if (k === 'arrowright') m.x += st; if (k === 'arrowup') m.y -= st; if (k === 'arrowdown') m.y += st;
-    b.fx = r4(clamp(m.x, 0, it.w - m.w) / it.w); b.fy = r4(clamp(m.y, 0, it.h - m.h) / it.h);
+    const st = e.shiftKey ? 5 : 0.5;
+    selBoxes().filter(x => !x.locked).forEach(x => { const m = mmBox(it, x);
+      if (k === 'arrowleft') m.x -= st; if (k === 'arrowright') m.x += st; if (k === 'arrowup') m.y -= st; if (k === 'arrowdown') m.y += st;
+      x.fx = r4(clamp(m.x, 0, it.w - m.w) / it.w); x.fy = r4(clamp(m.y, 0, it.h - m.h) / it.h); });
     renderStage(); renderPanel(); persist();
   }
   else if ((k === 'pagedown' || k === 'pageup') && doc.items.length) {
@@ -2481,7 +3015,7 @@ function textPart(b, w, charId, paraId) {
     `<hp:p id="0" paraPrIDRef="${paraId}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0"><hp:run charPrIDRef="${charId}">${l ? `<hp:t>${esc(l)}</hp:t>` : '<hp:t/>'}</hp:run></hp:p>`).join('');
   return decoXML(b)
     + `<hp:shadow type="NONE" color="#B2B2B2" offsetX="0" offsetY="0" alpha="0"/>`
-    + `<hp:drawText lastWidth="${w}" name="" editable="0"><hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="${b.valign}" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">${paras}</hp:subList>`
+    + `<hp:drawText lastWidth="${w}" name="" editable="0"><hp:subList id="" textDirection="HORIZONTAL" lineWrap="${b.oneLine ? 'SQUEEZE' : 'BREAK'}" vertAlign="${b.valign}" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">${paras}</hp:subList>`
     + `<hp:textMargin left="${HU(b.padL)}" right="${HU(b.padR)}" top="${HU(b.padT)}" bottom="${HU(b.padB)}"/></hp:drawText>`;
 }
 function objXML(it, binId, ids, dims, stk) {
@@ -2495,12 +3029,15 @@ function objXML(it, binId, ids, dims, stk) {
   const child = z => `id="0" zOrder="${z}" numberingType="NONE" textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" lock="0" dropcapstyle="None" href="" groupLevel="1"`;
   let kids = `<hp:pic ${child(0)} instid="${ID()}" reverse="0">${place(0, 0, W, H, 2)}${picBody(binId, dims, W, H)}</hp:pic>`;
   let z = 1;
-  stk.forEach(({ b, binId:sid, dims:sd }) => {
-    const x = clamp(HU(b.fx * it.w), 0, W), y = clamp(HU(b.fy * it.h), 0, H);
-    const w = Math.max(1, Math.min(HU(b.fw * it.w), W - x)), h = Math.max(1, Math.min(HU(b.fh * it.h), H - y));
-    kids += `<hp:pic ${child(z++)} instid="${ID()}" reverse="0">${place(x, y, w, h, 2)}${picBody(sid, sd, w, h)}</hp:pic>`;
-  });
-  tbs.forEach((b) => {
+  const stkOf = new Map(stk.map(o => [o.b, o]));
+  layers(it).forEach(b => {   // 화면과 같은 순서(뒤 → 앞)로 넣음
+    if (b.shape === 'pic') {
+      const o = stkOf.get(b); if (!o) return;
+      const x = clamp(HU(b.fx * it.w), 0, W), y = clamp(HU(b.fy * it.h), 0, H);
+      const w = Math.max(1, Math.min(HU(b.fw * it.w), W - x)), h = Math.max(1, Math.min(HU(b.fh * it.h), H - y));
+      kids += `<hp:pic ${child(z++)} instid="${ID()}" reverse="0">${place(x, y, w, h, 2)}${picBody(o.binId, o.dims, w, h)}</hp:pic>`;
+      return;
+    }
     const i = z++ - 1;
     const x = clamp(HU(b.fx * it.w), 0, W), y = clamp(HU(b.fy * it.h), 0, H);
     const w = Math.max(1, Math.min(HU(b.fw * it.w), W - x)), h = Math.max(1, Math.min(HU(b.fh * it.h), H - y));
@@ -2518,15 +3055,20 @@ function objXML(it, binId, ids, dims, stk) {
   return `<hp:container id="${gid}" zOrder="0" numberingType="PICTURE" textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" lock="0" dropcapstyle="None" href="" groupLevel="0" instid="${gid - 1}">`
     + place(0, 0, W, H, 1) + kids + layout(W, H, it) + `<hp:shapeComment>묶음 개체입니다.</hp:shapeComment></hp:container>`;
 }
-/* 얹은 그림: 문서에 놓이는 크기 기준 300dpi로 줄여 저장 (PNG 투명 유지) */
+/* 얹은 그림: 문서에 놓이는 크기 기준(150/300dpi)으로 줄여 저장 (PNG 투명 유지) */
 async function bakedSticker(it, b) {
-  const img = b.img, tw = Math.round(b.fw * it.w / 25.4 * 300), th = Math.round(b.fh * it.h / 25.4 * 300);
+  const img = b.img, tw = Math.round(b.fw * it.w / 25.4 * DPI()), th = Math.round(b.fh * it.h / 25.4 * DPI());
   if (!doc.shrink || img.pw <= tw * 1.1 || img.ph <= th * 1.1) return { data:dataUrlBytes(img.dataUrl), mime:img.mime, ext:img.ext, pw:img.pw, ph:img.ph };
   const im = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = img.dataUrl; });
   const c = document.createElement('canvas'); c.width = tw; c.height = th;
   const ctx = c.getContext('2d'); ctx.imageSmoothingQuality = 'high'; ctx.drawImage(im, 0, 0, tw, th);
   const jpg = img.mime === 'image/jpeg';
   return { data:dataUrlBytes(c.toDataURL(jpg ? 'image/jpeg' : 'image/png', 0.9)), mime:jpg ? 'image/jpeg' : 'image/png', ext:jpg ? 'jpg' : 'png', pw:tw, ph:th };
+}
+function opaque(ctx, W, H) {
+  const d = ctx.getImageData(0, 0, W, H).data;
+  for (let i = 3; i < d.length; i += 16) if (d[i] < 250) return false;
+  return true;
 }
 async function bakedImage(it) {
   const mos = it.boxes.filter(b => b.shape === 'mos');
@@ -2542,8 +3084,12 @@ async function bakedImage(it) {
     pixelate(ctx, im, sx, sy, sw, sh, Math.round(b.fx * W), Math.round(b.fy * H), Math.max(1, Math.round(b.fw * W)), Math.max(1, Math.round(b.fh * H)), mosaicCell(it, b));
   });
   ctx.imageSmoothingEnabled = true;
-  const jpg = it.img.mime === 'image/jpeg';
-  const url = c.toDataURL(jpg ? 'image/jpeg' : 'image/png', 0.9);
+  let jpg = it.img.mime === 'image/jpeg', url = c.toDataURL(jpg ? 'image/jpeg' : 'image/png', 0.9);
+  if (!jpg && doc.shrink && opaque(ctx, W, H)) {
+    // 투명한 곳이 없는 PNG(사진·스크린샷): JPG가 훨씬 작으면 JPG로. 단색 도표는 PNG가 더 작아 그대로 둠
+    const j = c.toDataURL('image/jpeg', 0.92);
+    if (j.length < url.length * 0.6) { url = j; jpg = true; }
+  }
   const out = { data:dataUrlBytes(url), mime:jpg ? 'image/jpeg' : 'image/png', ext:jpg ? 'jpg' : 'png', pw:W, ph:H };
   // 다시 저장했는데 오히려 커지면(드문 경우) 원본을 씀
   if (!mos.length && out.data.length > imgBytes(it)) return { data:dataUrlBytes(it.img.dataUrl), mime:it.img.mime, ext:it.img.ext, pw:it.img.pw, ph:it.img.ph };
