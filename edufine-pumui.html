@@ -34,6 +34,7 @@
   --ok:#6fcf9b; --ok-soft:#173327; --warn:#e7b65a; --warn-soft:#352a12; --err:#f08a80; --err-soft:#3a1d1a;
   --doc:#1f2629; --doc-line:#46504f; color-scheme:dark; }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{margin:0}
 body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:14.5px;line-height:1.55}
 .wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
@@ -136,7 +137,7 @@ details summary{cursor:pointer;font-size:13px;color:var(--accent);font-weight:60
       <div class="grid2">
         <div class="field"><label for="t1year">학년도</label><input type="text" id="t1year" placeholder="2026"></div>
         <div class="field"><label for="t1term">학기</label><select id="t1term"><option value="1">1학기</option><option value="2" selected>2학기</option></select></div>
-        <div class="field"><label for="t1rel">1. 관련 (문서번호)</label><input type="text" id="t1rel" placeholder="예원초등학교-10021(2026. 8. 31.)"></div>
+        <div class="field"><label for="t1rel">1. 관련 (문서번호)</label><input type="text" id="t1rel" placeholder="○○초등학교-0000(2026. 0. 0.)"></div>
       </div>
     </div>
     <div class="step">
@@ -153,7 +154,7 @@ details summary{cursor:pointer;font-size:13px;color:var(--accent);font-weight:60
       <label class="drop" id="t2drop">
         <input type="file" id="t2file" accept=".pdf" multiple hidden>
         <strong>견적서 PDF를 끌어다 놓거나 클릭해서 고르세요</strong>
-        <span class="hint">신한오엔씨 견적서 양식을 자동으로 읽습니다. 다른 업체는 아래 표에 직접 입력하세요.</span>
+        <span class="hint">견적서의 품목 표(품목명·수량·단가·금액)를 자동으로 읽습니다. 읽지 못한 품목은 아래 표에 직접 입력하세요.</span>
         <span class="files" id="t2fname"></span>
       </label>
       <div class="grid2">
@@ -218,7 +219,7 @@ details summary{cursor:pointer;font-size:13px;color:var(--accent);font-weight:60
         <span class="files" id="t4fname"></span>
       </label>
       <div class="grid2">
-        <div class="field"><label for="t4rel">1. 관련 (문서번호)</label><input type="text" id="t4rel" value="예원초등학교-3560(2026. 3. 26.)"></div>
+        <div class="field"><label for="t4rel">1. 관련 (문서번호)</label><input type="text" id="t4rel" placeholder="○○초등학교-0000(2026. 0. 0.)"></div>
         <div class="field"><label for="t4grade">학년</label><select id="t4grade"><option value="">전체</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
         <div class="field"><label>&nbsp;</label><label style="font-weight:500;color:var(--ink)"><input type="checkbox" id="t4todo"> 강사비 품의 안 한 건만 보기</label></div>
       </div>
@@ -395,7 +396,7 @@ function qpParse(pages){
   out.totals.grand = numNear(/총\s*구\s*매\s*금\s*액|총\s*결\s*제\s*금\s*액/);
   // '합계' 줄 숫자들 (마지막 것)
   pageLines.forEach((lines,pi)=>{ for(const L of lines){ const seg=L.segs.find(s=>/^(총\s*)?합\s*계$/.test(s.text)); if(seg){ const nums=L.segs.filter(s=>s!==seg && /\d/.test(s.text)).map(s=>qpNum(s.text)); if(nums.length) out.totals.sumLine=nums; } } });
-  // 신한식: 금 액 : 삼만구천육백 원 정 (￦ 39,600원)
+  // 한글 금액 표기: 금 액 : 삼만구천육백 원 정 (￦ 39,600원)
   for(const t of allText){
     const m=t.match(/금\s*액\s*[:：]?\s*([일이삼사오육칠팔구십백천만억\s]+)\s*원/);
     if(m){ out.totals.korean=qpKorNum(m[1]); out.totals.koreanText=m[1].replace(/\s/g,''); const w=t.match(/[￦₩]\s*([\d,]+)/); if(w) out.totals.won=qpNum(w[1]); }
@@ -682,7 +683,6 @@ async function pdfPages(file){
 }
 function vendorOf(pages){
   const t=pages.map(p=>p.items.map(i=>i.str).join('')).join(' ');
-  if(/신한오엔씨/.test(t)) return '신한오엔씨';
   if(/지마켓|G\s*마켓|Gmarket/i.test(t)) return 'G마켓';
   if(/에스에스지닷컴|SSG\.COM/i.test(t)) return 'SSG';
   if(/쿠팡/.test(t)) return '쿠팡';
@@ -939,6 +939,10 @@ $('#t4list').addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&
 ['t4y','t4b','t4p','t4n','t4u','t4h','t4c','t4mt','t4ma','t4rel'].forEach(id=>$('#'+id).addEventListener('input',t4Output));
 $('#t4manual').addEventListener('change',t4Output);
 
+// 학교마다 다른 값(관련 문서번호, 기본 문구)은 이 브라우저에만 기억
+(function(){ const keep=['t1rel','t4rel','t2title','t2intro','t3title','t3purpose'];
+  keep.forEach(id=>{ const el=$('#'+id); try{ const v=localStorage.getItem('pumui.'+id); if(v!=null) el.value=v; }catch(e){}
+    el.addEventListener('input',()=>{ try{ localStorage.setItem('pumui.'+id, el.value); }catch(e){} }); }); })();
 if(!window.XLSX||!window.JSZip||!window.pdfjsLib) setTimeout(()=>toast('일부 구성요소를 불러오지 못했습니다. 인터넷에 연결된 상태에서 열어 주세요'),400);
 </script>
 </body>
