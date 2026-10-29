@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Nanum+Myeongjo:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
 <style>
@@ -108,6 +109,12 @@ details summary{cursor:pointer;font-size:13px;color:var(--accent);font-weight:60
 .muted{color:var(--muted)}
 .mono{font-family:var(--f-num)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+footer.site{margin-top:28px;padding-top:14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+footer.site p{margin:0 0 4px}
+footer.site a{color:inherit}
+footer.site details{margin-top:6px}
+footer.site summary{cursor:pointer;width:max-content;max-width:100%}
+footer.site ul{margin:6px 0 0;padding-left:18px}
 </style>
 </head>
 <body>
@@ -223,15 +230,16 @@ details summary{cursor:pointer;font-size:13px;color:var(--accent);font-weight:60
   <!-- ===== 4. 강사료 ===== -->
   <section class="panel" id="t4" role="tabpanel" hidden>
     <div class="step">
-      <h2><span class="k">입력</span>강사 관리 시트 (엑셀 또는 CSV)</h2>
+      <h2><span class="k">입력</span>강사 대장 (엑셀) 또는 강사 관리 시트</h2>
       <label class="drop" id="t4drop">
         <input type="file" id="t4file" accept=".xlsx,.xls,.csv" hidden>
         <strong>시트 파일을 끌어다 놓거나 클릭해서 고르세요</strong>
-        <span class="hint">구글 시트에서 [파일 → 다운로드 → Microsoft Excel(.xlsx)]로 받은 파일</span>
+        <span class="hint">강사 관리 도우미에서 저장한 강사 대장, 또는 구글 시트에서 [파일 → 다운로드 → Microsoft Excel]로 받은 파일</span>
         <span class="files" id="t4fname"></span>
       </label>
       <div class="grid2">
         <div class="field"><label for="t4rel">1. 관련 (문서번호)</label><input type="text" id="t4rel" placeholder="○○초등학교-0000(2026. 0. 0.)"></div>
+        <div class="field"><label for="t4year">학년도</label><select id="t4year"><option value="">전체</option></select></div>
         <div class="field"><label for="t4grade">학년</label><select id="t4grade"><option value="">전체</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
         <div class="field"><label>&nbsp;</label><label style="font-weight:500;color:var(--ink)"><input type="checkbox" id="t4todo"> 강사비 품의 안 한 건만 보기</label></div>
       </div>
@@ -242,13 +250,17 @@ details summary{cursor:pointer;font-size:13px;color:var(--accent);font-weight:60
       <div class="grid2">
         <div class="field"><label for="t4y">학년도</label><input type="text" id="t4y"></div>
         <div class="field"><label for="t4b">예산/구분</label><input type="text" id="t4b"></div>
+        <div class="field"><label for="t4g">학년</label><input type="text" id="t4g"></div>
         <div class="field"><label for="t4p">프로그램명</label><input type="text" id="t4p"></div>
         <div class="field"><label for="t4n">강사명</label><input type="text" id="t4n"></div>
+        <div class="field"><label for="t4per">수업기간</label><input type="text" id="t4per" placeholder="2026. 8. 31. ~ 10. 12.(12회)"></div>
+        <div class="field"><label for="t4att">붙임</label><input type="text" id="t4att" value="강사카드 및 통장사본 1부."></div>
       </div>
       <div class="grid2">
         <div class="field"><label for="t4u">시간당 단가(원)</label><input type="number" id="t4u" min="0" step="1000"></div>
         <div class="field"><label for="t4h">시간(회)</label><input type="number" id="t4h" min="0"></div>
         <div class="field"><label for="t4c">학급</label><input type="number" id="t4c" min="0"></div>
+        <div class="field"><label for="t4x">추가시간 (발표회 등)</label><input type="number" id="t4x" min="0" value="0"></div>
         <div class="field"><label><input type="checkbox" id="t4manual"> 산출내역 직접 입력 (인원당 재료비 등)</label></div>
       </div>
       <div class="grid2" id="t4manualbox" hidden>
@@ -259,6 +271,21 @@ details summary{cursor:pointer;font-size:13px;color:var(--accent);font-weight:60
     </div>
     <div class="step" id="t4out"></div>
   </section>
+  <footer class="site">
+    <p>에듀파인 품의 도우미 v1.0 · 2026-10-29 · 만든 사람: <a href="https://blog.naver.com/oderobong" target="_blank" rel="noopener">blog.naver.com/oderobong</a></p>
+    <p>파일 내용은 서버로 전송되지 않고 이 브라우저 안에서만 처리됩니다. 처리용 공개 라이브러리만 CDN(cdnjs)에서 불러옵니다.</p>
+    <details>
+      <summary>만든 사람 · 사용한 공개 소프트웨어</summary>
+      <ul>
+      <li>만든 사람: <a href="https://blog.naver.com/oderobong" target="_blank" rel="noopener">blog.naver.com/oderobong</a> · 소스: <a href="https://github.com/wonwongemini-ctrl/school-tool" target="_blank" rel="noopener">github.com/wonwongemini-ctrl/school-tool</a></li>
+      <li><a href="https://sheetjs.com" target="_blank" rel="noopener">SheetJS</a> 0.18.5 (Apache-2.0) · 엑셀 읽기</li>
+      <li><a href="https://github.com/exceljs/exceljs" target="_blank" rel="noopener">ExcelJS</a> 4.4.0 (MIT) · 엑셀 만들기</li>
+      <li><a href="https://stuk.github.io/jszip/" target="_blank" rel="noopener">JSZip</a> 3.10.1 (MIT) · 엑셀 파일 묶기</li>
+      <li><a href="https://mozilla.github.io/pdf.js/" target="_blank" rel="noopener">pdf.js</a> 3.11.174 (Apache-2.0) · PDF 견적서 읽기</li>
+      <li><a href="https://github.com/IBM/plex" target="_blank" rel="noopener">IBM Plex Sans KR · Mono</a> (SIL OFL 1.1) · 화면 글꼴, Google Fonts로 불러옴</li>
+      </ul>
+    </details>
+  </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -506,6 +533,19 @@ function bindDrop(dropId, inputId, onFiles){
   ['dragleave','drop'].forEach(ev=>d.addEventListener(ev,e=>{e.preventDefault(); d.classList.remove('over');}));
   d.addEventListener('drop',e=>{ const f=[...e.dataTransfer.files]; if(f.length) onFiles(f); });
 }
+// 한셀(HCell)로 저장한 xlsx: 서식 있는 글자(rPr)에 한셀 전용 태그가 있어 읽기 도구가 멈춤 → 미리 정리
+async function readWorkbook(buf){
+  let data=buf;
+  if(window.JSZip){ try{ const z=await JSZip.loadAsync(buf); let changed=false;
+    for(const n of Object.keys(z.files)){ if(!/^xl\/(sharedStrings|worksheets\/sheet\d+)\.xml$/.test(n)) continue; const s=await z.file(n).async('string');
+      if(/<(\w+:)?rPr\b/.test(s) && /haansoft|hs:/.test(s)){ z.file(n, s.replace(/<(\w+:)?rPr\b[^>]*\/>/g,'').replace(/<(\w+:)?rPr\b[^>]*>[\s\S]*?<\/(\w+:)?rPr>/g,'')); changed=true; } }
+    if(changed) data=await z.generateAsync({type:'arraybuffer'}); }catch(e){} }
+  const wb=XLSX.read(data,{type:'array'});
+  for(const sn of wb.SheetNames){ const ws=wb.Sheets[sn]; if(!ws) continue; let r1=1e9,c1=1e9,r2=-1,c2=-1;
+    for(const k of Object.keys(ws)){ if(k[0]==='!') continue; const a=XLSX.utils.decode_cell(k); if(a.r<r1)r1=a.r; if(a.c<c1)c1=a.c; if(a.r>r2)r2=a.r; if(a.c>c2)c2=a.c; }
+    if(r2>=0) ws['!ref']=XLSX.utils.encode_range({s:{r:Math.min(r1,0),c:Math.min(c1,0)},e:{r:r2,c:c2}}); }
+  return wb;
+}
 function readBuf(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsArrayBuffer(file); }); }
 function libsOk(names){ const miss=names.filter(n=>!window[n]); if(miss.length){ toast('프로그램 구성요소를 불러오지 못했습니다. 인터넷 연결을 확인하세요'); return false;} return true; }
 
@@ -690,7 +730,7 @@ async function t1Load(files){
         if(r.totals.grand!=null) q.checks.push([sum+q.shipping===r.totals.grand?'ok':'err',`품목 ${won(sum)} + 배송비 ${won(q.shipping)} ${sum+q.shipping===r.totals.grand?'=':'≠'} 총 구매금액 ${won(r.totals.grand)}원`]);
         S1.quotes.push(q); continue;
       }
-      const wb=XLSX.read(await readBuf(f),{type:'array'});
+      const wb=await readWorkbook(await readBuf(f));
       const r=parseSupplyBook(wb);
       if(r.grades.length){
         S1.sheetFiles++;
@@ -918,7 +958,7 @@ async function t2Load(files){
   for(const f of files){
     const rec={name:f.name, res:null, err:''};
     if(!/\.pdf$/i.test(f.name)){
-      try{ if(!libsOk(['XLSX'])) continue; const xq=excelQuote(XLSX.read(await readBuf(f),{type:'array'}));
+      try{ if(!libsOk(['XLSX'])) continue; const xq=excelQuote(await readWorkbook(await readBuf(f)));
         if(!xq){ rec.err='견적서 표(상품명·수량·금액)를 찾지 못했습니다'; }
         else { rec.vendor=xq.vendor; rec.xchecks=xq.checks;
           xq.items.forEach(it=>{ const ok=Number.isInteger(it.price); S2.rows.push({name:it.option?`${it.name} (${it.option})`:it.name, qty:it.qty||1, price:ok?it.price:Math.round(it.amt/(it.qty||1)), amount:it.amt, src:f.name, warn:ok?'':'단가가 원 단위로 나누어떨어지지 않습니다', fix:!ok}); });
@@ -986,7 +1026,7 @@ async function t3Load(files){
   for(const f of files){
     const rec={name:f.name,res:null,err:''};
     if(!/\.pdf$/i.test(f.name)){
-      try{ if(!libsOk(['XLSX'])) continue; const xq=excelQuote(XLSX.read(await readBuf(f),{type:'array'}));
+      try{ if(!libsOk(['XLSX'])) continue; const xq=excelQuote(await readWorkbook(await readBuf(f)));
         if(!xq){ rec.err='견적서 표(상품명·수량·금액)를 찾지 못했습니다. 아래 표에 직접 입력하세요'; }
         else { rec.vendor=xq.vendor; rec.xchecks=xq.checks;
           xq.items.forEach(it=>{ const qty=it.qty||1, price=it.amt/qty, ok=Number.isInteger(price); const base={name:it.name, option:it.option};
@@ -1059,23 +1099,35 @@ $('#t3add').onclick=()=>{ S3.rows.push({name:'',qty:1,price:0,src:''}); renderRo
 // ================= 4. 강사료 =================
 const S4={rows:[],sel:null};
 function parseLecturerSheet(aoa){
-  const hr=aoa.findIndex(r=>r&&r.some(c=>/강사명/.test(String(c??''))));
+  const hr=aoa.slice(0,6).findIndex(r=>r&&r.some(c=>/^(강사명|성명)$/.test(String(c??'').replace(/\s/g,''))));
   if(hr<0) return [];
   const H=aoa[hr].map(c=>String(c??'').replace(/\s/g,''));
   const ci=re=>H.findIndex(h=>re.test(h));
-  const col={name:ci(/강사명/),grade:ci(/^학년/),prog:ci(/프로그램/),budget:ci(/예산|구분/),start:ci(/시작/),end:ci(/종료일/),calc:ci(/산출/),crime:ci(/범죄/),contract:ci(/계약/),pumui:ci(/품의/),done:H.findIndex((h,i)=>/^종료$/.test(h))};
+  const ledger = ci(/^성명$/)>=0 && ci(/강의명/)>=0; // 강사 대장 형식
+  const col={name:ci(/^(강사명|성명)$/),grade:ci(/^학년$/),prog:ci(/프로그램명|강의명/),budget:ci(/^(사업명|예산\/?구분|구분)$/),year:ci(/^학년도$/),start:ci(/^시작/),end:ci(/종료일/),calc:ci(/산출/),
+    sess:ci(/^(횟수|강의횟수)$/),cls:ci(/^(학급|강의학급)$/),extra:ci(/추가시간/),rate:ci(/^(시간당강사료|회당강사료)$/),basis:ci(/^(근거공문|근거|관련공문)$/),pumui:ci(/^(강사비품의|강사료품의일)$/)};
+  if(col.grade<0 && ledger){ // 기존 대장: 학년 열 머리글이 비어 있음
+    H.forEach((h,i)=>{ if(h||col.grade>=0) return; let n=0,t=0; for(let r=hr+1;r<aoa.length;r++){ const v=aoa[r]&&aoa[r][i]; if(v==null||v==='') continue; t++; if(/^[1-6]$/.test(String(v).trim())) n++; } if(t&&n/t>=0.6) col.grade=i; }); }
   const out=[];
   for(let r=hr+1;r<aoa.length;r++){
-    const row=aoa[r]; if(!row) continue;
-    const name=String(row[col.name]??'').trim(); if(!name) continue;
+    const row=aoa[r]; if(!row) continue; const g=i=>i>=0?row[i]:null;
+    const name=String(g(col.name)??'').trim(); if(!name) continue;
     const cells=row.map(c=>String(c??'').trim());
-    const sess=cells.find(c=>/^\d+\s*회$/.test(c)); const cls=cells.find(c=>/^\d+\s*학급$/.test(c));
     const clean=s=>String(s??'').replace(/\s*\n\s*/g,'').trim();
-    out.push({ idx:out.length, name, grade:String(row[col.grade]??'').trim(), prog:clean(row[col.prog]).replace(/\s+/g,' '), budget:clean(row[col.budget]),
-      start:String(row[col.start]??'').replace(/\n/g,' ').trim(), end:String(row[col.end]??'').trim(),
-      sessions: sess? parseInt(sess) : null, classes: cls? parseInt(cls) : null,
-      calc:String(row[col.calc]??'').replace(/\s*\n\s*/g,' ').trim(),
-      pumui: col.pumui>=0? String(row[col.pumui]??'').trim().toUpperCase() : '' });
+    let sessions=numK(g(col.sess)), classes=numK(g(col.cls));
+    if(sessions==null){ const s=cells.find(c=>/^\d+\s*회$/.test(c)); if(s) sessions=parseInt(s); }
+    if(classes==null){ const s=cells.find(c=>/^\d+\s*학급$/.test(c)); if(s) classes=parseInt(s); }
+    const cm=String(g(col.sess)??'').match(/(\d+)\s*학급/); if(cm&&!classes) classes=+cm[1];
+    const dfix=v=>{ const t=String(v??'').replace(/\n/g,' ').trim(); return /^\d{5}(\.\d+)?$/.test(t)&&+t>20000&&+t<80000? XLSX.SSF.format('yyyy-mm-dd',+t) : t; };
+    const start=dfix(g(col.start));
+    const year=String(g(col.year)??'').trim() || (start.match(/(20\d\d)/)||[])[1] || '';
+    const pv=String(g(col.pumui)??'').trim();
+    const rec={ idx:out.length, name, year, grade:String(g(col.grade)??'').replace(/학년/,'').trim(), prog:clean(g(col.prog)).replace(/\s+/g,' '), budget:clean(g(col.budget)),
+      start, end:dfix(g(col.end)), sessions, classes, calc:String(g(col.calc)??'').replace(/\s*\n\s*/g,' ').trim(),
+      basis: col.basis>=0? String(g(col.basis)??'').trim() : '',
+      pumui: col.pumui<0? '' : (/^x$/i.test(pv)||!pv? '' : 'O') };
+    if(ledger && col.rate>=0){ rec.direct={unit:numK(g(col.rate))||0, hours:sessions||0, classes:classes||1, extra:numK(g(col.extra))||0}; }
+    out.push(rec);
   }
   return out;
 }
@@ -1090,30 +1142,44 @@ async function t4Load(files){
   if(!libsOk(['XLSX'])) return;
   const f=files[0]; $('#t4fname').textContent='불러온 파일: '+f.name;
   try{
-    let wb; if(/\.csv$/i.test(f.name)){ wb=XLSX.read(new TextDecoder('utf-8').decode(await readBuf(f)),{type:'string'}); } else wb=XLSX.read(await readBuf(f),{type:'array'});
-    let rows=[]; for(const sn of wb.SheetNames){ const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,defval:null}); rows=parseLecturerSheet(aoa); if(rows.length) break; }
-    S4.rows=rows; S4.sel=null; if(!rows.length) toast("'강사명' 머리글이 있는 시트를 찾지 못했습니다");
+    let wb; if(/\.csv$/i.test(f.name)){ wb=XLSX.read(new TextDecoder('utf-8').decode(await readBuf(f)),{type:'string'}); } else wb=await readWorkbook(await readBuf(f));
+    let rows=[]; for(const sn of wb.SheetNames){ if(/강의별\s*기록|서류|안내/.test(sn)) continue; const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,defval:null}); rows=parseLecturerSheet(aoa); if(rows.length) break; }
+    // 강사 관리 도우미 대장: '강의별 기록' 시트의 강사료 품의일로 품의 여부 표시
+    const rs=wb.SheetNames.find(n=>/강의별\s*기록/.test(n));
+    if(rs){ const aoa=XLSX.utils.sheet_to_json(wb.Sheets[rs],{header:1,raw:false,defval:null}); const H=(aoa[0]||[]).map(c=>String(c??'').replace(/\s/g,''));
+      const ci=re=>H.findIndex(h=>re.test(h)); const iy=ci(/^학년도$/), inm=ci(/^성명$/), ig=ci(/^학년$/), it=ci(/강의명/), ip=ci(/강사료품의일/);
+      const done=new Set(); aoa.slice(1).forEach(r=>{ if(r&&ip>=0&&String(r[ip]??'').trim()) done.add([r[iy],r[inm],String(r[ig]??'').replace(/학년/,''),r[it]].map(v=>String(v??'').trim()).join('|')); });
+      rows.forEach(r=>{ if(done.has([r.year,r.name,r.grade,r.prog].join('|'))) r.pumui='O'; }); }
+    S4.rows=rows; S4.sel=null; if(!rows.length) toast("'강사명'(또는 '성명') 머리글이 있는 시트를 찾지 못했습니다");
+    const ys=[...new Set(rows.map(r=>r.year).filter(Boolean))].sort().reverse(); const cur=String(new Date().getFullYear());
+    $('#t4year').innerHTML='<option value="">전체</option>'+ys.map(y=>`<option>${y}</option>`).join(''); $('#t4year').value= ys.includes(cur)? cur : (ys[0]||'');
   }catch(e){ console.error(e); toast('시트 파일을 읽지 못했습니다'); S4.rows=[]; }
   t4List();
 }
 function t4List(){
-  const g=$('#t4grade').value, todo=$('#t4todo').checked;
+  const g=$('#t4grade').value, todo=$('#t4todo').checked, yy=$('#t4year').value;
   if(!S4.rows.length){ $('#t4list').innerHTML='<div class="empty">시트를 올리면 학년별 강사·프로그램 목록이 나옵니다.</div>'; return; }
-  const list=S4.rows.filter(r=>(!g||r.grade===g)&&(!todo||r.pumui!=='O'));
+  const list=S4.rows.filter(r=>(!yy||r.year===yy)&&(!g||r.grade===g)&&(!todo||r.pumui!=='O'));
   if(!list.length){ $('#t4list').innerHTML='<div class="empty">조건에 맞는 강사가 없습니다.</div>'; return; }
   $('#t4list').innerHTML='<div class="lecturers">'+list.map(r=>`<div class="lect ${S4.sel===r.idx?'sel':''}" data-idx="${r.idx}" tabindex="0" role="button">
      <span class="pill info">${esc(r.grade)}학년</span>
      <div><div class="t">${esc(r.name)} · ${esc(r.prog)}</div><div class="d">${esc(r.budget)} · ${esc(r.start)}${r.end?' ~ '+esc(r.end):''}${r.sessions?` · ${r.sessions}회`:''}${r.classes?` · ${r.classes}학급`:''}</div></div>
      <span class="pill ${r.pumui==='O'?'ok':'warn'}">${r.pumui==='O'?'품의함':'미품의'}</span></div>`).join('')+'</div>';
 }
+function anyDate(t){ const m=String(t||'').match(/(20\d\d)\s*[.\-\/년]\s*(\d{1,2})\s*[.\-\/월]\s*(\d{1,2})/); return m? new Date(+m[1],+m[2]-1,+m[3]) : null; }
+function periodStr(start,end,n){ const a=anyDate(start), b=anyDate(end); if(!a) return String(start||'').trim(); const f=(d,y)=>`${y?d.getFullYear()+'. ':''}${d.getMonth()+1}. ${d.getDate()}.`; return `${f(a,true)}${b?` ~ ${f(b,b.getFullYear()!==a.getFullYear())}`:''}${n?`(${n}회)`:''}`; }
 function t4Select(idx){
   const r=S4.rows[idx]; S4.sel=idx; t4List(); $('#t4edit').hidden=false;
-  const yr=(r.start.match(/(20\d\d)/)||[])[1]||String(new Date().getFullYear());
-  $('#t4y').value=yr; $('#t4b').value=r.budget; $('#t4p').value=r.prog; $('#t4n').value=r.name;
+  const yr=r.year||(r.start.match(/(20\d\d)/)||[])[1]||String(new Date().getFullYear());
+  if(r.basis) $('#t4rel').value=r.basis;
+  $('#t4y').value=yr; $('#t4b').value=r.budget; $('#t4g').value=r.grade||''; $('#t4p').value=r.prog; $('#t4n').value=r.name;
   const c=parseCalc(r.calc); S4.parsed=c;
-  if(c.std){ $('#t4u').value=c.unit; $('#t4h').value=c.hours; $('#t4c').value=c.classes; $('#t4manual').checked=false; }
+  $('#t4x').value=0;
+  if(r.direct){ $('#t4u').value=r.direct.unit; $('#t4h').value=r.direct.hours; $('#t4c').value=r.direct.classes; $('#t4x').value=r.direct.extra; $('#t4manual').checked=false; S4.parsed={}; }
+  else if(c.std){ $('#t4u').value=c.unit; $('#t4h').value=c.hours; $('#t4c').value=c.classes; $('#t4manual').checked=false; }
   else if(!r.calc){ $('#t4u').value=40000; $('#t4h').value=r.sessions||''; $('#t4c').value=r.classes||''; $('#t4manual').checked=false; }
   else { $('#t4manual').checked=true; $('#t4mt').value=r.calc.replace(/(\d)\.(\d{3})(?!\d)/g,'$1,$2'); $('#t4ma').value=c.total||''; $('#t4u').value=''; $('#t4h').value=r.sessions||''; $('#t4c').value=r.classes||''; }
+  $('#t4per').value=periodStr(r.start,r.end, r.direct? r.direct.hours : (c.std? c.hours : r.sessions));
   $('#t4manualbox').hidden=!$('#t4manual').checked;
   t4Output();
   $('#t4edit').scrollIntoView({behavior:'smooth',block:'start'});
@@ -1126,9 +1192,11 @@ function t4Output(){
   let calcText, amount; const checks=[];
   if(manual){ calcText=$('#t4mt').value.trim(); amount=Number($('#t4ma').value)||0; if(!amount) checks.push(['err','금액을 입력하세요']); }
   else{
-    const u=Number($('#t4u').value)||0, h=Number($('#t4h').value)||0, cl=Number($('#t4c').value)||0;
-    amount=u*h*cl; calcText=`${won(u)}원*${h}시간*${cl}학급 = ${won(amount)}원`;
-    if(!r.calc) checks.push(['warn','시트에 산출내역이 비어 있어 단가 40,000원과 횟수·학급으로 계산했습니다. 맞는지 확인하세요']);
+    const u=Number($('#t4u').value)||0, h=Number($('#t4h').value)||0, cl=Number($('#t4c').value)||0, x=Number($('#t4x').value)||0;
+    amount=u*(h*cl+x); calcText= x? `${won(u)}원*(${h}시간*${cl}학급+${x}시간) = ${won(amount)}` : `${won(u)}원*${h}시간*${cl}학급 = ${won(amount)}`;
+    if(r.direct && !r.direct.unit) checks.push(['warn','대장에 시간당 강사료가 비어 있습니다. 단가를 입력하세요']);
+    else if(r.direct) checks.push(['ok',`강사 대장 값: 시간당 ${won(r.direct.unit)}원 × (${r.direct.hours}회 × ${r.direct.classes}학급${r.direct.extra?` + ${r.direct.extra}시간`:''})`]);
+    else if(!r.calc) checks.push(['warn','시트에 산출내역이 비어 있어 단가 40,000원과 횟수·학급으로 계산했습니다. 맞는지 확인하세요']);
     if(c.std && c.total!=null){ const sheetCalc=c.unit*c.hours*c.classes; if(sheetCalc!==c.total) checks.push(['err',`시트 산출내역 계산이 맞지 않습니다: ${won(c.unit)}×${c.hours}×${c.classes} = ${won(sheetCalc)} ≠ ${won(c.total)}`]); else checks.push(['ok',`시트 산출내역 ${won(c.unit)}원×${c.hours}시간×${c.classes}학급 = ${won(c.total)}원 (계산 맞음)`]); }
     if(r.sessions!=null && h && r.sessions!==h) checks.push(['warn',`시트의 횟수(${r.sessions}회)와 시간(${h})이 다릅니다`]);
     if(r.classes!=null && cl && r.classes!==cl) checks.push(['warn',`시트의 학급수(${r.classes}학급)와 입력 학급(${cl})이 다릅니다`]);
@@ -1138,21 +1206,25 @@ function t4Output(){
   const body=[
     `1. 관련: ${$('#t4rel').value.trim()}`,
     `2. ${cls} 강사비를 아래와 같이 지급하고자 합니다.`,
-    `  가. 수업명: ${cls}`,
-    `  나. 강사명: ${n}`,
-    `  다. 강사료 산출내역: ${calcText}${/[.]$/.test(calcText)?'':'.'}  끝.`
+    `  가. 수 업 명: ${$('#t4g').value.trim()?$('#t4g').value.trim().replace(/학년$/,'')+'학년 ':''}${p}`,
+    `  나. 수업기간: ${$('#t4per').value.trim()}`,
+    `  다. 강 사 명: ${n}`,
+    `  라. 강 사 료: ${won(amount)}원(금${korAmount(amount)}원정)`,
+    `  마. 산출내역: ${calcText}`,
+    ``,
+    `붙임  ${$('#t4att').value.trim()||'강사카드 및 통장사본 1부.'}  끝.`
   ].join('\n');
   renderOutput('t4out',{title:`${cls} 강사비 지급`, body, rows:[{name:`${cls} 강사료`,qty:1,price:amount}], fname:`품목내역_강사료_${n}_${today()}.xls`});
 }
 bindDrop('t4drop','t4file',t4Load);
-$('#t4grade').addEventListener('change',t4List); $('#t4todo').addEventListener('change',t4List);
+$('#t4grade').addEventListener('change',t4List); $('#t4year').addEventListener('change',t4List); $('#t4todo').addEventListener('change',t4List);
 $('#t4list').addEventListener('click',e=>{ const el=e.target.closest('.lect'); if(el) t4Select(+el.dataset.idx); });
 $('#t4list').addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('lect')){ e.preventDefault(); t4Select(+e.target.dataset.idx);} });
-['t4y','t4b','t4p','t4n','t4u','t4h','t4c','t4mt','t4ma','t4rel'].forEach(id=>$('#'+id).addEventListener('input',t4Output));
+['t4y','t4b','t4g','t4p','t4n','t4per','t4att','t4u','t4h','t4c','t4x','t4mt','t4ma','t4rel'].forEach(id=>$('#'+id).addEventListener('input',t4Output));
 $('#t4manual').addEventListener('change',t4Output);
 
 // 학교마다 다른 값(관련 문서번호, 기본 문구)은 이 브라우저에만 기억
-(function(){ const keep=['t1rel','t4rel','t2title','t2intro','t3title','t3purpose'];
+(function(){ const keep=['t1rel','t4rel','t4att','t2title','t2intro','t3title','t3purpose'];
   keep.forEach(id=>{ const el=$('#'+id); try{ const v=localStorage.getItem('pumui.'+id); if(v!=null) el.value=v; }catch(e){}
     el.addEventListener('input',()=>{ try{ localStorage.setItem('pumui.'+id, el.value); }catch(e){} }); }); })();
 if(!window.XLSX||!window.pdfjsLib) setTimeout(()=>toast('일부 구성요소를 불러오지 못했습니다. 인터넷에 연결된 상태에서 열어 주세요'),400);
