@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Nanum+Myeongjo:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
 <style>
@@ -114,7 +114,7 @@ details summary{cursor:pointer;font-size:13px;color:var(--accent);font-weight:60
 <div class="wrap">
   <header class="top">
     <h1><small>교무실 · 에듀파인 지출 품의</small>에듀파인 품의 도우미</h1>
-    <p class="privacy">올린 파일은 이 브라우저 안에서만 읽고, 어디에도 저장하거나 보내지 않습니다. 기안문 본문과 품목내역 엑셀(에듀파인 업로드 양식)을 만듭니다.</p>
+    <p class="privacy">올린 파일은 이 브라우저 안에서만 읽고, 어디에도 저장하거나 보내지 않습니다. 기안문 본문과 에듀파인에 올릴 품목내역 엑셀(.xls)을 만듭니다.</p>
   </header>
 
   <nav class="tabs" role="tablist">
@@ -128,17 +128,29 @@ details summary{cursor:pointer;font-size:13px;color:var(--accent);font-weight:60
   <section class="panel" id="t1" role="tabpanel">
     <div class="step">
       <h2><span class="k">입력</span>학년별 학습준비물 신청 엑셀</h2>
-      <label class="drop" id="t1drop">
-        <input type="file" id="t1file" accept=".xlsx,.xls" hidden>
-        <strong>엑셀 파일을 끌어다 놓거나 클릭해서 고르세요</strong>
-        <span class="hint">학년별 시트(1학년~6학년)와 집계 시트가 있는 신청서 파일</span>
-        <span class="files" id="t1fname"></span>
-      </label>
       <div class="grid2">
         <div class="field"><label for="t1year">학년도</label><input type="text" id="t1year" placeholder="2026"></div>
         <div class="field"><label for="t1term">학기</label><select id="t1term"><option value="1">1학기</option><option value="2" selected>2학기</option></select></div>
         <div class="field"><label for="t1rel">1. 관련 (문서번호)</label><input type="text" id="t1rel" placeholder="○○초등학교-0000(2026. 0. 0.)"></div>
+        <div class="field"><label for="t1att">붙임 (비우면 자동)</label><input type="text" id="t1att" placeholder="자동: 신청내역 또는 학년별 견적서 N부"></div>
       </div>
+      <div class="filecard">
+        <div class="fname">학년별 수합 양식 내려받기</div>
+        <p class="hint">학년에 나눠 줄 신청서 엑셀입니다. 금액·소계·집계는 수식으로 자동 계산되고, 다 모이면 그대로 아래에 올리면 됩니다. 위의 학년도·학기가 제목에 들어갑니다.</p>
+        <div class="row">
+          <label for="t1lines" class="muted" style="font-size:12.5px;font-weight:600">학년별 줄 수</label>
+          <input type="number" id="t1lines" min="5" max="200" value="30" style="width:80px">
+          <button class="btn primary" id="t1form">전체 양식 (1~6학년 + 집계)</button>
+          <span class="muted" style="font-size:12.5px">학년별 파일:</span>
+          <button class="btn small" data-formg="1">1학년</button><button class="btn small" data-formg="2">2학년</button><button class="btn small" data-formg="3">3학년</button><button class="btn small" data-formg="4">4학년</button><button class="btn small" data-formg="5">5학년</button><button class="btn small" data-formg="6">6학년</button>
+        </div>
+      </div>
+      <label class="drop" id="t1drop">
+        <input type="file" id="t1file" accept=".xlsx,.xls,.pdf" multiple hidden>
+        <strong>신청서 엑셀이나 견적서를 끌어다 놓거나 클릭해서 고르세요</strong>
+        <span class="hint">신청서(전체 또는 학년별), 아이스크림몰 견적서 엑셀(.xls), 견적서 PDF를 섞어서 여러 개 올려도 됩니다. 계속 추가로 올릴 수 있습니다. 파일 이름에 '3학년'처럼 학년이 있으면 자동으로 지정됩니다.</span>
+        <span class="files" id="t1fname"></span>
+      </label>
     </div>
     <div class="step">
       <h2><span class="k">검증</span>단가 · 수량 · 금액 · 소계 · 총액 확인</h2>
@@ -150,10 +162,10 @@ details summary{cursor:pointer;font-size:13px;color:var(--accent);font-weight:60
   <!-- ===== 2. 정보화 기자재 ===== -->
   <section class="panel" id="t2" role="tabpanel" hidden>
     <div class="step">
-      <h2><span class="k">입력</span>견적서 PDF (여러 장 가능)</h2>
+      <h2><span class="k">입력</span>견적서 PDF · 엑셀 (여러 장 가능)</h2>
       <label class="drop" id="t2drop">
-        <input type="file" id="t2file" accept=".pdf" multiple hidden>
-        <strong>견적서 PDF를 끌어다 놓거나 클릭해서 고르세요</strong>
+        <input type="file" id="t2file" accept=".pdf,.xls,.xlsx" multiple hidden>
+        <strong>견적서(PDF 또는 엑셀)를 끌어다 놓거나 클릭해서 고르세요</strong>
         <span class="hint">견적서의 품목 표(품목명·수량·단가·금액)를 자동으로 읽습니다. 읽지 못한 품목은 아래 표에 직접 입력하세요.</span>
         <span class="files" id="t2fname"></span>
       </label>
@@ -180,11 +192,11 @@ details summary{cursor:pointer;font-size:13px;color:var(--accent);font-weight:60
   <!-- ===== 3. G마켓·SSG ===== -->
   <section class="panel" id="t3" role="tabpanel" hidden>
     <div class="step">
-      <h2><span class="k">입력</span>G마켓 · SSG 견적서 PDF (여러 장 가능)</h2>
+      <h2><span class="k">입력</span>G마켓 · SSG · 아이스크림몰 견적서 PDF · 엑셀 (여러 장 가능)</h2>
       <label class="drop" id="t3drop">
-        <input type="file" id="t3file" accept=".pdf" multiple hidden>
-        <strong>견적서 PDF를 끌어다 놓거나 클릭해서 고르세요</strong>
-        <span class="hint">크롬·엣지 인쇄 화면에서 'PDF로 저장'으로 만든 파일이어야 글자를 읽을 수 있습니다. 한컴 PDF로 저장한 파일은 그림이라 읽지 못합니다.</span>
+        <input type="file" id="t3file" accept=".pdf,.xls,.xlsx" multiple hidden>
+        <strong>견적서(PDF 또는 엑셀)를 끌어다 놓거나 클릭해서 고르세요</strong>
+        <span class="hint">엑셀 견적서(장바구니 견적 내려받기)가 가장 정확합니다. PDF는 크롬·엣지 인쇄 화면에서 'PDF로 저장'으로 만든 파일이어야 글자를 읽을 수 있고, 한컴 PDF로 저장한 파일은 그림이라 읽지 못합니다.</span>
         <span class="files" id="t3fname"></span>
       </label>
       <div class="grid2">
@@ -460,7 +472,6 @@ function qpParse(pages){
 </script>
 <script>
 // ================= 공통 =================
-const TPL = {"files": {"[Content_Types].xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\n<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">\n  <Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>\n  <Default Extension=\"xml\" ContentType=\"application/xml\"/>\n  <Override PartName=\"/docProps/app.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.extended-properties+xml\"/>\n  <Override PartName=\"/docProps/core.xml\" ContentType=\"application/vnd.openxmlformats-package.core-properties+xml\"/>\n  <Override PartName=\"/xl/drawings/drawing1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.drawing+xml\"/>\n  <Override PartName=\"/xl/sharedStrings.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml\"/>\n  <Override PartName=\"/xl/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"/>\n  <Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>\n  <Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>\n</Types>\n", "docProps/app.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Properties xmlns=\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\"><Application>Apache POI</Application></Properties>", "docProps/core.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\n<coreProperties xmlns=\"http://schemas.openxmlformats.org/package/2006/metadata/core-properties\" xmlns:cp=\"http://schemas.openxmlformats.org/package/2006/metadata/core-properties\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:dcterms=\"http://purl.org/dc/terms/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n  <dcterms:created xsi:type=\"dcterms:W3CDTF\">2026-10-29T00:33:54Z</dcterms:created>\n  <dc:creator>Apache POI</dc:creator>\n</coreProperties>\n", "_rels/.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n  <Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"xl/workbook.xml\"/>\n  <Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties\" Target=\"docProps/app.xml\"/>\n  <Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties\" Target=\"docProps/core.xml\"/>\n</Relationships>\n", "xl/sharedStrings.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<sst count=\"0\" uniqueCount=\"0\" xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"/>", "xl/styles.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<styleSheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><numFmts count=\"1\"><numFmt numFmtId=\"165\" formatCode=\"#,##0_ \"/></numFmts><fonts count=\"12\"><font><sz val=\"11.0\"/><color indexed=\"8\"/><name val=\"Calibri\"/><family val=\"2\"/><scheme val=\"minor\"/></font><font><name val=\"Dotum\"/><sz val=\"9.0\"/><color rgb=\"00FFFFFF\"/><b val=\"true\"/><u val=\"none\"/></font><font><name val=\"Dotum\"/><sz val=\"9.0\"/><color rgb=\"00FFFFFF\"/><b val=\"true\"/><u val=\"none\"/></font><font><name val=\"Dotum\"/><sz val=\"9.0\"/><color rgb=\"00FFFFFF\"/><b val=\"true\"/><u val=\"none\"/></font><font><name val=\"Dotum\"/><sz val=\"9.0\"/><color rgb=\"00FFFFFF\"/><b val=\"true\"/><u val=\"none\"/></font><font><name val=\"Dotum\"/><sz val=\"9.0\"/><color rgb=\"00FFFFFF\"/><b val=\"true\"/><u val=\"none\"/></font><font><name val=\"Dotum\"/><sz val=\"9.0\"/><color rgb=\"00000000\"/><u val=\"none\"/></font><font><name val=\"Dotum\"/><sz val=\"9.0\"/><color rgb=\"00000000\"/><u val=\"none\"/></font><font><name val=\"Dotum\"/><sz val=\"9.0\"/><color rgb=\"00000000\"/><u val=\"none\"/></font><font><name val=\"Dotum\"/><sz val=\"9.0\"/><color rgb=\"00000000\"/><u val=\"none\"/></font><font><name val=\"Dotum\"/><sz val=\"9.0\"/><color rgb=\"00000000\"/><u val=\"none\"/></font><font><name val=\"Dotum\"/><sz val=\"9.0\"/><color rgb=\"00000000\"/><u val=\"none\"/></font></fonts><fills count=\"6\"><fill><patternFill patternType=\"none\"/></fill><fill><patternFill patternType=\"darkGray\"/></fill><fill><patternFill><fgColor indexed=\"9\"/></patternFill></fill><fill><patternFill patternType=\"solid\"><fgColor indexed=\"9\"/></patternFill></fill><fill><patternFill patternType=\"solid\"><fgColor rgb=\"0059595B\"/></patternFill></fill><fill><patternFill patternType=\"solid\"><fgColor rgb=\"00FFFFFF\"/></patternFill></fill></fills><borders count=\"25\"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style=\"thin\"/></border><border><left style=\"thin\"><color rgb=\"00A4A4A5\"/></left></border><border><left style=\"thin\"><color rgb=\"00A4A4A5\"/></left><top style=\"thin\"/></border><border><left style=\"thin\"><color rgb=\"00A4A4A5\"/></left><top style=\"thin\"><color rgb=\"00A4A4A5\"/></top></border><border><left style=\"thin\"><color rgb=\"00A4A4A5\"/></left><right style=\"thin\"/><top style=\"thin\"><color rgb=\"00A4A4A5\"/></top></border><border><left style=\"thin\"><color rgb=\"00A4A4A5\"/></left><right style=\"thin\"><color rgb=\"00A4A4A5\"/></right><top style=\"thin\"><color rgb=\"00A4A4A5\"/></top></border><border><left style=\"thin\"><color rgb=\"00A4A4A5\"/></left><right style=\"thin\"><color rgb=\"00A4A4A5\"/></right><top style=\"thin\"><color rgb=\"00A4A4A5\"/></top><bottom style=\"thin\"/></border><border><left style=\"thin\"><color rgb=\"00A4A4A5\"/></left><right style=\"thin\"><color rgb=\"00A4A4A5\"/></right><top style=\"thin\"><color rgb=\"00A4A4A5\"/></top><bottom style=\"thin\"><color rgb=\"00A4A4A5\"/></bottom></border><border><left style=\"thin\"><color rgb=\"00A4A4A5\"/></left><right style=\"thin\"/></border><border><left style=\"thin\"><color rgb=\"00A4A4A5\"/></left><right style=\"thin\"><color rgb=\"00A4A4A5\"/></right></border><border><left style=\"thin\"><color rgb=\"00A4A4A5\"/></left><right style=\"thin\"><color rgb=\"00A4A4A5\"/></right><bottom style=\"thin\"/></border><border><left style=\"thin\"><color rgb=\"00A4A4A5\"/></left><right style=\"thin\"><color rgb=\"00A4A4A5\"/></right><bottom style=\"thin\"><color rgb=\"00A4A4A5\"/></bottom></border><border><right style=\"thin\"/></border><border><right style=\"thin\"><color rgb=\"00A4A4A5\"/></right></border><border><right style=\"thin\"><color rgb=\"00A4A4A5\"/></right><bottom style=\"thin\"/></border><border><right style=\"thin\"><color rgb=\"00A4A4A5\"/></right><bottom style=\"thin\"><color rgb=\"00A4A4A5\"/></bottom></border><border><left style=\"thin\"><color rgb=\"00D3D4D8\"/></left></border><border><left style=\"thin\"><color rgb=\"00D3D4D8\"/></left><right style=\"thin\"/></border><border><left style=\"thin\"><color rgb=\"00D3D4D8\"/></left><right style=\"thin\"><color rgb=\"00D3D4D8\"/></right></border><border><left style=\"thin\"><color rgb=\"00D3D4D8\"/></left><right style=\"thin\"><color rgb=\"00D3D4D8\"/></right><bottom style=\"thin\"/></border><border><left style=\"thin\"><color rgb=\"00D3D4D8\"/></left><right style=\"thin\"><color rgb=\"00D3D4D8\"/></right><bottom style=\"thin\"><color rgb=\"00D3D4D8\"/></bottom></border><border><right style=\"thin\"><color rgb=\"00D3D4D8\"/></right></border><border><right style=\"thin\"><color rgb=\"00D3D4D8\"/></right><bottom style=\"thin\"/></border><border><right style=\"thin\"><color rgb=\"00D3D4D8\"/></right><bottom style=\"thin\"><color rgb=\"00D3D4D8\"/></bottom></border></borders><cellStyleXfs count=\"1\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\"/></cellStyleXfs><cellXfs count=\"12\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\"/><xf numFmtId=\"0\" fontId=\"1\" fillId=\"4\" borderId=\"8\" xfId=\"0\" applyFill=\"true\" applyBorder=\"true\" applyFont=\"true\"><alignment wrapText=\"true\" horizontal=\"center\" vertical=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"5\" borderId=\"12\" xfId=\"0\" applyFill=\"true\" applyBorder=\"true\" applyFont=\"true\"><alignment wrapText=\"true\" horizontal=\"center\" vertical=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"3\" fillId=\"4\" borderId=\"12\" xfId=\"0\" applyFill=\"true\" applyBorder=\"true\" applyFont=\"true\"><alignment wrapText=\"true\" horizontal=\"center\" vertical=\"center\"/></xf><xf numFmtId=\"49\" fontId=\"4\" fillId=\"4\" borderId=\"16\" xfId=\"0\" applyFill=\"true\" applyBorder=\"true\" applyNumberFormat=\"true\" applyFont=\"true\"><alignment wrapText=\"true\" horizontal=\"center\" vertical=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"5\" fillId=\"4\" borderId=\"16\" xfId=\"0\" applyFill=\"true\" applyBorder=\"true\" applyFont=\"true\"><alignment wrapText=\"true\" horizontal=\"center\" vertical=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"6\" fillId=\"5\" borderId=\"21\" xfId=\"0\" applyFill=\"true\" applyBorder=\"true\" applyFont=\"true\"><alignment wrapText=\"true\" horizontal=\"center\" vertical=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"7\" fillId=\"5\" borderId=\"24\" xfId=\"0\" applyFill=\"true\" applyBorder=\"true\" applyFont=\"true\"><alignment wrapText=\"true\" horizontal=\"left\" vertical=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"8\" fillId=\"5\" borderId=\"24\" xfId=\"0\" applyFill=\"true\" applyBorder=\"true\" applyFont=\"true\"><alignment wrapText=\"true\" horizontal=\"center\" vertical=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"9\" fillId=\"5\" borderId=\"24\" xfId=\"0\" applyFill=\"true\" applyBorder=\"true\" applyFont=\"true\"><alignment wrapText=\"true\" horizontal=\"left\" vertical=\"center\"/></xf><xf numFmtId=\"165\" fontId=\"10\" fillId=\"5\" borderId=\"24\" xfId=\"0\" applyFill=\"true\" applyBorder=\"true\" applyNumberFormat=\"true\" applyFont=\"true\"><alignment wrapText=\"true\" horizontal=\"right\" vertical=\"center\"/></xf><xf numFmtId=\"49\" fontId=\"11\" fillId=\"5\" borderId=\"24\" xfId=\"0\" applyFill=\"true\" applyBorder=\"true\" applyNumberFormat=\"true\" applyFont=\"true\"><alignment wrapText=\"true\" horizontal=\"left\" vertical=\"center\"/></xf></cellXfs></styleSheet>", "xl/workbook.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><workbookPr date1904=\"false\"/><bookViews><workbookView activeTab=\"0\"/></bookViews><sheets><sheet name=\"Sheet1\" r:id=\"rId3\" sheetId=\"1\"/></sheets></workbook>", "xl/worksheets/_rels/sheet1.xml.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n  <Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing\" Target=\"../drawings/drawing1.xml\"/>\n</Relationships>\n", "xl/drawings/drawing1.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<xdr:wsDr xmlns:xdr=\"http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing\"/>", "xl/_rels/workbook.xml.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n  <Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings\" Target=\"sharedStrings.xml\"/>\n  <Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>\n  <Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/>\n</Relationships>\n"}, "sheetHead": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><dimension ref=\"A1:I4\"/><sheetViews><sheetView workbookViewId=\"0\" tabSelected=\"true\"/></sheetViews><sheetFormatPr defaultRowHeight=\"15.0\"/><cols><col min=\"1\" max=\"1\" width=\"7.25\" customWidth=\"true\"/><col min=\"2\" max=\"2\" width=\"66.375\" customWidth=\"true\"/><col min=\"3\" max=\"3\" width=\"0.0\" customWidth=\"true\"/><col min=\"4\" max=\"4\" width=\"11.875\" customWidth=\"true\"/><col min=\"5\" max=\"5\" width=\"17.625\" customWidth=\"true\"/><col min=\"6\" max=\"6\" width=\"13.125\" customWidth=\"true\"/><col min=\"7\" max=\"7\" width=\"22.125\" customWidth=\"true\"/><col min=\"8\" max=\"8\" width=\"24.5\" customWidth=\"true\"/><col min=\"9\" max=\"9\" width=\"0.125\" customWidth=\"true\"/></cols>", "sheetTail": "<mergeCells><mergeCell ref=\"A1:I1\"/><mergeCell ref=\"A2:I2\"/></mergeCells><pageMargins bottom=\"0.75\" footer=\"0.3\" header=\"0.3\" left=\"0.7\" right=\"0.7\" top=\"0.75\"/><drawing r:id=\"rId1\"/></worksheet>", "rows123": "\n<row r=\"1\">\n<c r=\"A1\" s=\"1\" t=\"inlineStr\"><is><t>&#54408;&#47785;&#45236;&#50669;</t></is></c><c r=\"B1\" s=\"1\"></c><c r=\"C1\" s=\"1\"></c><c r=\"D1\" s=\"1\"></c><c r=\"E1\" s=\"1\"></c><c r=\"F1\" s=\"1\"></c><c r=\"G1\" s=\"1\"></c><c r=\"H1\" s=\"1\"></c><c r=\"I1\" s=\"1\"></c></row>\n<row r=\"2\">\n<c r=\"A2\" s=\"2\"></c><c r=\"B2\" s=\"2\"></c><c r=\"C2\" s=\"2\"></c><c r=\"D2\" s=\"2\"></c><c r=\"E2\" s=\"2\"></c><c r=\"F2\" s=\"2\"></c><c r=\"G2\" s=\"2\"></c><c r=\"H2\" s=\"2\"></c><c r=\"I2\" s=\"2\"></c></row>\n<row r=\"3\">\n<c r=\"A3\" s=\"3\" t=\"inlineStr\"><is><t>&#49692;&#48264;</t></is></c><c r=\"B3\" s=\"4\" t=\"inlineStr\"><is><t>* &#45236;&#50857;</t></is></c><c r=\"C3\" s=\"5\" t=\"inlineStr\"><is><t>S2B&#47932;&#54408;&#48264;&#54840;</t></is></c><c r=\"D3\" s=\"4\" t=\"inlineStr\"><is><t>&#44508;&#44201;</t></is></c><c r=\"E3\" s=\"5\" t=\"inlineStr\"><is><t>&#49688;&#47049;</t></is></c><c r=\"F3\" s=\"5\" t=\"inlineStr\"><is><t>&#45800;&#50948;</t></is></c><c r=\"G3\" s=\"5\" t=\"inlineStr\"><is><t>&#50696;&#49345;&#45800;&#44032;</t></is></c><c r=\"H3\" s=\"5\" t=\"inlineStr\"><is><t>* &#50696;&#49345;&#44552;&#50529;</t></is></c><c r=\"I3\" s=\"5\" t=\"inlineStr\"><is><t>&#49688;&#49688;&#47308;</t></is></c></row>\n"};
 const $ = (s,el=document)=>el.querySelector(s);
 const $$ = (s,el=document)=>[...el.querySelectorAll(s)];
 const won = n => (n==null||isNaN(n)) ? '' : Math.round(n).toLocaleString('ko-KR');
@@ -498,29 +509,22 @@ function bindDrop(dropId, inputId, onFiles){
 function readBuf(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsArrayBuffer(file); }); }
 function libsOk(names){ const miss=names.filter(n=>!window[n]); if(miss.length){ toast('프로그램 구성요소를 불러오지 못했습니다. 인터넷 연결을 확인하세요'); return false;} return true; }
 
-// ---------- 품목내역 엑셀 (에듀파인 양식 그대로) ----------
-function xmlEsc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,''); }
-async function buildItemXlsx(rows){
-  const zip=new JSZip();
-  for(const [p,c] of Object.entries(TPL.files)) zip.file(p,c);
-  let x=''; rows.forEach((r,i)=>{ const n=i+4;
-    x+=`<row r="${n}"><c r="A${n}" s="6" t="inlineStr"><is><t>${i+1}</t></is></c><c r="B${n}" s="7" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(r.name)}</t></is></c><c r="C${n}" s="8"></c>`
-      + (r.spec? `<c r="D${n}" s="9" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(r.spec)}</t></is></c>` : `<c r="D${n}" s="9"></c>`)
-      + `<c r="E${n}" s="10" t="n"><v>${r.qty}</v></c>`
-      + (r.unit? `<c r="F${n}" s="11" t="inlineStr"><is><t>${xmlEsc(r.unit)}</t></is></c>` : `<c r="F${n}" s="11"></c>`)
-      + `<c r="G${n}" s="10" t="n"><v>${r.price}</v></c><c r="H${n}" s="10" t="n"><v>${r.qty*r.price}</v></c><c r="I${n}" s="10" t="n"><v>0</v></c></row>\n`;
-  });
-  const head=TPL.sheetHead.replace(/<dimension ref="[^"]*"\/>/,`<dimension ref="A1:I${rows.length+3}"/>`);
-  zip.file('xl/worksheets/sheet1.xml', head+'<sheetData>'+TPL.rows123+x+'</sheetData>'+TPL.sheetTail);
-  return zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+// ---------- 품목내역 엑셀 (에듀파인 품목 업로드 서식 .xls) ----------
+// 서식: 시트 '품목내역', 1행 머리글 [내용, 규격, 단위, 수량, 예상단가], 2행부터 품목
+function buildItemXls(rows){
+  const aoa=[['내용','규격','단위','수량','예상단가']].concat(rows.map(r=>[r.name, r.spec||null, r.unit||null, r.qty, r.price]));
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[{wch:60},{wch:14},{wch:10},{wch:10},{wch:14}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'품목내역');
+  return new Blob([XLSX.write(wb,{bookType:'xls',type:'array'})],{type:'application/vnd.ms-excel'});
 }
 async function downloadItems(rows, fname){
-  if(!libsOk(['JSZip'])) return;
+  if(!libsOk(['XLSX'])) return;
   const bad=rows.filter(r=>!r.name||!(r.qty>0)||!Number.isInteger(r.price)||r.price<0);
   if(bad.length){ toast('내용·수량·단가를 확인하세요 (단가는 원 단위 정수)'); return; }
-  const blob=await buildItemXlsx(rows);
+  const blob=buildItemXls(rows);
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fname; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},500);
-  toast('품목내역 엑셀을 내려받았습니다');
+  toast('품목내역 엑셀(.xls)을 내려받았습니다');
 }
 // ---------- 출력 영역 ----------
 function renderOutput(boxId, out){
@@ -539,11 +543,11 @@ function renderOutput(boxId, out){
         <p class="hint" style="margin-top:6px">여기서 고친 내용은 위 입력값을 바꾸면 다시 만들어집니다. 마지막에 복사하세요.</p>
       </div>
       <div>
-        <p class="sub">품목내역 (에듀파인 업로드 엑셀)</p>
+        <p class="sub">품목내역 (에듀파인 품목 업로드 서식 .xls)</p>
         <div class="tblwrap"><table>
-          <thead><tr><th class="num">순번</th><th>* 내용</th><th class="num">수량</th><th class="num">예상단가</th><th class="num">* 예상금액</th></tr></thead>
-          <tbody>${out.rows.map((r,i)=>`<tr><td class="num">${i+1}</td><td>${esc(r.name)}</td><td class="num">${won(r.qty)}</td><td class="num">${won(r.price)}</td><td class="num">${won(r.qty*r.price)}</td></tr>`).join('')}</tbody>
-          <tfoot><tr><td></td><td>합계</td><td></td><td></td><td class="num">${won(total)}</td></tr></tfoot>
+          <thead><tr><th class="num">#</th><th>내용</th><th>규격</th><th>단위</th><th class="num">수량</th><th class="num">예상단가</th><th class="num">금액</th></tr></thead>
+          <tbody>${out.rows.map((r,i)=>`<tr><td class="num">${i+1}</td><td>${esc(r.name)}</td><td>${esc(r.spec||'')}</td><td>${esc(r.unit||'')}</td><td class="num">${won(r.qty)}</td><td class="num">${won(r.price)}</td><td class="num">${won(r.qty*r.price)}</td></tr>`).join('')}</tbody>
+          <tfoot><tr><td></td><td>합계</td><td></td><td></td><td></td><td></td><td class="num">${won(total)}</td></tr></tfoot>
         </table></div>
         <div class="row" style="margin-top:10px"><button class="btn primary" data-dl>품목내역 엑셀 내려받기</button><span class="hint">${esc(out.fname)}</span></div>
       </div>
@@ -560,7 +564,7 @@ $$('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
 }));
 
 // ================= 1. 학습준비물 =================
-const S1={grades:[],summary:null,fname:''};
+const S1={grades:[],summary:null,quotes:[],dup:[],multi:false,sheetFiles:0};
 function findCol(row, re){ if(!row) return -1; return row.findIndex(c=>c!=null && re.test(String(c).replace(/\s/g,''))); }
 function parseSupplyBook(wb){
   const grades=[]; let summary=null;
@@ -586,7 +590,7 @@ function parseSupplyBook(wb){
     for(let r=hr+1;r<aoa.length;r++){
       const row=aoa[r]; if(!row||!row.some(c=>c!=null&&String(c).trim()!=='')) continue;
       const txt=row.map(c=>String(c??'')).join('|').replace(/\s/g,'');
-      if(/소계|합계/.test(txt)){ const v=row[col.amt]; g.subtotal = typeof v==='number'? v : numK(v); break; }
+      if(/소계|합계/.test(txt)){ const v=row[col.amt]; g.subtotal = typeof v==='number'? v : numK(v); g.subRow=true; break; }
       const name=row[col.name]; const nm=name==null?'':String(name).trim();
       const qty=numK(row[col.qty]), price=numK(row[col.price]), amt=numK(row[col.amt]);
       if(!nm && qty==null && price==null && amt==null) continue; // 머리글 둘째 줄 등
@@ -599,21 +603,136 @@ function parseSupplyBook(wb){
   grades.sort((a,b)=>(a.grade??99)-(b.grade??99));
   return {grades,summary};
 }
+// 아이스크림몰 등 '견적서(장바구니) 엑셀' 읽기: 상품명·수량·합계금액 머리글이 있는 표
+function parseEstimateBook(wb){
+  let found=null;
+  const sheets=wb.SheetNames.map(sn=>XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,defval:null}));
+  for(const aoa of sheets){
+    const AMT=/합계금액|공급합계|결제금액|^금액$|^합계$/;
+    const hr=aoa.findIndex(r=>r && findCol(r,/상품명|품목명|품명/)>=0 && findCol(r,/^수량/)>=0 && findCol(r,AMT)>=0);
+    if(hr<0) continue;
+    const H=aoa[hr];
+    const c={name:findCol(H,/상품명|품목명|품명/), unit:findCol(H,/할인적용금액|할인후단가|할인적용가/), qty:findCol(H,/^수량/), amt:findCol(H,AMT), seller:findCol(H,/판매자|공급자/), supply:findCol(H,/공급가액|원금액|상품금액/), disc:findCol(H,/^할인금액$|^할인$/)};
+    const items=[]; let sumRow=null;
+    for(let r=hr+1;r<aoa.length;r++){
+      const row=aoa[r]; if(!row||!row.some(v=>v!=null&&String(v).trim())) continue;
+      const first=String(row.find(v=>v!=null)??'').trim();
+      if(/^합\s*계/.test(first)){ sumRow={qty:numK(row[c.qty]), amt:numK(row[c.amt]), count:numK((first.match(/(\d+)\s*종/)||[])[1])}; break; }
+      const full=String(row[c.name]??'').trim(); if(!full) continue;
+      const qv=numK(row[c.qty]), av=numK(row[c.amt]);
+      if(qv==null && av==null && items.length){ // G마켓: 상품 아래 줄의 선택 옵션
+        const prev=items[items.length-1]; prev.option=[prev.option,full].filter(Boolean).join(' / '); continue; }
+      const m=full.match(/^(.*?)\s*\[\d{4,}\]\s*(.*)$/);
+      const qty=numK(row[c.qty]), amt=numK(row[c.amt]);
+      const price= c.unit>=0? numK(row[c.unit]) : (qty? amt/qty : null);
+      const it={full, name:(m?m[1]:full).trim(), option:m?m[2].replace(/^[^:]*:\s*/,'').replace(/^단일\s*상품$/,'').trim():'', qty, price, amt, seller:c.seller>=0?row[c.seller]:''};
+      if(c.unit<0 && c.supply>=0 && c.disc>=0){ const sp=numK(row[c.supply]), dc=numK(row[c.disc])||0; if(sp!=null && sp-dc!==amt) it.bad=`공급가액−할인 ${won(sp-dc)} ≠ 합계 ${won(amt)}`; }
+      items.push(it);
+    }
+    found={items,sumRow}; break;
+  }
+  if(!found) return null;
+  // 최종견적금액 (상품가격 / 배송비 / 합계금액)
+  for(const aoa of sheets){
+    const hi=aoa.findIndex(r=>r&&findCol(r,/^배송비$/)>=0&&findCol(r,/합계금액|^합계$/)>=0&&!(findCol(r,/상품명/)>=0));
+    if(hi<0) continue;
+    const H=aoa[hi]; const fi=aoa.findIndex((r,i)=>i>hi&&r&&/최종\s*견적\s*금액|최종\s*금액/.test(String(r.find(v=>v!=null)??'')));
+    if(fi<0) continue;
+    const R=aoa[fi]; found.final={goods:numK(R[findCol(H,/상품가격|상품금액/)]), ship:numK(R[findCol(H,/^배송비$/)]), total:numK(R[findCol(H,/합계금액|^합계$/)])};
+    break;
+  }
+  if(!found.final){ // '배송비', '총 구매금액' 이 줄 단위로 있는 양식
+    let ship=null,total=null;
+    for(const aoa of sheets) for(const r of aoa){ if(!r) continue; const first=String(r.find(v=>v!=null)??'').replace(/\s/g,''); const nums=r.map(v=>numK(v)).filter(v=>v!=null);
+      if(/^배송비$/.test(first)&&nums.length) ship=nums[nums.length-1];
+      if(/^(총구매금액|총결제금액|최종견적금액|총합계)$/.test(first)&&nums.length) total=nums[nums.length-1]; }
+    if(total!=null) found.final={ship:ship||0,total};
+  }
+  return found;
+}
+// 엑셀형 견적서 → 공통 결과 (품목·배송비·검증)
+function excelVendor(wb){ const t=wb.SheetNames.map(n=>JSON.stringify(wb.Sheets[n])).join(' ');
+  if(/필수선택\s*\/\s*추가구성/.test(t)) return 'G마켓'; if(/옵션\s*\/\s*추가구성\s*정보/.test(t)) return 'SSG';
+  if(/아이스크림/.test(t)) return '아이스크림몰'; if(/지마켓|G\s*마켓|gmarket/i.test(t)) return 'G마켓'; if(/에스에스지|SSG/i.test(t)) return 'SSG'; if(/쿠팡/.test(t)) return '쿠팡'; if(/학교장터|S2B/i.test(t)) return '학교장터'; return ''; }
+function excelQuote(wb){
+  const e=parseEstimateBook(wb); if(!e) return null;
+  const q={vendor:excelVendor(wb), items:e.items, shipping:e.final?e.final.ship||0:0, checks:[]};
+  const bad=e.items.filter(i=>i.qty==null||i.amt==null||i.bad||(i.price!=null&&Number.isInteger(i.price)&&i.qty*i.price!==i.amt));
+  bad.forEach(i=>q.checks.push(['err',`${esc(i.name)}: ${i.bad||'수량×단가 ≠ 합계금액'}`]));
+  if(!bad.length && e.items.length) q.checks.push(['ok',`품목 ${e.items.length}개 모두 (할인 적용) 단가 × 수량 = 합계금액`]);
+  if(!e.items.length) q.checks.push(['err','품목을 찾지 못했습니다']);
+  const sum=e.items.reduce((s,i)=>s+(i.amt||0),0), qsum=e.items.reduce((s,i)=>s+(i.qty||0),0);
+  if(e.sumRow){ const ok=e.sumRow.amt===sum && (e.sumRow.count==null||e.sumRow.count===e.items.length) && (e.sumRow.qty==null||e.sumRow.qty===qsum);
+    const L=(c,q,a)=>[c!=null?c+'종':'',q!=null?q+'개':'',won(a)+'원'].filter(Boolean).join(' ');
+    q.checks.push([ok?'ok':'err',`견적서 합계 ${L(e.sumRow.count,e.sumRow.qty,e.sumRow.amt)} ${ok?'=':'≠'} 다시 계산 ${L(e.sumRow.count!=null?e.items.length:null,e.sumRow.qty!=null?qsum:null,sum)}`]); }
+  if(e.final){ const ok=sum+q.shipping===e.final.total; q.checks.push([ok?'ok':'err',`상품 ${won(sum)} + 배송비 ${won(q.shipping)} ${ok?'=':'≠'} 최종견적금액 ${won(e.final.total)}원`]); }
+  else q.checks.push(['warn','최종 견적금액(배송비 포함)을 찾지 못했습니다. 배송비를 확인하세요']);
+  if(q.shipping) q.checks.push(['info',`배송비 ${won(q.shipping)}원을 품목에 한 줄로 넣었습니다`]);
+  return q;
+}
+function gradeFromName(n){ const m=String(n).match(/([1-6])\s*학년/); return m? +m[1] : null; }
 async function t1Load(files){
   if(!libsOk(['XLSX'])) return;
-  const f=files[0]; S1.fname=f.name; $('#t1fname').textContent='불러온 파일: '+f.name;
-  try{
-    const wb=XLSX.read(await readBuf(f),{type:'array'});
-    const r=parseSupplyBook(wb); S1.grades=r.grades; S1.summary=r.summary;
-    const g0=S1.grades.find(g=>g.titleYear);
-    if(g0){ $('#t1year').value=g0.titleYear; if(g0.titleTerm) $('#t1term').value=g0.titleTerm; }
-    if(!S1.grades.length) toast('학년 시트를 찾지 못했습니다 (품목·수량 머리글이 있는 시트)');
-  }catch(e){ console.error(e); toast('엑셀을 읽지 못했습니다'); S1.grades=[]; }
+  const byGrade=new Map(S1.grades.map(g=>[g.grade??g.sheet,g]));
+  for(const f of files){
+    try{
+      if(/\.pdf$/i.test(f.name)){
+        if(!libsOk(['pdfjsLib'])) continue;
+        const pages=await pdfPages(f); const r=qpParse(pages);
+        const q={file:f.name, vendor:vendorOf(pages), grade:gradeFromName(f.name), kind:'pdf', items:[], shipping:r.totals.shipping||0, checks:[]};
+        if(!r.hasText) q.checks.push(['err','글자가 없는 PDF입니다. 크롬·엣지에서 [인쇄 → PDF로 저장]으로 다시 저장해 올려 주세요']);
+        else if(!r.items.length) q.checks.push(['err','품목 표를 찾지 못했습니다']);
+        r.items.forEach(it=>q.items.push({name:it.name, option:it.option, qty:it.qty, price:it.amount/(it.qty||1), amt:it.amount}));
+        const sum=r.items.reduce((s,i)=>s+i.amount,0);
+        r.items.filter(i=>i.checks.length).forEach(i=>q.checks.push(['err',`${esc(i.name)}: ${i.checks.join(', ')}`]));
+        const sl=r.totals.sumLine? r.totals.sumLine[r.totals.sumLine.length-1] : (r.totals.bottom??r.totals.won);
+        if(sl!=null) q.checks.push([sl===sum?'ok':'err',`품목 합계 ${won(sum)}원 ${sl===sum?'=':'≠'} 견적서 합계 ${won(sl)}원`]);
+        if(r.totals.grand!=null) q.checks.push([sum+q.shipping===r.totals.grand?'ok':'err',`품목 ${won(sum)} + 배송비 ${won(q.shipping)} ${sum+q.shipping===r.totals.grand?'=':'≠'} 총 구매금액 ${won(r.totals.grand)}원`]);
+        S1.quotes.push(q); continue;
+      }
+      const wb=XLSX.read(await readBuf(f),{type:'array'});
+      const r=parseSupplyBook(wb);
+      if(r.grades.length){
+        S1.sheetFiles++;
+        for(const g of r.grades){ const key=g.grade??g.sheet;
+          if(byGrade.has(key)){ const prev=byGrade.get(key); if(!g.items.length) continue; if(prev.items.length) S1.dup.push(key); }
+          g.file=f.name; byGrade.set(key,g); }
+        if(r.summary) S1.summary=r.summary;
+        continue;
+      }
+      const xq=excelQuote(wb);
+      if(xq){ S1.quotes.push({file:f.name, grade:gradeFromName(f.name), kind:'xls', ...xq}); continue; }
+      toast(f.name+': 신청서나 견적서 표를 찾지 못했습니다');
+    }catch(err){ console.error(err); toast(f.name+': 파일을 읽지 못했습니다'); }
+  }
+  S1.grades=[...byGrade.values()].sort((a,b)=>(a.grade??99)-(b.grade??99));
+  S1.multi=S1.sheetFiles>1; if(S1.multi) S1.summary=null;
+  const g0=S1.grades.find(g=>g.titleYear);
+  if(g0){ $('#t1year').value=g0.titleYear; if(g0.titleTerm) $('#t1term').value=g0.titleTerm; }
+  $('#t1fname').textContent='불러온 파일: '+[...new Set([...S1.grades.map(g=>g.file),...S1.quotes.map(q=>q.file)])].join(', ');
   t1Render();
+}
+function t1Reset(){ S1.grades=[]; S1.summary=null; S1.quotes=[]; S1.dup=[]; S1.multi=false; S1.sheetFiles=0; $('#t1fname').textContent=''; t1Render(); }
+// 신청서 + 견적서를 학년별로 합친 결과
+function t1Merged(){
+  const M=new Map();
+  const get=g=>{ if(!M.has(g)) M.set(g,{grade:g,items:[],shipping:0,src:[]}); return M.get(g); };
+  S1.grades.filter(g=>g.items.length&&g.grade).forEach(g=>{ const m=get(g.grade); m.items.push(...g.items); m.src.push('신청서'); });
+  S1.quotes.filter(q=>q.grade&&q.items.length).forEach(q=>{ const m=get(q.grade); m.items.push(...q.items); m.shipping+=q.shipping; m.src.push('견적서'); });
+  const out=[...M.values()].sort((a,b)=>a.grade-b.grade);
+  out.forEach(m=>{ m.goods=m.items.reduce((s,i)=>s+(i.amt||0),0); m.calc=m.goods+m.shipping; });
+  return out;
 }
 function t1Render(){
   const G=S1.grades;
-  if(!G.length){ $('#t1check').innerHTML='<div class="empty">파일을 올리면 학년별로 다시 계산한 금액과 시트의 소계, 집계 시트를 비교합니다.</div>'; renderOutput('t1out',null); return; }
+  if(!G.length && !S1.quotes.length){ $('#t1check').innerHTML='<div class="empty">파일을 올리면 학년별로 다시 계산한 금액과 시트의 소계, 집계 시트, 견적서 합계를 비교합니다.</div>'; renderOutput('t1out',null); return; }
+  const sheetHtml = G.length? t1SheetHtml(G) : '';
+  $('#t1check').innerHTML = sheetHtml + t1QuoteHtml() + t1MergedHtml() + '<div class="row"><button class="btn small" id="t1reset">올린 파일 모두 지우기</button></div>';
+  $('#t1reset').onclick=t1Reset;
+  $$('#t1check select[data-q]').forEach(sel=>sel.onchange=()=>{ S1.quotes[+sel.dataset.q].grade=sel.value?+sel.value:null; t1Render(); });
+  t1Output();
+}
+function t1SheetHtml(G){
   const checks=[]; let anyErr=false;
   const sm=S1.summary;
   const rowsHtml=G.map(g=>{
@@ -622,38 +741,64 @@ function t1Render(){
     const noUnit=g.items.filter(it=>!it.unit).length;
     const subOk=g.subtotal==null? null : g.subtotal===g.calc;
     const smOk=!s? null : (s.amount===g.calc && s.count===g.items.length);
-    const st = errs.length||subOk===false||smOk===false ? 'err' : (noUnit||subOk===null)?'warn':'ok';
+    const st = !g.items.length? 'none' : errs.length||subOk===false||smOk===false ? 'err' : (noUnit||subOk===null)?'warn':'ok';
     if(st==='err') anyErr=true;
     if(errs.length) checks.push(['err',`${g.grade}학년: 수량×단가와 금액이 다르거나 빈 칸이 있는 행 ${errs.length}개 (엑셀 ${errs.map(e=>e.row+'행').join(', ')})`]);
     if(subOk===false) checks.push(['err',`${g.grade}학년: 시트 소계 ${won(g.subtotal)}원 ≠ 다시 계산한 합계 ${won(g.calc)}원`]);
-    if(subOk===null) checks.push(['warn',`${g.grade}학년: 소계 행을 찾지 못했습니다`]);
+    if(subOk===null && g.items.length) checks.push(['warn', g.subRow? `${g.grade}학년: 소계 칸이 비어 있습니다 (엑셀에서 열어 저장하면 계산값이 들어갑니다)` : `${g.grade}학년: 소계 행을 찾지 못했습니다`]);
     if(smOk===false) checks.push(['err',`${g.grade}학년: 집계 시트(${s.count}종, ${won(s.amount)}원)와 다릅니다 (${g.items.length}종, ${won(g.calc)}원)`]);
     if(noUnit) checks.push(['warn',`${g.grade}학년: 단위가 빈 품목 ${noUnit}개 (품목내역에는 영향 없음)`]);
     if(g.skipped.length) checks.push(['info',`${g.grade}학년: 품목 없이 값만 있는 행은 건너뜀 (엑셀 ${g.skipped.join(', ')}행)`]);
-    return `<tr class="${st==='err'?'bad':''}"><td>${g.grade?g.grade+'학년':esc(g.sheet)}</td><td class="num">${g.items.length}</td><td class="num">${won(g.calc)}</td><td class="num">${g.subtotal==null?'—':won(g.subtotal)}</td><td class="num">${s?won(s.amount):'—'}</td><td><span class="pill ${st}">${{ok:'맞음',warn:'주의',err:'오류'}[st]}</span></td></tr>`;
+    return `<tr class="${st==='err'?'bad':''}"><td>${g.grade?g.grade+'학년':esc(g.sheet)}</td><td class="num">${g.items.length}</td><td class="num">${won(g.calc)}</td><td class="num">${g.subtotal==null?'—':won(g.subtotal)}</td><td class="num">${s?won(s.amount):'—'}</td><td>${st==='none'?'<span class="muted">신청 없음</span>':`<span class="pill ${st}">${{ok:'맞음',warn:'주의',err:'오류'}[st]}</span>`}</td></tr>`;
   }).join('');
   const total=G.reduce((s,g)=>s+g.calc,0), cnt=G.reduce((s,g)=>s+g.items.length,0);
   const tOk=sm&&sm.total? (sm.total.amount===total&&sm.total.count===cnt) : null;
   if(tOk===false){ checks.push(['err',`총액: 집계 시트 ${sm.total.count}종 ${won(sm.total.amount)}원 ≠ 다시 계산 ${cnt}종 ${won(total)}원`]); anyErr=true; }
-  if(!sm) checks.push(['warn','집계 시트를 찾지 못해 학년별 소계만 비교했습니다']);
+  if(!sm) checks.push([S1.multi?'info':'warn', S1.multi?'학년별 파일 여러 개를 합쳤습니다. 집계 시트 대신 학년별 소계로 비교했습니다':'집계 시트를 찾지 못해 학년별 소계만 비교했습니다']);
+  (S1.dup||[]).forEach(k=>checks.push(['err',`${k}학년 품목이 두 파일에 있습니다. 나중에 올린 파일 기준으로 계산했으니 확인하세요`]));
+  G.filter(g=>!g.items.length).forEach(g=>checks.push(['info',`${g.grade?g.grade+'학년':g.sheet}: 신청 품목이 없습니다`]));
   if(!checks.some(c=>c[0]==='err')) checks.unshift(['ok',`${cnt}개 품목 모두 수량×단가=금액, 학년 소계와 총액 ${won(total)}원이 일치합니다`]);
   const detail=G.map(g=>`<details><summary>${g.grade}학년 품목 ${g.items.length}개 보기</summary><div class="tblwrap" style="margin-top:6px"><table><thead><tr><th class="num">번호</th><th>품목</th><th>규격</th><th class="num">수량</th><th>단위</th><th class="num">단가</th><th class="num">금액</th><th class="num">수량×단가</th></tr></thead><tbody>${g.items.map(it=>{const bad=it.qty==null||it.price==null||it.qty*it.price!==it.amt;return `<tr class="${bad?'bad':''}"><td class="num">${esc(it.no??'')}</td><td>${esc(it.name)}</td><td>${esc(it.spec)}</td><td class="num">${won(it.qty)}</td><td>${esc(it.unit)||'<span class="muted">—</span>'}</td><td class="num">${won(it.price)}</td><td class="num">${won(it.amt)}</td><td class="num">${won((it.qty||0)*(it.price||0))}</td></tr>`}).join('')}</tbody></table></div></details>`).join('');
-  $('#t1check').innerHTML=`<div class="tblwrap"><table><thead><tr><th>학년</th><th class="num">품목 수</th><th class="num">다시 계산한 합계</th><th class="num">시트 소계</th><th class="num">집계 시트</th><th>판정</th></tr></thead><tbody>${rowsHtml}</tbody>
+  return `<p class="sub">학년별 신청서</p><div class="tblwrap"><table><thead><tr><th>학년</th><th class="num">품목 수</th><th class="num">다시 계산한 합계</th><th class="num">시트 소계</th><th class="num">집계 시트</th><th>판정</th></tr></thead><tbody>${rowsHtml}</tbody>
     <tfoot><tr><td>합계</td><td class="num">${cnt}</td><td class="num">${won(total)}</td><td></td><td class="num">${sm&&sm.total?won(sm.total.amount):'—'}</td><td>${tOk===false?'<span class="pill err">오류</span>':tOk?'<span class="pill ok">맞음</span>':''}</td></tr></tfoot></table></div>
     ${checksHtml(checks)}<div style="display:grid;gap:4px">${detail}</div>`;
-  t1Output();
+}
+function t1QuoteHtml(){
+  if(!S1.quotes.length) return '';
+  return '<p class="sub" style="margin-top:6px">견적서</p><div style="display:grid;gap:8px">'+S1.quotes.map((q,i)=>{
+    const goods=q.items.reduce((s,it)=>s+(it.amt||0),0);
+    const sel=`<select data-q="${i}" aria-label="학년 지정" style="width:auto"><option value="">학년 선택</option>${[1,2,3,4,5,6].map(g=>`<option value="${g}" ${q.grade===g?'selected':''}>${g}학년</option>`).join('')}</select>`;
+    const c=[...q.checks]; if(!q.grade) c.unshift(['warn','학년을 골라 주세요. 학년을 정해야 기안문에 들어갑니다']);
+    return `<div class="filecard"><div class="row" style="justify-content:space-between"><div class="fname">${esc(q.file)} ${q.vendor?`<span class="pill info">${esc(q.vendor)}</span>`:''}</div>${sel}</div>
+      <div class="hint">품목 ${q.items.length}종 · 상품 ${won(goods)}원${q.shipping?` + 배송비 ${won(q.shipping)}원`:''} = <b>${won(goods+q.shipping)}원</b></div>${checksHtml(c)}
+      <details><summary>품목 보기</summary><div class="tblwrap" style="margin-top:6px"><table><thead><tr><th class="num">#</th><th>상품명</th><th>옵션</th><th class="num">수량</th><th class="num">단가</th><th class="num">금액</th></tr></thead><tbody>${q.items.map((it,k)=>`<tr class="${it.qty*it.price!==it.amt?'bad':''}"><td class="num">${k+1}</td><td>${esc(it.name)}</td><td class="muted">${esc(it.option||'')}</td><td class="num">${won(it.qty)}</td><td class="num">${won(it.price)}</td><td class="num">${won(it.amt)}</td></tr>`).join('')}</tbody></table></div></details></div>`;
+  }).join('')+'</div>';
+}
+function t1MergedHtml(){
+  if(!S1.quotes.length) return '';
+  const M=t1Merged(); if(!M.length) return '';
+  const tot=M.reduce((s,m)=>s+m.calc,0), cnt=M.reduce((s,m)=>s+m.items.length,0);
+  return `<p class="sub" style="margin-top:6px">학년별 합계 (기안문에 들어가는 금액)</p><div class="tblwrap"><table><thead><tr><th>학년</th><th>자료</th><th class="num">품목 수</th><th class="num">상품 금액</th><th class="num">배송비</th><th class="num">합계</th></tr></thead><tbody>${M.map(m=>`<tr><td>${m.grade}학년</td><td>${[...new Set(m.src)].join(' + ')}</td><td class="num">${m.items.length}</td><td class="num">${won(m.goods)}</td><td class="num">${won(m.shipping)}</td><td class="num">${won(m.calc)}</td></tr>`).join('')}</tbody><tfoot><tr><td>합계</td><td></td><td class="num">${cnt}</td><td></td><td></td><td class="num">${won(tot)}</td></tr></tfoot></table></div>`;
 }
 function t1Output(){
-  const G=S1.grades.filter(g=>g.items.length); if(!G.length){ renderOutput('t1out',null); return; }
+  const G=t1Merged(); if(!G.length){ renderOutput('t1out',null); return; }
   const y=$('#t1year').value.trim()||String(new Date().getFullYear()), term=$('#t1term').value, rel=$('#t1rel').value.trim();
-  const all=G.flatMap(g=>g.items.map(it=>({...it,grade:g.grade})));
-  const top=all.reduce((b,it)=>(it.amt||0)>(b.amt||0)?it:b, all[0]);
+  const pick=items=>items.reduce((b,it)=>(it.amt||0)>(b.amt||0)?it:b, items[0]);
+  const all=G.flatMap(g=>g.items);
+  const top=pick(all);
   const total=G.reduce((s,g)=>s+g.calc,0);
-  const gs=G.map(g=>g.grade).filter(Boolean).sort((a,b)=>a-b);
+  const gs=G.map(g=>g.grade);
   const contiguous=gs.every((v,i)=>i===0||v===gs[i-1]+1);
   const target= gs.length===1? `${gs[0]}학년` : contiguous? `${gs[0]}학년~${gs[gs.length-1]}학년` : gs.join(', ')+'학년';
   const itemLine= all.length>1? `${top.name} 외 ${all.length-1}종` : top.name;
   const title=`${y}학년도 ${term}학기 학습준비물 물품 구입`;
+  const hasSheet=G.some(g=>g.src.includes('신청서')), nq=S1.quotes.filter(q=>q.grade&&q.items.length).length;
+  const custom=$('#t1att').value.trim();
+  let att;
+  if(custom) att=`붙임  ${custom}  끝.`;
+  else if(hasSheet && nq) att=`붙임  1. ${y}학년도 ${term}학기 학습준비물 신청내역 및 구매링크 1부.\n      2. 학년별 견적서 ${nq}부.  끝.`;
+  else if(nq) att=`붙임  ${y}학년도 ${term}학기 학습준비물 학년별 견적서 ${nq}부.  끝.`;
+  else att=`붙임  ${y}학년도 ${term}학기 학습준비물 신청내역 및 구매링크 1부.  끝.`;
   const body=[
     `1. 관련: ${rel||'(관련 문서번호를 입력하세요)'}`,
     `2. 원활한 교육활동을 위하여 아래와 같이 구입하고자 합니다.`,
@@ -661,13 +806,58 @@ function t1Output(){
     `  나. 품목: ${itemLine}`,
     `  다. 금액: 금${won(total)}원(금${korAmount(total)}원)`,
     ``,
-    `붙임  ${y}학년도 ${term}학기 학습준비물 신청내역 및 구매링크 1부.  끝.`
+    att
   ].join('\n');
-  const rows=G.map(g=>{ const t=g.items.reduce((b,it)=>(it.amt||0)>(b.amt||0)?it:b,g.items[0]); return {name:`${g.grade}학년 학습준비물(${t.name}${g.items.length>1?` 외 ${g.items.length-1}종`:''})`, qty:1, price:g.calc}; });
-  renderOutput('t1out',{title,body,rows,fname:`품목내역_학습준비물_${today()}.xlsx`});
+  const rows=G.map(g=>{ const t=pick(g.items); return {name:`${g.grade}학년 학습준비물(${t.name}${g.items.length>1?` 외 ${g.items.length-1}종`:''})`, qty:1, price:g.calc}; });
+  renderOutput('t1out',{title,body,rows,fname:`품목내역_학습준비물_${today()}.xls`});
 }
 bindDrop('t1drop','t1file',t1Load);
-['t1year','t1term','t1rel'].forEach(id=>$('#'+id).addEventListener('input',t1Output));
+// ---------- 학년별 수합 양식 ----------
+const FORM_COLS=[['번호',6],['품 목',28],['소모성',7],['교과',9],['영역',18],['사용학기',9],['규 격',28],['수량',7],['단위',7],['단 가',11],['금 액',13],['인터넷 구입처',42]];
+function formGradeSheet(wb, g, y, t, n){
+  const ws=wb.addWorksheet(`${g}학년`,{views:[{state:'frozen',ySplit:3}],pageSetup:{paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:'3:3'}});
+  ws.columns=FORM_COLS.map(c=>({width:c[1]}));
+  const thin={style:'thin',color:{argb:'FF8C8C8C'}}, box={top:thin,left:thin,bottom:thin,right:thin};
+  ws.mergeCells('A1:L1'); const t1=ws.getCell('A1'); t1.value=`${y}학년도 학습준비물 신청서 (${t}학기)`; t1.font={bold:true,size:16}; t1.alignment={horizontal:'center',vertical:'middle'}; ws.getRow(1).height=30;
+  ws.mergeCells('A2:L2'); const t2=ws.getCell('A2'); t2.value=`${g}학년 담당                    (인)`; t2.alignment={horizontal:'right'}; t2.font={size:11};
+  const hr=ws.getRow(3); FORM_COLS.forEach((c,i)=>{ const cell=hr.getCell(i+1); cell.value=c[0]; cell.font={bold:true}; cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE7ECEB'}}; cell.alignment={horizontal:'center',vertical:'middle',wrapText:true}; cell.border=box; }); hr.height=24;
+  const first=4, last=3+n;
+  for(let r=first;r<=last;r++){
+    const row=ws.getRow(r);
+    row.getCell(1).value=r-3;
+    row.getCell(11).value={formula:`IF(OR(H${r}="",J${r}=""),"",H${r}*J${r})`};
+    for(let c=1;c<=12;c++){ const cell=row.getCell(c); cell.border=box; cell.alignment={vertical:'middle',wrapText:c===2||c===7, horizontal:[1,3,6,8,9].includes(c)?'center':undefined}; if([8,10,11].includes(c)) cell.numFmt='#,##0'; }
+    row.getCell(11).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF4F6F5'}};
+  }
+  const sr=last+1; ws.mergeCells(`A${sr}:J${sr}`);
+  const sc=ws.getCell(`A${sr}`); sc.value='소 계'; sc.font={bold:true}; sc.alignment={horizontal:'center'};
+  const sv=ws.getCell(`K${sr}`); sv.value={formula:`SUM(K${first}:K${last})`}; sv.numFmt='#,##0'; sv.font={bold:true};
+  for(let c=1;c<=12;c++){ const cell=ws.getRow(sr).getCell(c); cell.border=box; cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE7ECEB'}}; }
+  const nr=ws.getCell(`A${sr+2}`); nr.value='※ 금액과 소계는 자동 계산됩니다. 줄이 모자라면 소계 줄 위에서 행을 삽입하세요. 품목명·수량·단가는 꼭 적어 주세요.'; nr.font={size:10,color:{argb:'FF666666'}};
+  return {first,last,sr};
+}
+async function t1MakeForm(grades){
+  if(!window.ExcelJS){ toast('양식 구성요소를 불러오지 못했습니다. 인터넷 연결을 확인하세요'); return; }
+  const y=$('#t1year').value.trim()||String(new Date().getFullYear()), t=$('#t1term').value;
+  const n=Math.min(200,Math.max(5,Number($('#t1lines').value)||30));
+  const wb=new ExcelJS.Workbook(); wb.calcProperties.fullCalcOnLoad=true;
+  const info=grades.map(g=>[g,formGradeSheet(wb,g,y,t,n)]);
+  if(grades.length>1){
+    const ws=wb.addWorksheet('집계'); ws.columns=[{width:12},{width:12},{width:16}];
+    const thin={style:'thin',color:{argb:'FF8C8C8C'}}, box={top:thin,left:thin,bottom:thin,right:thin};
+    ws.mergeCells('A1:C1'); ws.getCell('A1').value=`${y}학년도 ${t}학기 학습준비물 학년별 집계`; ws.getCell('A1').font={bold:true,size:13};
+    ['학년','품목 수','금액'].forEach((h,i)=>{ const c=ws.getRow(2).getCell(i+1); c.value=h; c.font={bold:true}; c.border=box; c.alignment={horizontal:'center'}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE7ECEB'}}; });
+    info.forEach(([g,p],i)=>{ const r=ws.getRow(3+i); r.getCell(1).value=`${g}학년`; r.getCell(2).value={formula:`COUNTA('${g}학년'!B${p.first}:B${p.last})`}; r.getCell(3).value={formula:`'${g}학년'!K${p.sr}`}; r.getCell(3).numFmt='#,##0'; [1,2,3].forEach(c=>{r.getCell(c).border=box;}); r.getCell(1).alignment={horizontal:'center'}; });
+    const tr=ws.getRow(3+info.length), e=2+info.length; tr.getCell(1).value='합계'; tr.getCell(2).value={formula:`SUM(B3:B${e})`}; tr.getCell(3).value={formula:`SUM(C3:C${e})`}; tr.getCell(3).numFmt='#,##0'; [1,2,3].forEach(c=>{ tr.getCell(c).border=box; tr.getCell(c).font={bold:true}; }); tr.getCell(1).alignment={horizontal:'center'};
+  }
+  const buf=await wb.xlsx.writeBuffer();
+  const name= grades.length>1? `${y}학년도_${t}학기_학습준비물_신청서_전체.xlsx` : `${y}학년도_${t}학기_학습준비물_신청서_${grades[0]}학년.xlsx`;
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},500);
+  toast('수합 양식을 내려받았습니다');
+}
+$('#t1form').onclick=()=>t1MakeForm([1,2,3,4,5,6]);
+$$('[data-formg]').forEach(b=>b.onclick=()=>t1MakeForm([+b.dataset.formg]));
+['t1year','t1term','t1rel','t1att'].forEach(id=>$('#'+id).addEventListener('input',t1Output));
 
 // ================= PDF 공통 =================
 async function pdfPages(file){
@@ -695,7 +885,8 @@ function topItemLine(rows){
   const real=rows.filter(r=>!r.isShip && r.name);
   if(!real.length) return '';
   const top=real.reduce((b,r)=>r.qty*r.price>b.qty*b.price?r:b, real[0]);
-  return real.length>1? `${top.name} 외 ${real.length-1}종` : top.name;
+  const nm=(top.base&&!top.userEdited)? top.base.name : top.name;
+  return real.length>1? `${nm} 외 ${real.length-1}종` : nm;
 }
 // 편집 가능한 품목 표
 function renderRows(boxId, S, onChange, opts={}){
@@ -724,9 +915,18 @@ function renderRows(boxId, S, onChange, opts={}){
 // ================= 2. 정보화 기자재 =================
 const S2={files:[],rows:[]};
 async function t2Load(files){
-  if(!libsOk(['pdfjsLib'])) return;
   for(const f of files){
     const rec={name:f.name, res:null, err:''};
+    if(!/\.pdf$/i.test(f.name)){
+      try{ if(!libsOk(['XLSX'])) continue; const xq=excelQuote(XLSX.read(await readBuf(f),{type:'array'}));
+        if(!xq){ rec.err='견적서 표(상품명·수량·금액)를 찾지 못했습니다'; }
+        else { rec.vendor=xq.vendor; rec.xchecks=xq.checks;
+          xq.items.forEach(it=>{ const ok=Number.isInteger(it.price); S2.rows.push({name:it.option?`${it.name} (${it.option})`:it.name, qty:it.qty||1, price:ok?it.price:Math.round(it.amt/(it.qty||1)), amount:it.amt, src:f.name, warn:ok?'':'단가가 원 단위로 나누어떨어지지 않습니다', fix:!ok}); });
+          if(xq.shipping) S2.rows.push({name:'배송비', qty:1, price:xq.shipping, amount:xq.shipping, src:f.name, isShip:true}); }
+      }catch(e){ console.error(e); rec.err='엑셀 견적서를 읽지 못했습니다'; }
+      S2.files.push(rec); continue;
+    }
+    if(!libsOk(['pdfjsLib'])) continue;
     try{ const pages=await pdfPages(f); rec.vendor=vendorOf(pages); rec.res=qpParse(pages);
       if(!rec.res.hasText) rec.err='글자가 없는 PDF입니다 (그림으로 저장됨)';
       else if(!rec.res.items.length) rec.err='품목 표를 찾지 못했습니다';
@@ -743,6 +943,7 @@ function t2Checks(){
   if(!S2.files.length){ return; }
   const html=S2.files.map(f=>{
     const c=[]; const r=f.res;
+    if(f.xchecks) c.push(...f.xchecks);
     if(f.err) c.push(['err',f.err+'. 아래 표에 직접 입력하세요.']);
     if(r && r.items.length){
       const sum=r.items.reduce((s,i)=>s+i.amount,0);
@@ -772,7 +973,7 @@ function t2Output(){
     ``,
     att? `붙임  견적서 ${att}부.  끝.` : `끝.`
   ].join('\n');
-  renderOutput('t2out',{title:$('#t2title').value.trim(), body, rows:rows.map(r=>({name:r.name,qty:r.qty,price:r.price})), fname:`품목내역_정보화기자재_${today()}.xlsx`});
+  renderOutput('t2out',{title:$('#t2title').value.trim(), body, rows:rows.map(r=>({name:r.name,qty:r.qty,price:r.price})), fname:`품목내역_정보화기자재_${today()}.xls`});
 }
 bindDrop('t2drop','t2file',t2Load);
 ['t2title','t2item','t2intro','t2att'].forEach(id=>$('#'+id).addEventListener('input',t2Output));
@@ -782,9 +983,19 @@ $('#t2add').onclick=()=>{ S2.rows.push({name:'',qty:1,price:0,src:''}); renderRo
 const S3={files:[],rows:[]};
 function t3Name(it){ return ($('#t3opt').checked && it.option)? `${it.name} (${it.option})` : it.name; }
 async function t3Load(files){
-  if(!libsOk(['pdfjsLib'])) return;
   for(const f of files){
     const rec={name:f.name,res:null,err:''};
+    if(!/\.pdf$/i.test(f.name)){
+      try{ if(!libsOk(['XLSX'])) continue; const xq=excelQuote(XLSX.read(await readBuf(f),{type:'array'}));
+        if(!xq){ rec.err='견적서 표(상품명·수량·금액)를 찾지 못했습니다. 아래 표에 직접 입력하세요'; }
+        else { rec.vendor=xq.vendor; rec.xchecks=xq.checks;
+          xq.items.forEach(it=>{ const qty=it.qty||1, price=it.amt/qty, ok=Number.isInteger(price); const base={name:it.name, option:it.option};
+            S3.rows.push({base, name:t3Name(base), qty, price:ok?price:Math.round(price), amount:it.amt, src:f.name, warn: ok?'':`할인 후 금액 ${won(it.amt)}원이 수량 ${qty}로 나누어떨어지지 않습니다`, fix:!ok}); });
+          if(xq.shipping) S3.rows.push({name:'배송비', qty:1, price:xq.shipping, amount:xq.shipping, src:f.name, isShip:true}); }
+      }catch(e){ console.error(e); rec.err='엑셀 견적서를 읽지 못했습니다'; }
+      S3.files.push(rec); continue;
+    }
+    if(!libsOk(['pdfjsLib'])) continue;
     try{ const pages=await pdfPages(f); rec.vendor=vendorOf(pages); rec.res=qpParse(pages);
       if(!rec.res.hasText) rec.err='글자가 없는 PDF입니다 (한컴 PDF 등으로 그림처럼 저장됨). 크롬·엣지에서 [인쇄 → PDF로 저장]으로 다시 저장해 올리거나 아래 표에 직접 입력하세요';
       else if(!rec.res.items.length) rec.err='품목 표를 찾지 못했습니다. 아래 표에 직접 입력하세요';
@@ -803,6 +1014,7 @@ function t3Checks(){
   if(!S3.files.length) return;
   const html=S3.files.map(f=>{
     const c=[]; const r=f.res;
+    if(f.xchecks) c.push(...f.xchecks);
     if(f.err) c.push(['err',f.err]);
     if(r && r.items.length){
       const bad=r.items.filter(i=>i.checks.length);
@@ -837,7 +1049,7 @@ function t3Output(){
     ``,
     att? `붙임  견적서 ${att}부.  끝.` : `끝.`
   ].join('\n');
-  renderOutput('t3out',{title:$('#t3title').value.trim(), body, rows:rows.map(r=>({name:r.name,qty:r.qty,price:r.price})), fname:`품목내역_온라인구입_${today()}.xlsx`});
+  renderOutput('t3out',{title:$('#t3title').value.trim(), body, rows:rows.map(r=>({name:r.name,qty:r.qty,price:r.price})), fname:`품목내역_온라인구입_${today()}.xls`});
 }
 bindDrop('t3drop','t3file',t3Load);
 ['t3title','t3purpose','t3item','t3att'].forEach(id=>$('#'+id).addEventListener('input',t3Output));
@@ -930,7 +1142,7 @@ function t4Output(){
     `  나. 강사명: ${n}`,
     `  다. 강사료 산출내역: ${calcText}${/[.]$/.test(calcText)?'':'.'}  끝.`
   ].join('\n');
-  renderOutput('t4out',{title:`${cls} 강사비 지급`, body, rows:[{name:`${cls} 강사료`,qty:1,price:amount}], fname:`품목내역_강사료_${n}_${today()}.xlsx`});
+  renderOutput('t4out',{title:`${cls} 강사비 지급`, body, rows:[{name:`${cls} 강사료`,qty:1,price:amount}], fname:`품목내역_강사료_${n}_${today()}.xls`});
 }
 bindDrop('t4drop','t4file',t4Load);
 $('#t4grade').addEventListener('change',t4List); $('#t4todo').addEventListener('change',t4List);
@@ -943,7 +1155,7 @@ $('#t4manual').addEventListener('change',t4Output);
 (function(){ const keep=['t1rel','t4rel','t2title','t2intro','t3title','t3purpose'];
   keep.forEach(id=>{ const el=$('#'+id); try{ const v=localStorage.getItem('pumui.'+id); if(v!=null) el.value=v; }catch(e){}
     el.addEventListener('input',()=>{ try{ localStorage.setItem('pumui.'+id, el.value); }catch(e){} }); }); })();
-if(!window.XLSX||!window.JSZip||!window.pdfjsLib) setTimeout(()=>toast('일부 구성요소를 불러오지 못했습니다. 인터넷에 연결된 상태에서 열어 주세요'),400);
+if(!window.XLSX||!window.pdfjsLib) setTimeout(()=>toast('일부 구성요소를 불러오지 못했습니다. 인터넷에 연결된 상태에서 열어 주세요'),400);
 </script>
 </body>
 </html>
