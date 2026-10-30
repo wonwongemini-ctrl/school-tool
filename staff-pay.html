@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>공무직 급여 도우미</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --paper:#f6f7f5; --card:#ffffff; --ink:#1d2a33; --muted:#5d6b73; --line:#d8dedb; --line-strong:#b9c3bf;
+  --accent:#1f5e74; --accent-ink:#ffffff; --accent-soft:#e3eef1;
+  --ok:#1d7a4c; --ok-soft:#e2f2e9; --warn:#9a6200; --warn-soft:#fbf0d9; --err:#b3261e; --err-soft:#fbe5e3;
+  --f-body:"IBM Plex Sans KR","Malgun Gothic","맑은 고딕","Apple SD Gothic Neo",sans-serif;
+  --f-num:"IBM Plex Mono",Consolas,"D2Coding",monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#141a1d; --card:#1b2327; --ink:#e4eaec; --muted:#9aa8ae; --line:#2e3a3f; --line-strong:#43535a;
+  --accent:#6cb6cc; --accent-ink:#0d1c22; --accent-soft:#1d3239;
+  --ok:#6fcf9b; --ok-soft:#173327; --warn:#e7b65a; --warn-soft:#352a12; --err:#f08a80; --err-soft:#3a1d1a; color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --paper:#141a1d; --card:#1b2327; --ink:#e4eaec; --muted:#9aa8ae; --line:#2e3a3f; --line-strong:#43535a;
+  --accent:#6cb6cc; --accent-ink:#0d1c22; --accent-soft:#1d3239;
+  --ok:#6fcf9b; --ok-soft:#173327; --warn:#e7b65a; --warn-soft:#352a12; --err:#f08a80; --err-soft:#3a1d1a; color-scheme:dark; }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:14.5px;line-height:1.55}
+.wrap{max-width:1000px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 24px;border-bottom:2px solid var(--ink);padding-bottom:10px}
+header.top h1{margin:0;font-size:22px;letter-spacing:-.01em}
+header.top h1 small{display:block;font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.04em}
+header.top .privacy{font-size:12.5px;color:var(--muted);max-width:430px;margin:0}
+nav.tabs{display:flex;flex-wrap:wrap;gap:4px;margin:18px 0 0;border-bottom:1px solid var(--line-strong)}
+nav.tabs button{font:inherit;font-weight:600;border:1px solid transparent;border-bottom:none;background:none;color:var(--muted);padding:9px 16px 8px;border-radius:var(--r) var(--r) 0 0;cursor:pointer;display:flex;gap:8px;align-items:baseline}
+nav.tabs button .n{font-family:var(--f-num);font-size:12px;opacity:.8}
+nav.tabs button[aria-selected="true"]{background:var(--card);color:var(--ink);border-color:var(--line-strong);margin-bottom:-1px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+section.panel{background:var(--card);border:1px solid var(--line-strong);border-top:none;padding:20px clamp(14px,2.5vw,26px) 28px;display:grid;gap:24px}
+.step{display:grid;gap:10px;min-width:0}
+.step > h2{margin:0;font-size:15px;display:flex;align-items:center;gap:10px}
+.step > h2 .k{font-family:var(--f-num);font-size:11.5px;font-weight:500;color:var(--accent);border:1px solid var(--accent);border-radius:3px;padding:0 6px}
+.hint{color:var(--muted);font-size:13px;margin:0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px 18px}
+.field{display:grid;gap:4px;min-width:0;align-content:start}
+.field label{font-size:12.5px;font-weight:600;color:var(--muted)}
+.field .sub{font-size:12px;color:var(--muted)}
+input[type=text],input[type=number],input[type=search],select{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line-strong);border-radius:4px;padding:7px 9px;width:100%;min-width:0}
+input[type=number],input.date{font-family:var(--f-num)}
+input.auto{background:var(--paper)}
+.drop{border:1.5px dashed var(--line-strong);border-radius:var(--r);padding:16px 18px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;background:var(--paper);cursor:pointer;transition:border-color .15s,background .15s}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop .files{flex-basis:100%;font-size:13px;color:var(--muted)}
+.btn{font:inherit;font-weight:600;font-size:13.5px;border-radius:4px;border:1px solid var(--line-strong);background:var(--card);color:var(--ink);padding:7px 13px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.small{font-size:12.5px;padding:3px 8px;font-weight:500}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border-bottom:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+th{background:var(--paper);font-weight:600;font-size:12.5px;color:var(--muted);white-space:nowrap}
+td.num,th.num{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+tfoot td{font-weight:700;border-top:1.5px solid var(--line-strong);border-bottom:none}
+tr.off td{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line-strong)}
+tr.off td:first-child,tr.off td.why{text-decoration:none}
+.pill{display:inline-flex;align-items:center;font-size:12px;font-weight:600;border-radius:999px;padding:1px 9px;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.err{background:var(--err-soft);color:var(--err)} .pill.info{background:var(--accent-soft);color:var(--accent)}
+.note{font-size:13px;border-left:3px solid var(--warn);background:var(--warn-soft);padding:8px 12px;border-radius:0 4px 4px 0;margin:0}
+.note.info{border-color:var(--accent);background:var(--accent-soft)}
+.checks{display:grid;gap:6px}
+.checks label{display:flex;gap:8px;align-items:baseline;font-size:13.5px;cursor:pointer}
+.checks .amt{font-family:var(--f-num);color:var(--muted);font-size:12.5px}
+.result{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.result .cell{border:1px solid var(--line);border-radius:4px;padding:10px 12px;display:grid;gap:2px}
+.result .cell .l{font-size:12px;color:var(--muted);font-weight:600}
+.result .cell .v{font-family:var(--f-num);font-size:17px;font-weight:500}
+.result .cell.big{border-color:var(--accent);background:var(--accent-soft)}
+.result .cell.big .v{font-size:22px;color:var(--accent);font-weight:600}
+pre.calc{margin:0;font-family:var(--f-num);font-size:13px;background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:12px 14px;white-space:pre-wrap;line-height:1.7}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font:inherit;font-size:13px;border:1px solid var(--line-strong);background:var(--card);color:var(--muted);border-radius:999px;padding:3px 12px;cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.faq{display:grid;gap:8px}
+.faq details{border:1px solid var(--line);border-radius:4px;background:var(--card)}
+.faq summary{cursor:pointer;padding:10px 14px;font-weight:600;display:flex;gap:10px;align-items:baseline;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::before{content:"＋";font-family:var(--f-num);color:var(--accent);flex:none}
+.faq details[open] summary::before{content:"－"}
+.faq summary .cat{margin-left:auto;font-size:11.5px;font-weight:500;color:var(--muted);white-space:nowrap}
+.faq .body{padding:0 14px 12px 36px;font-size:13.5px;display:grid;gap:8px}
+.faq .body p{margin:0} .faq .body ul{margin:0;padding-left:18px}
+.faq .mine{border-left:3px solid var(--accent);background:var(--accent-soft);padding:6px 10px;border-radius:0 4px 4px 0}
+.faq .src{font-size:12px;color:var(--muted)}
+.empty{color:var(--muted);font-size:13.5px;padding:14px;border:1px dashed var(--line);border-radius:4px;text-align:center}
+.mono{font-family:var(--f-num)}
+.toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:8px 16px;border-radius:4px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:20}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+footer.site{margin-top:28px;padding-top:14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+footer.site p{margin:0 0 4px} footer.site a{color:inherit}
+footer.site summary{cursor:pointer;width:max-content;max-width:100%}
+footer.site ul{margin:6px 0 0;padding-left:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1><small>교육공무직원 · 내 급여 알아보기</small>공무직 급여 도우미</h1>
+    <p class="privacy">나이스에서 받은 급여명세서·복무 파일은 이 브라우저 안에서만 읽습니다. 어디로도 보내지 않으며, 이름·생년월일은 저장하지 않습니다.</p>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="t1"><span class="n">1</span>내 정보 · 통상시급</button>
+    <button role="tab" aria-selected="false" data-tab="t2"><span class="n">2</span>연가보상비</button>
+    <button role="tab" aria-selected="false" data-tab="t3"><span class="n">3</span>궁금한 것 찾아보기</button>
+  </nav>
+
+  <!-- ① 내 정보 -->
+  <section class="panel" id="t1" role="tabpanel">
+    <div class="step">
+      <h2><span class="k">01</span>나이스 급여명세서 엑셀 넣기 <span class="pill info">선택</span></h2>
+      <p class="hint">나이스 › 급여 › 급여명세서 조회에서 엑셀로 받은 파일을 끌어 놓으세요. 직종·주 소정근로시간·계약기간·근속연수·통상시급을 읽어 아래 칸을 채웁니다. 없으면 직접 입력해도 됩니다.</p>
+      <label class="drop" id="dropPay">
+        <input type="file" id="filePay" accept=".xlsx,.xls" hidden>
+        <strong>급여명세서 엑셀(.xlsx) 끌어 놓기</strong><span class="btn small">파일 고르기</span>
+        <span class="files" id="payInfo">아직 넣지 않았습니다.</span>
+      </label>
+      <div class="row"><button class="btn small" id="btnSample">예시 값으로 채워 보기</button><button class="btn small" id="btnClear">내 정보 지우기</button></div>
+    </div>
+
+    <div class="step">
+      <h2><span class="k">02</span>내 정보</h2>
+      <div class="grid2">
+        <div class="field"><label for="job">직종</label><select id="job"></select></div>
+        <div class="field"><label for="ptype">기본급 유형</label><select id="ptype"><option value="2">유형2</option><option value="1">유형1</option></select></div>
+        <div class="field"><label for="hours">주 소정근로시간</label><input type="number" id="hours" min="15" max="40" step="1" value="40"></div>
+        <div class="field"><label for="wtype">근무형태</label><select id="wtype"><option value="상시">상시</option><option value="방학중비근무">방학 중 비근무</option></select></div>
+        <div class="field"><label for="hire">계속근로 시작일</label><input type="text" class="date" id="hire" placeholder="20120301" inputmode="numeric"><span class="sub">숫자만 이어 쳐도 됩니다 (20120301)</span></div>
+        <div class="field"><label for="cend">계약 종료일</label><input type="text" class="date" id="cend" placeholder="20360229" inputmode="numeric"></div>
+        <div class="field"><label for="years">근속수당 경력연수(년)</label><input type="number" id="years" min="0" max="40" step="1" value="0"><span class="sub">명세서 ‘근속수당경력연수’</span></div>
+        <div class="field"><label for="neisRate">명세서 통상시급(원)</label><input type="number" id="neisRate" min="0" step="1" placeholder="명세서에 적힌 값"></div>
+      </div>
+      <div id="dutyBox" class="field"><label>직무관련수당 (통상임금에 들어감)</label><div class="checks" id="duty"></div></div>
+      <div class="checks" id="shortBox" hidden>
+        <label><input type="checkbox" id="shortProp" checked> 2018.9.1. 이후 처우개선수당 대상이 된 단시간 근로자 (근속수당·정기상여금을 주 소정근로시간에 비례)</label>
+      </div>
+    </div>
+
+    <div class="step">
+      <h2><span class="k">03</span>통상시급 검산</h2>
+      <p class="hint">통상임금 = 기본급 + 직무관련수당 + 정액급식비 + 근속수당 + 정기상여금÷12 + 명절휴가비÷12 (가족수당·맞춤형복지비는 빠짐). 월 임금산정시간으로 나누고 소수점 첫째 자리에서 반올림합니다.</p>
+      <div class="tblwrap"><table><thead><tr><th>항목</th><th class="num">월 금액</th><th>비고</th></tr></thead><tbody id="rateBody"></tbody><tfoot id="rateFoot"></tfoot></table></div>
+      <p id="rateCheck" class="hint"></p>
+    </div>
+  </section>
+
+  <!-- ② 연가보상비 -->
+  <section class="panel" id="t2" role="tabpanel" hidden>
+    <div class="step">
+      <h2><span class="k">01</span>연차 사용기간</h2>
+      <div class="grid2">
+        <div class="field"><label for="basis">부여 기준</label><select id="basis"><option value="school">학교 (3.1. ~ 다음 해 2월 말)</option><option value="office">교육행정기관 (1.1. ~ 12.31.)</option></select></div>
+        <div class="field"><label for="pyear">연도</label><select id="pyear"></select></div>
+      </div>
+      <p class="note info" id="periodInfo"></p>
+    </div>
+
+    <div class="step">
+      <h2><span class="k">02</span>생긴 연차</h2>
+      <div class="grid2">
+        <div class="field"><label for="leaveDays">연차 일수</label><input type="number" id="leaveDays" min="0" max="25" step="1"><span class="sub" id="leaveWhy"></span></div>
+        <div class="field"><label for="dayH">1일 소정근로시간</label><input type="number" id="dayH" min="1" max="8" step="0.5" value="8"><span class="sub">주 소정근로시간 ÷ 5</span></div>
+      </div>
+      <p class="note" id="leaveWarn" hidden></p>
+    </div>
+
+    <div class="step">
+      <h2><span class="k">03</span>쓴 연차 (나이스 복무 CSV)</h2>
+      <p class="hint">나이스 › 복무 › 개인근무상황 조회에서 위 사용기간으로 조회해 CSV로 받으세요. 연차·연차(조퇴·지각·외출)만 더하고, 병조퇴 등 다른 근무상황과 삭제·취소된 줄은 뺍니다. 줄마다 체크로 넣고 뺄 수 있습니다.</p>
+      <label class="drop" id="dropCsv">
+        <input type="file" id="fileCsv" accept=".csv,text/csv" hidden>
+        <strong>복무 CSV 끌어 놓기</strong><span class="btn small">파일 고르기</span>
+        <span class="files" id="csvInfo">아직 넣지 않았습니다.</span>
+      </label>
+      <div class="tblwrap" id="useWrap" hidden><table><thead><tr><th>넣기</th><th>근무상황</th><th>날짜</th><th class="num">일수/기간</th><th>결재</th><th class="why">판단</th></tr></thead><tbody id="useBody"></tbody><tfoot id="useFoot"></tfoot></table></div>
+      <div class="grid2">
+        <div class="field"><label for="planD">앞으로 쓸 예정 (일)</label><input type="number" id="planD" min="0" step="1" value="0"></div>
+        <div class="field"><label for="planH">앞으로 쓸 예정 (시간)</label><input type="number" id="planH" min="0" step="0.5" value="0"></div>
+        <div class="field"><label for="manualUse">CSV 없이 직접 입력 (쓴 시간 합계)</label><input type="number" id="manualUse" min="0" step="0.5" placeholder="예: 30.5 (시간)"><span class="sub">CSV를 넣으면 무시됩니다</span></div>
+      </div>
+    </div>
+
+    <div class="step">
+      <h2><span class="k">04</span>연가보상비</h2>
+      <div class="grid2">
+        <div class="field"><label for="payRate">보상에 쓸 통상시급(원)</label><input type="number" id="payRate" min="0" step="1"><span class="sub" id="payRateWhy"></span></div>
+        <div class="field checks" style="align-content:center"><label><input type="checkbox" id="promo"> 학교에서 연차 사용촉진(서면 통보)을 했음</label></div>
+      </div>
+      <div class="result" id="result"></div>
+      <p class="note" id="promoWarn" hidden>근로기준법 제61조에 따라 사용촉진을 적법하게 했다면 남은 연차에 대한 보상 의무가 없을 수 있습니다. 행정실에 확인하세요. 아래 금액은 참고용입니다.</p>
+      <pre class="calc" id="calc"></pre>
+      <div class="row"><button class="btn primary" id="btnCopy">산출내역 복사</button><span class="hint">끝전은 원단위 절사(10원 미만 버림)</span></div>
+    </div>
+  </section>
+
+  <!-- ③ 찾아보기 -->
+  <section class="panel" id="t3" role="tabpanel" hidden>
+    <div class="step">
+      <h2><span class="k">Q</span>궁금한 것 찾아보기</h2>
+      <p class="hint" id="faqMe"></p>
+      <input type="search" id="q" placeholder="예: 명절, 근속, 상여금, 조퇴, 가족수당">
+      <div class="chips" id="cats"></div>
+    </div>
+    <div class="faq" id="faq"></div>
+  </section>
+
+  <footer class="site">
+    <p>공무직 급여 도우미 v1.0 · 2026-10-30 · 단가 기준: <span id="rateYear"></span> · 만든 사람: <a href="https://blog.naver.com/oderobong" target="_blank" rel="noopener">blog.naver.com/oderobong</a></p>
+    <p>계산 결과는 참고용입니다. 실제 지급액은 학교(행정실)·나이스 처리 결과를 따릅니다. 파일 내용은 서버로 보내지 않고 이 브라우저 안에서만 처리합니다.</p>
+    <details>
+      <summary>근거 자료 · 사용한 공개 소프트웨어</summary>
+      <ul>
+        <li>근거: <span id="rateSource"></span> (경기도교육청 누리집 › 통합자료실 › 노사협력과 자료실). 다른 시도는 단체협약·지침을 확인하세요.</li>
+        <li>소스: <a href="https://github.com/wonwongemini-ctrl/school-tool" target="_blank" rel="noopener">github.com/wonwongemini-ctrl/school-tool</a></li>
+        <li><a href="https://sheetjs.com" target="_blank" rel="noopener">SheetJS</a> 0.18.5 (Apache-2.0) · 엑셀 읽기</li>
+        <li><a href="https://github.com/IBM/plex" target="_blank" rel="noopener">IBM Plex Sans KR · Mono</a> (SIL OFL 1.1) · 화면 글꼴, Google Fonts로 불러옴</li>
+      </ul>
+    </details>
+  </footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ==========================================================
+   ▼ 매년 바꾸는 곳: 단가표 (임금협약이 바뀌면 이 블록만 고치기)
+   ========================================================== */
+const RATES = {
+  label: '2026 경기',
+  source: '2026 경기도교육청 교육공무직원 급여 업무 매뉴얼 (2026. 7.)',
+  base: { 1: 2344500, 2: 2144500 },  // 기본급(주 40시간, 월)
+  living: 12860,                      // 생활임금 시간급 (시급제)
+  meal: 160000,                       // 정액급식비(월)
+  longevity: 41000, longevityCap: 24, // 근속수당 1년당, 상한 연수
+  bonus: 1000000,                     // 정기상여금(연, 1·8월 균분)
+  holiday: 2144500,                   // 명절휴가비(연, 설·추석 균분)
+  family: { spouse: 40000, other: 20000, c1: 50000, c2: 80000, c3: 120000 },
+  welfare: 1050, checkup: 200,        // 맞춤형복지 포인트, 건강검진(격년)
+};
+/* 직종 → 기본급 유형, 직무관련수당 (on: 기본으로 체크) */
+const JOBS = [
+  ['행정실무사',2,[['관리수당(중·고·특수 세입담당자)',30000,false]]],
+  ['조리실무사',2,[['위험수당',70000,true]]],
+  ['조리사',2,[['면허수당',107220,true],['위험수당',70000,true]]],
+  ['영양사',1,[['면허가산수당',117220,true],['식생활지도수당',50000,true],['위험관리수당',70000,true],['기술정보수당(면허가산 대신, 영양사 2명 이상 학교)',20000,false]]],
+  ['사서',1,[['특수업무수당',20000,true]]],
+  ['교육복지사',1,[['특수업무수당',20000,true]]],
+  ['교육복지조정자',1,[['특수업무수당',20000,true]]],
+  ['특수교육지도사',2,[['특수교육지원수당',20000,true]]],
+  ['초등보육전담사',2,[]],['늘봄행정실무사',2,[]],['유치원방과후전담사',2,[]],
+  ['특수교육종일반강사',1,[]],['특수교육관련서비스지원가',1,[]],
+  ['Wee프로젝트 전문상담사',1,[]],['Wee센터 사회복지사',1,[]],['Wee센터 임상심리사',1,[]],
+  ['생활인권전문상담사',1,[]],['학부모상담사',1,[]],['학부모지원전문가',1,[]],
+  ['급식(배식)보조원',2,[]],['통학차량보조원',2,[]],['운전원',2,[]],['안내원',2,[]],['청소원',2,[]],
+  ['실습보조원',2,[]],['시설관리(보조)원',2,[]],['당직전담(경비)원',2,[]],['사감',2,[]],['취업지원관',2,[]],
+  ['기타(직접 확인)',2,[]],
+].map(([name,type,duty])=>({name,type,duty}));
+/* ========================================================== */
+
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const fmt=n=>Math.round(n).toLocaleString('ko-KR');
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('show'),1800)}
+const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+
+/* 날짜 */
+function pd(s){const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||'');return m?new Date(Date.UTC(+m[1],+m[2]-1,+m[3])):null}
+function fd(d){return d.toISOString().slice(0,10)}
+function dot(d){return `${d.getUTCFullYear()}. ${d.getUTCMonth()+1}. ${d.getUTCDate()}.`}
+function addM(d,k){const y=d.getUTCFullYear(),m=d.getUTCMonth()+k,day=d.getUTCDate();const last=new Date(Date.UTC(y,m+1,0)).getUTCDate();return new Date(Date.UTC(y,m,Math.min(day,last)))}
+function addD(d,k){return new Date(d.getTime()+k*864e5)}
+function fullMonths(a,b){let k=0;while(addM(a,k+1)<=b)k++;return k}
+function normDate(v){
+  const s=String(v||'').trim(); const dg=s.replace(/\D/g,'');
+  let m=/^(\d{4})\D+(\d{1,2})\D+(\d{1,2})/.exec(s);
+  if(m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  if(dg.length===8) return `${dg.slice(0,4)}-${dg.slice(4,6)}-${dg.slice(6)}`;
+  if(dg.length===6) return `${dg.slice(0,4)}-${dg.slice(4,6)}`;
+  return s;
+}
+$$('input.date').forEach(el=>{
+  el.addEventListener('input',()=>{const dg=el.value.replace(/\D/g,'');if(/^\d+$/.test(el.value)&&dg.length===8){el.value=normDate(dg);update()}});
+  el.addEventListener('blur',()=>{el.value=normDate(el.value);update()});
+});
+
+/* 탭 */
+$$('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  $$('nav.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
+  $$('section.panel').forEach(p=>p.hidden=p.id!==b.dataset.tab);
+  store.set('staffpay.tab',b.dataset.tab);
+}));
+
+/* 직종 목록 */
+$('#job').innerHTML=JOBS.map((j,i)=>`<option value="${i}">${esc(j.name)}</option>`).join('');
+function job(){return JOBS[+$('#job').value]||JOBS[0]}
+function renderDuty(checked){
+  const j=job();
+  $('#duty').innerHTML=j.duty.length?j.duty.map((d,i)=>`<label><input type="checkbox" data-i="${i}" ${(checked?checked.includes(d[0]):d[2])?'checked':''}> ${esc(d[0])} <span class="amt">월 ${fmt(d[1])}원</span></label>`).join(''):'<span class="hint">이 직종은 매뉴얼에 정한 직무관련수당이 없습니다. (사업부서 별도 계획이 있으면 행정실에 확인)</span>';
+}
+$('#job').addEventListener('change',()=>{$('#ptype').value=job().type;renderDuty();update()});
+$('#duty').addEventListener('change',update);
+['ptype','hours','wtype','years','neisRate','shortProp','basis','pyear','dayH','planD','planH','manualUse','promo'].forEach(id=>$('#'+id).addEventListener('input',e=>{
+  if(id==='hours'){$('#dayH').value=Math.min(8,(+$('#hours').value||40)/5)}
+  if(id==='basis'){fillYears()}
+  update();
+}));
+$('#leaveDays').addEventListener('input',()=>{$('#leaveDays').dataset.manual='1';update()});
+$('#payRate').addEventListener('input',()=>{$('#payRate').dataset.manual='1';update()});
+
+/* 월 임금산정시간 */
+function monthHours(h){const t={40:209,35:182,30:156,25:130,20:104,15:78};return t[h]||Math.round(4.345*(h+h/40*8))}
+
+/* 통상시급 계산 */
+let lastRate=0;
+function calcRate(){
+  const h=+$('#hours').value||40, type=+$('#ptype').value, prop=h<40&&$('#shortProp').checked, r=h/40;
+  const yrs=Math.min(+$('#years').value||0,RATES.longevityCap);
+  const rows=[];
+  rows.push(['기본급(유형'+type+')',RATES.base[type]*r,h<40?`주 ${h}시간 비례`:'']);
+  $$('#duty input:checked').forEach(c=>{const d=job().duty[+c.dataset.i];rows.push([d[0],d[1],'직무관련수당'])});
+  rows.push(['정액급식비',RATES.meal,'단시간도 전액']);
+  rows.push(['근속수당',RATES.longevity*yrs*(prop?r:1),`${yrs}년 × ${fmt(RATES.longevity)}원${prop?' × 시간 비례':''}`]);
+  rows.push(['정기상여금 ÷ 12',RATES.bonus/12*(prop?r:1),`연 ${fmt(RATES.bonus)}원${prop?' × 시간 비례':''}`]);
+  rows.push(['명절휴가비 ÷ 12',RATES.holiday/12,`연 ${fmt(RATES.holiday)}원 (단시간도 전액)`]);
+  const sum=rows.reduce((a,x)=>a+x[1],0), mh=monthHours(h), rate=Math.round(sum/mh);
+  $('#rateBody').innerHTML=rows.map(x=>`<tr><td>${esc(x[0])}</td><td class="num">${fmt(x[1])}</td><td class="hint">${esc(x[2])}</td></tr>`).join('');
+  $('#rateFoot').innerHTML=`<tr><td>월 통상임금 합계</td><td class="num">${fmt(sum)}</td><td></td></tr><tr><td>÷ 월 임금산정시간</td><td class="num">${mh}시간</td><td class="hint">주 ${h}시간 기준</td></tr><tr><td>= 계산한 통상시급</td><td class="num">${fmt(rate)}원</td><td></td></tr>`;
+  const neis=+$('#neisRate').value||0;
+  if(!neis) $('#rateCheck').innerHTML='명세서 통상시급을 넣으면 맞는지 비교해 드립니다.';
+  else if(neis===rate) $('#rateCheck').innerHTML=`<span class="pill ok">일치</span> 명세서 통상시급 ${fmt(neis)}원과 같습니다.`;
+  else $('#rateCheck').innerHTML=`<span class="pill warn">${fmt(Math.abs(neis-rate))}원 차이</span> 명세서 ${fmt(neis)}원 · 계산 ${fmt(rate)}원. 직무관련수당·근속연수·단시간 여부를 확인하세요. 연가보상비에는 명세서 값을 먼저 씁니다.`;
+  $('#shortBox').hidden=!(h<40);
+  lastRate=rate; return rate;
+}
+
+/* 사용기간 */
+function fillYears(){
+  const now=new Date(), y=now.getFullYear(), school=$('#basis').value==='school';
+  const cur=school?(now.getMonth()+1>=3?y:y-1):y, sel=+$('#pyear').value||cur;
+  $('#pyear').innerHTML=[cur-2,cur-1,cur,cur+1].map(v=>`<option value="${v}" ${v===sel?'selected':''}>${school?v+'학년도':v+'년'}</option>`).join('');
+}
+function period(){
+  const y=+$('#pyear').value, school=$('#basis').value==='school';
+  const s=school?new Date(Date.UTC(y,2,1)):new Date(Date.UTC(y,0,1));
+  const e=school?new Date(Date.UTC(y+1,2,0)):new Date(Date.UTC(y,11,31));
+  return {s,e};
+}
+
+/* 연차 일수 자동 계산 */
+function autoLeave(){
+  const {s,e}=period(), hire=pd($('#hire').value), cend=pd($('#cend').value), vac=$('#wtype').value==='방학중비근무';
+  const base=vac?12:15; let warn='';
+  if(!hire) return {days:base,why:`기본 ${base}일 (계속근로 시작일을 넣으면 가산 일수를 계산합니다)`,warn};
+  let n=0; while(addM(hire,12*(n+1))<=s) n++;
+  if(hire<=s && n>=1){
+    const add=Math.floor((n-1)/2), days=Math.min(25,base+add);
+    return {days,why:`${dot(s)} 기준 계속근로 ${n}년 → ${base}일 + 가산 ${add}일${base+add>25?' (25일 한도)':''}`,warn};
+  }
+  if(hire<s){warn='회계연도 중간에 채용되어 첫 해 연차가 비례 부여되는 경우입니다. 나이스 연가일수나 행정실 안내 값으로 고쳐 넣으세요.'}
+  const end=cend&&cend<e?cend:e, inside=cend&&cend<e;
+  let m=fullMonths(hire<s?s:hire,addD(end,1)); if(inside)m-=1; m=Math.max(0,Math.min(11,m));
+  return {days:m,why:`1년 미만 근무: 개근한 달마다 1일 (최대 11일) → ${m}일로 추정`,warn:warn||'1년 미만 근무자는 결근한 달은 연차가 생기지 않습니다. 결근한 달이 있으면 그만큼 빼 주세요.'};
+}
+
+/* 복무 CSV */
+let useRows=null;
+function parseCSV(t){const out=[];let row=[],f='',q=false;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}else if(c==='"')q=true;else if(c===','){row.push(f);f=''}else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(f);out.push(row);row=[];f=''}else f+=c}if(f||row.length){row.push(f);out.push(row)}return out}
+function durMin(s,dayH){const m=/(\d+)\s*일\s*(\d+)\s*시간\s*(\d+)\s*분/.exec(s||'');if(!m)return null;return (+m[1])*dayH*60+(+m[2])*60+(+m[3])}
+async function readCsv(file){
+  const buf=await file.arrayBuffer(); let t=new TextDecoder('utf-8').decode(buf);
+  if(t.includes('�')){try{t=new TextDecoder('euc-kr').decode(buf)}catch(e){}}
+  t=t.replace(/^﻿/,'');
+  const g=parseCSV(t); const hi=g.findIndex(r=>r.some(c=>c.trim()==='근무상황'));
+  if(hi<0){toast('근무상황 열을 찾지 못했습니다');return}
+  const H=g[hi].map(c=>c.trim()), col=n=>H.indexOf(n);
+  const ci={k:col('근무상황'),p:col('기간'),d:col('일수/기간'),st:col('결재상태'),del:col('삭제여부'),why:col('사유 또는 용무')};
+  useRows=g.slice(hi+1).filter(r=>r[ci.k]&&!/총계/.test(r[0])&&r.length>3).map(r=>({
+    kind:r[ci.k].trim(), per:(r[ci.p]||'').trim(), dur:(r[ci.d]||'').trim(), st:(r[ci.st]||'').trim(), del:(r[ci.del]||'').trim(), on:null
+  }));
+  $('#csvInfo').textContent=`${file.name} · ${useRows.length}줄 읽음`;
+  update();
+}
+function judge(r,s,e){
+  const date=(/(\d{4}-\d{2}-\d{2})/.exec(r.per)||[])[1]||'';
+  if(!/^연차|^연가/.test(r.kind)) return {on:false,why:'연차가 아님',date};
+  if(r.del==='삭제') return {on:false,why:'삭제된 신청',date};
+  if(/취소|반려/.test(r.st)) return {on:false,why:'취소·반려',date};
+  const d=pd(date); if(d&&(d<s||d>e)) return {on:false,why:'사용기간 밖',date};
+  if(!/완결/.test(r.st)) return {on:true,why:'결재 중 · 포함',date,warn:1};
+  return {on:true,why:'포함',date};
+}
+
+/* 분 → 일·시간·분 */
+function dur(min,dayH){min=Math.max(0,Math.round(min));const per=dayH*60,d=Math.floor(min/per),rest=min-d*per,h=Math.floor(rest/60),m=rest%60;const p=[];if(d)p.push(d+'일');if(h)p.push(h+'시간');if(m)p.push(m+'분');return p.join(' ')||'0'}
+
+/* 전체 갱신 */
+let calcText='';
+function update(){
+  const rate=calcRate();
+  const {s,e}=period(), dayH=+$('#dayH').value||8;
+  const school=$('#basis').value==='school', lastMonth=new Date(Date.UTC(e.getUTCFullYear(),e.getUTCMonth(),1));
+  $('#periodInfo').innerHTML=`사용기간 <b>${dot(s)} ~ ${dot(e)}</b> · 보상비 청구권 발생 <b>${dot(addD(e,1))}</b> · 통상시급은 사용기간 마지막 달(<b>${lastMonth.getUTCFullYear()}년 ${lastMonth.getUTCMonth()+1}월</b>) 기준`;
+
+  const a=autoLeave();
+  if(!$('#leaveDays').dataset.manual) $('#leaveDays').value=a.days;
+  $('#leaveWhy').textContent=($('#leaveDays').dataset.manual?'직접 고친 값 · 자동 계산: '+a.days+'일 — ':'')+a.why;
+  $('#leaveWarn').hidden=!a.warn; $('#leaveWarn').textContent=a.warn;
+  const leaveDays=+$('#leaveDays').value||0;
+
+  // 사용
+  let used=0, csvUsed=false;
+  if(useRows){
+    csvUsed=true; $('#useWrap').hidden=false;
+    let html='';
+    useRows.forEach((r,i)=>{
+      const j=judge(r,s,e), on=r.on===null?j.on:r.on, m=durMin(r.dur,dayH)||0;
+      if(on) used+=m;
+      html+=`<tr class="${on?'':'off'}"><td><input type="checkbox" data-u="${i}" ${on?'checked':''} aria-label="넣기"></td><td>${esc(r.kind)}</td><td class="mono">${esc(j.date)}</td><td class="num">${esc(dur(m,dayH))}</td><td>${esc(r.st)}${r.del==='삭제'?' · 삭제':''}</td><td class="why"><span class="pill ${j.on?(j.warn?'warn':'ok'):'info'}">${esc(j.why)}</span>${r.on!==null&&r.on!==j.on?' <span class="pill warn">직접 바꿈</span>':''}</td></tr>`;
+    });
+    $('#useBody').innerHTML=html;
+    $('#useFoot').innerHTML=`<tr><td colspan="3">넣은 연차 합계</td><td class="num">${dur(used,dayH)}</td><td colspan="2"></td></tr>`;
+  } else {
+    $('#useWrap').hidden=true;
+    used=(+$('#manualUse').value||0)*60;
+  }
+  const plan=(+$('#planD').value||0)*dayH*60+(+$('#planH').value||0)*60;
+  const total=leaveDays*dayH*60, rem=Math.max(0,total-used-plan), over=used+plan>total;
+
+  // 보상 시급
+  const neis=+$('#neisRate').value||0;
+  if(!$('#payRate').dataset.manual) $('#payRate').value=neis||rate;
+  const pr=+$('#payRate').value||0;
+  $('#payRateWhy').textContent=$('#payRate').dataset.manual?'직접 넣은 값':(neis?'명세서 통상시급':'계산한 통상시급')+` — ${lastMonth.getUTCFullYear()}년 ${lastMonth.getUTCMonth()+1}월 명세서가 나오면 그 값으로 바꾸세요`;
+
+  const raw=rem*pr/60, amt=Math.floor(rem*pr/600)*10;
+  const dayPay=pr*dayH, remD=Math.floor(rem/(dayH*60)), remMin=rem-remD*dayH*60;
+  $('#result').innerHTML=[
+    ['생긴 연차',leaveDays+'일'],['쓴 연차',dur(used,dayH)],['쓸 예정',dur(plan,dayH)],['남은 연차',dur(rem,dayH)],['연가보상비',fmt(amt)+'원',1]
+  ].map(([l,v,b])=>`<div class="cell${b?' big':''}"><span class="l">${l}</span><span class="v">${v}</span></div>`).join('');
+  $('#promoWarn').hidden=!$('#promo').checked;
+  calcText=[
+    `■ 연가보상비 산출내역 (${RATES.label} 기준, 참고용)`,
+    `· 사용기간: ${dot(s)} ~ ${dot(e)}`,
+    `· 생긴 연차: ${leaveDays}일 (1일 = ${dayH}시간)`,
+    `· 쓴 연차: ${dur(used,dayH)}${csvUsed?' (나이스 복무 기준)':''}${plan?` / 쓸 예정: ${dur(plan,dayH)}`:''}`,
+    `· 남은 연차: ${dur(rem,dayH)} (${(rem/60).toLocaleString('ko-KR')}시간)`,
+    `· 통상시급: ${fmt(pr)}원 → 일급 통상임금 ${fmt(dayPay)}원 (${fmt(pr)}원 × ${dayH}시간)`,
+    `· 계산: ${remD}일 × ${fmt(dayPay)}원${remMin?` + ${(remMin/60).toLocaleString('ko-KR')}시간 × ${fmt(pr)}원`:''} = ${raw.toLocaleString('ko-KR',{maximumFractionDigits:1})}원`,
+    `· 연가보상비: ${fmt(amt)}원 (원단위 절사)`,
+    over?'※ 쓴 연차가 생긴 연차보다 많습니다. 연차 일수나 CSV 범위를 확인하세요.':'',
+    $('#promo').checked?'※ 연차 사용촉진 시행: 보상 의무가 없을 수 있음(근로기준법 제61조)':'',
+  ].filter(Boolean).join('\n');
+  $('#calc').textContent=calcText;
+
+  renderFaq();
+  saveProfile();
+}
+$('#useBody').addEventListener('change',e=>{const i=e.target.dataset.u;if(i==null)return;useRows[+i].on=e.target.checked;update()});
+$('#btnCopy').addEventListener('click',()=>{navigator.clipboard.writeText(calcText).then(()=>toast('산출내역을 복사했습니다'),()=>toast('복사하지 못했습니다'))});
+
+/* 급여명세서 엑셀 */
+async function readPay(file){
+  const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
+  const ws=wb.Sheets[wb.SheetNames[0]], g=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''}).map(r=>r.map(c=>String(c).trim()));
+  const find=lab=>{for(const r of g){const i=r.findIndex(c=>c.replace(/\s/g,'')===lab.replace(/\s/g,''));if(i>=0){for(let k=i+1;k<r.length;k++)if(r[k]!=='')return r[k]}}return ''};
+  const jobName=find('급여직종')||find('시도직종'), ct=find('계약기간'), h=parseFloat(find('주 소정근로시간')), wt=find('근무형태');
+  const rate=parseFloat((find('통상시급')||'').replace(/,/g,'')), yrs=parseFloat(find('근속수당경력연수'));
+  // 급여내역 항목
+  const items=[]; let on=false;
+  for(const r of g){ if(r.includes('계산방법')){on=true;continue} if(!on)continue; if(r.some(c=>/급여\s*총액/.test(c)))break; if(r[0])items.push(r[0]); }
+  const ji=JOBS.findIndex(j=>j.name===jobName);
+  $('#job').value=ji>=0?ji:JOBS.length-1;
+  const t=items.find(x=>/기본급/.test(x)); $('#ptype').value=t&&/1유형/.test(t)?1:t&&/2유형/.test(t)?2:job().type;
+  renderDuty(job().duty.filter(d=>items.some(x=>x.includes(d[0].replace(/\(.*$/,'')))).map(d=>d[0]));
+  if(h){$('#hours').value=h;$('#dayH').value=Math.min(8,h/5)}
+  $('#wtype').value=/방학/.test(wt)?'방학중비근무':'상시';
+  const cm=/(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})/.exec(ct); if(cm){$('#hire').value=cm[1];$('#cend').value=cm[2]}
+  if(!isNaN(yrs))$('#years').value=yrs;
+  if(rate)$('#neisRate').value=rate;
+  delete $('#payRate').dataset.manual; delete $('#leaveDays').dataset.manual;
+  $('#payInfo').innerHTML=`${esc(file.name)} · ${esc(jobName||'직종 모름')} · 주 ${h||'?'}시간 · ${esc(wt||'')} · 통상시급 ${rate?fmt(rate)+'원':'없음'}<br>계약기간 시작일은 ‘이번 계약’ 시작일일 수 있습니다. 처음 채용된 날(계속근로 시작일)과 다르면 고쳐 주세요.`;
+  update();
+}
+
+/* 끌어 놓기 */
+function bindDrop(id,input,fn){const d=$(id);['dragover','dragenter'].forEach(ev=>d.addEventListener(ev,e=>{e.preventDefault();d.classList.add('over')}));['dragleave','drop'].forEach(ev=>d.addEventListener(ev,()=>d.classList.remove('over')));d.addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f)fn(f).catch(err=>toast('파일을 읽지 못했습니다'))});$(input).addEventListener('change',e=>{const f=e.target.files[0];if(f)fn(f).catch(()=>toast('파일을 읽지 못했습니다'));e.target.value=''})}
+bindDrop('#dropPay','#filePay',readPay);
+bindDrop('#dropCsv','#fileCsv',readCsv);
+
+/* 예시 · 저장 */
+$('#btnSample').addEventListener('click',()=>{
+  $('#job').value=0;$('#ptype').value=2;renderDuty();$('#hours').value=40;$('#dayH').value=8;$('#wtype').value='상시';
+  $('#hire').value='2012-03-01';$('#cend').value='2036-02-29';$('#years').value=14;$('#neisRate').value=15027;
+  $('#basis').value='school';fillYears();
+  useRows=[['연차','2026-03-20 08:30 ~ 2026-03-20 17:30','1일0시간0분','완결',''],['연차(조퇴)','2026-04-02 14:30 ~ 2026-04-02 16:30','0일2시간0분','완결',''],['연차(조퇴)','2026-04-02 14:40 ~ 2026-04-02 16:40','0일2시간0분','완결(기결취소)','삭제'],['병조퇴','2026-04-06 15:30 ~ 2026-04-06 16:30','0일1시간0분','완결',''],['연차','2026-08-03 08:30 ~ 2026-08-03 17:30','1일0시간0분','완결',''],['연차(조퇴)','2026-10-27 16:00 ~ 2026-10-27 16:30','0일0시간30분','완결','']].map(([kind,per,dur,st,del])=>({kind,per,dur,st,del,on:null}));
+  $('#csvInfo').textContent='예시 복무 6줄 (가짜 데이터)';$('#payInfo').textContent='예시 값 (가짜 데이터): 행정실무사 · 주 40시간 · 상시';
+  delete $('#payRate').dataset.manual; delete $('#leaveDays').dataset.manual; update(); toast('예시 값으로 채웠습니다');
+});
+$('#btnClear').addEventListener('click',()=>{store.del('staffpay.profile');location.reload()});
+function saveProfile(){store.set('staffpay.profile',{job:$('#job').value,ptype:$('#ptype').value,hours:$('#hours').value,wtype:$('#wtype').value,hire:$('#hire').value,cend:$('#cend').value,years:$('#years').value,neisRate:$('#neisRate').value,duty:$$('#duty input:checked').map(c=>job().duty[+c.dataset.i][0]),basis:$('#basis').value})}
+function loadProfile(){const p=store.get('staffpay.profile');if(!p)return renderDuty();
+  ['job','ptype','hours','wtype','hire','cend','years','neisRate','basis'].forEach(k=>{if(p[k]!=null)$('#'+k).value=p[k]});
+  $('#dayH').value=Math.min(8,(+p.hours||40)/5); renderDuty(p.duty||[]);}
+
+/* ========== 궁금한 것 찾아보기 ========== */
+const CATS=['전체','임금·수당','연차·휴가','근무·가산','복지'];
+let curCat='전체';
+$('#cats').innerHTML=CATS.map(c=>`<button aria-pressed="${c==='전체'}" data-c="${c}">${c}</button>`).join('');
+$('#cats').addEventListener('click',e=>{const c=e.target.dataset.c;if(!c)return;curCat=c;$$('#cats button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.c===c));renderFaq()});
+$('#q').addEventListener('input',renderFaq);
+const R=RATES, F=R.family;
+/* body(c): c = {job, type, hours, years, rate, vac}  → 'mine'은 내 경우 한 줄 */
+const FAQ=[
+ {cat:'임금·수당',q:'내 기본급은 얼마인가요?',k:'기본급 유형1 유형2 월급 단시간 시급제 생활임금',p:'13',
+  body:c=>`<p>유형1 월 <b>${fmt(R.base[1])}원</b>, 유형2 월 <b>${fmt(R.base[2])}원</b> (주 40시간 기준). 학교는 3월부터, 교육행정기관은 1월부터 적용합니다.</p><ul><li>단시간 근로자는 주 소정근로시간에 비례 (예: 주 30시간 → × 30/40)</li><li>신규채용·휴직·복직·퇴직하는 달, 방학 중 비근무자의 방학이 든 달은 일할계산</li><li>시급제 근로자는 생활임금 시간급 ${fmt(R.living)}원</li></ul>`,
+  mine:c=>`${c.job} → 유형${c.type}${c.hours<40?`, 주 ${c.hours}시간이라 월 ${fmt(R.base[c.type]*c.hours/40)}원`:` 월 ${fmt(R.base[c.type])}원`}`},
+ {cat:'임금·수당',q:'내 직종의 직무관련수당은?',k:'직무관련수당 위험수당 면허수당 특수업무수당 관리수당 영양사 조리사 사서 식생활지도',p:'36',
+  body:c=>`<div class="tblwrap"><table><tbody>${JOBS.filter(j=>j.duty.length).map(j=>`<tr><td>${esc(j.name)}</td><td>${j.duty.map(d=>`${esc(d[0])} ${fmt(d[1])}원`).join('<br>')}</td></tr>`).join('')}</tbody></table></div><p class="hint">직무관련수당은 통상임금에 들어가므로 연장근로수당·연가보상비에도 영향을 줍니다. 그 밖의 수당은 사업부서 별도 계획을 따릅니다.</p>`,
+  mine:c=>{const j=JOBS.find(x=>x.name===c.job);return j&&j.duty.length?`${c.job}: `+j.duty.map(d=>`${d[0]} ${fmt(d[1])}원`).join(', '):`${c.job}: 매뉴얼에 정한 직무관련수당 없음`}},
+ {cat:'임금·수당',q:'근속수당은 얼마이고 언제 오르나요?',k:'근속수당 경력 재산정 전임경력 근속연수',p:'16~18',
+  body:c=>`<p>근속 1년마다 월 <b>${fmt(R.longevity)}원</b>, 최대 ${R.longevityCap}년(월 ${fmt(R.longevity*R.longevityCap)}원)까지.</p><ul><li>근속연수 = 전임경력 + 계속근로기간, 만 1년 이상이면 지급</li><li>경력재산정일은 지급 기준 충족 후 격월(1·3·5·7·9·11월 1일) — 만 n년이 되어도 다음 재산정일부터 오른 금액</li><li>전임경력은 교육감 소속 주 15시간 이상 교육공무직 경력 (기간제교사·강사 등 교원 대체 경력 제외)</li><li>방학 중 비근무자도 방학이 든 달 전액</li></ul>`,
+  mine:c=>`근속 ${c.years}년 → 월 ${fmt(R.longevity*Math.min(c.years,R.longevityCap))}원${c.hours<40?' (2018.9. 이후 대상 단시간은 시간 비례)':''}`},
+ {cat:'임금·수당',q:'정기상여금은 언제, 얼마 받나요?',k:'정기상여금 상여 1월 8월 보너스',p:'28',
+  body:c=>`<p>연 <b>${fmt(R.bonus)}원</b>을 1월·8월에 절반씩.</p><ul><li>보수지급일(17일) 기준 3개월 이상 계속근로한 재직자</li><li>지급일 기준 휴직자는 제외 (휴가·병가·출산휴가는 재직자라 지급)</li><li>방학 중 비근무자도 전액, 2018.9. 이후 대상이 된 단시간 근로자는 시간 비례</li><li>공개채용 등으로 다시 입사하면 계속근로가 끊긴 것으로 봄</li></ul>`},
+ {cat:'임금·수당',q:'명절휴가비는 언제, 얼마 받나요?',k:'명절휴가비 설 추석 명절',p:'31~32',
+  body:c=>`<p>연 <b>${fmt(R.holiday)}원</b> (설·추석 각 ${fmt(R.holiday/2)}원).</p><ul><li>명절일 당일 포함 1개월 이상 계속근로한 재직자</li><li>단시간 근로자도 전액 (2026년부터)</li><li>휴직자는 제외. 단, 육아휴직·노조전임 휴직 후 복직해 명절일에 재직하면 1개월이 안 돼도 지급</li><li>2024.12.19. 이후 통상임금에 포함</li></ul>`},
+ {cat:'임금·수당',q:'정액급식비는?',k:'급식비 정액급식비',p:'16',
+  body:c=>`<p>월 <b>${fmt(R.meal)}원</b>. 신분변동·방학이 든 달은 일할계산, 단시간 근로자도 전액(2024.1.1.부터). 통상임금에 들어갑니다.</p>`},
+ {cat:'임금·수당',q:'가족수당은 누구에게, 얼마?',k:'가족수당 배우자 자녀 부양가족 신고',p:'29~31',
+  body:c=>`<ul><li>배우자 월 ${fmt(F.spouse)}원 · 그 밖의 부양가족 1명당 ${fmt(F.other)}원</li><li>자녀: 첫째 ${fmt(F.c1)}원, 둘째 ${fmt(F.c2)}원, 셋째 이후 ${fmt(F.c3)}원 (만 19세 미만)</li><li>주민등록상 같은 세대 · 부양가족신고서 제출 후 지급</li><li>배우자 등 다른 사람이 이미 받고 있으면 중복 지급 불가</li><li>부모(직계존속)는 만 60세 이상(여자 55세 이상), 배우자 포함 4명 이내(자녀는 초과 가능)</li></ul><p class="hint">가족수당은 통상임금에 들어가지 않습니다.</p>`},
+ {cat:'임금·수당',q:'통상임금(통상시급)이 뭔가요?',k:'통상임금 통상시급 209 시급 계산',p:'6~7',
+  body:c=>`<p>연장·야간·휴일근로수당, 연가보상비, 해고예고수당 등을 계산하는 기준 금액입니다.</p><ul><li>들어감: 기본급, 직무관련수당, 정액급식비, 근속수당, 정기상여금, 명절휴가비</li><li>안 들어감: 가족수당, 맞춤형복지비, 연장·야간·휴일근로수당, 연가보상비</li><li>시급 = 월 통상임금 ÷ 월 임금산정시간(주 40시간 209 · 35시간 182 · 30시간 156 · 25시간 130 · 20시간 104 · 15시간 78), 소수점 첫째 자리 반올림</li><li>방학 중 비근무자도 ‘정상 근무할 때 받을 금액’으로 계산</li></ul>`,
+  mine:c=>`계산한 내 통상시급: ${fmt(c.rate)}원 (1번 탭 ‘통상시급 검산’)`},
+ {cat:'연차·휴가',q:'연차는 며칠 생기나요?',k:'연차 발생 15일 가산 25일 1년 미만 출근율 80%',p:'49~50',
+  body:c=>`<ul><li>1년간 80% 이상 출근: <b>15일</b> (방학 중 비근무자 <b>12일</b>), 3년 이상 근무하면 2년마다 1일 가산, 25일 한도</li><li>학교는 매년 3.1., 기관은 1.1.에 발생하고 그 회계연도 말까지 사용</li><li>1년 미만 근무자: 개근한 달마다 1일 (최대 11일). 결근한 달은 안 생김, 지각·조퇴만 있으면 개근</li><li>방학 중 비근무자는 15일 이상 방학이 든 달은 월 단위 연차에서 제외</li><li>80% 미만 출근: 개근한 달 수만큼</li></ul>`,
+  mine:c=>`올해 내 연차: ${$('#leaveDays').value||'?'}일 (2번 탭 계산)`},
+ {cat:'연차·휴가',q:'연가보상비(연차수당)는 언제, 어떻게 계산하나요?',k:'연가보상비 연차수당 미사용수당 보상 퇴직',p:'48',
+  body:c=>`<ul><li>재직 중: 사용기간이 끝난 다음 날 청구권 발생 (학교는 3.1.)</li><li>금액 = 남은 연차 일수 × 일급 통상임금 (통상시급 × 1일 소정근로시간), 단시간은 시간 단위</li><li>통상임금은 <b>사용기간 마지막 달</b> 기준 (학교는 2월)</li><li>퇴직 시: 퇴직일로부터 14일 이내, 마지막 근무일이 속한 달 통상임금으로</li><li>휴직해서 못 쓴 연차도 사용기간 종료 다음 날 청구권 발생</li><li>사용촉진을 적법하게 했다면 보상 의무가 없을 수 있음</li></ul>`},
+ {cat:'근무·가산',q:'조퇴·지각하면 주휴수당이나 연차가 없어지나요?',k:'조퇴 지각 외출 주휴 주휴수당 결근 개근',p:'37~43',
+  body:c=>`<ul><li>주휴수당: 주 15시간 이상이고 그 주 소정근로일에 결근이 없으면 발생</li><li>지각·조퇴·외출은 결근이 아니라서 주휴수당·월 단위 연차 모두 생김</li><li>휴가(무급휴가 포함) 사용, 적법한 파업 참가도 결근 아님</li><li>다만 연차가 아닌 일반 조퇴는 그 시간만큼 통상임금을 공제</li></ul>`},
+ {cat:'근무·가산',q:'연장·야간·휴일 근무하면 얼마나 더 받나요?',k:'연장근로 야간근로 휴일근로 가산 초과근무 시간외',p:'44~47',
+  body:c=>`<ul><li>연장: 1주 40시간·1일 8시간을 넘은 시간에 통상임금 50% 가산 (단시간은 소정근로시간을 넘으면 50%)</li><li>야간(오후 10시~오전 6시): 50% 가산, 연장과 겹치면 50%+50%</li><li>휴일: 8시간 이내 50%, 8시간 초과분 100% 가산</li><li>감시·단속적 근로자는 연장 가산분 미적용 (야간 가산은 적용)</li><li>연장근로시간은 분 단위도 절사하지 않음</li></ul>`,
+  mine:c=>c.rate?`내 통상시급 ${fmt(c.rate)}원 기준 연장 1시간 = ${fmt(c.rate*1.5)}원 (150%)`:''},
+ {cat:'복지',q:'맞춤형복지비·건강검진비는?',k:'맞춤형복지 복지포인트 건강검진 복지비',p:'33~35',
+  body:c=>`<ul><li>연 <b>${fmt(R.welfare)}포인트</b> (1포인트 = 1,000원), 학교는 3.1. 기준 배정</li><li>건강검진비: 격년 ${R.checkup}포인트 이내, 해당 연도 12.31. 기준 짝수년도 출생자</li><li>신규채용·휴직·퇴직 시 월할 계산, 청구 마감 12.15.</li><li>상품권(온누리·지역사랑 제외)·유흥·사행성 항목은 사용 불가</li></ul>`},
+];
+function ctx(){return {job:job().name,type:+$('#ptype').value,hours:+$('#hours').value||40,years:+$('#years').value||0,rate:+$('#neisRate').value||lastRate}}
+function renderFaq(){
+  const c=ctx(), q=$('#q').value.trim().toLowerCase(), open=new Set($$('#faq details[open]').map(d=>d.dataset.i));
+  $('#faqMe').textContent=`내 정보 탭 기준: ${c.job} · 유형${c.type} · 주 ${c.hours}시간 · 근속 ${c.years}년 — 항목을 열면 ‘내 경우’가 함께 나옵니다.`;
+  const list=FAQ.map((f,i)=>({...f,i})).filter(f=>(curCat==='전체'||f.cat===curCat)&&(!q||(f.q+f.k+f.body(c).replace(/<[^>]+>/g,'')).toLowerCase().includes(q)));
+  $('#faq').innerHTML=list.length?list.map(f=>{const mine=f.mine?f.mine(c):'';return `<details data-i="${f.i}" ${open.has(String(f.i))||(q&&list.length<=2)?'open':''}><summary>${esc(f.q)}<span class="cat">${f.cat}</span></summary><div class="body">${mine?`<p class="mine"><b>내 경우</b> · ${esc(mine)}</p>`:''}${f.body(c)}<p class="src">근거: ${esc(R.source)} ${f.p}쪽</p></div></details>`}).join(''):'<div class="empty">찾는 내용이 없습니다. 다른 말로 찾아보세요.</div>';
+}
+
+/* 시작 */
+$('#rateYear').textContent=RATES.label; $('#rateSource').textContent=RATES.source;
+loadProfile(); fillYears();
+const tab=store.get('staffpay.tab'); if(tab){const b=$(`nav.tabs button[data-tab="${tab}"]`);if(b)b.click()}
+update();
+</script>
+</body>
+</html>
