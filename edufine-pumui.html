@@ -109,6 +109,15 @@ details summary{cursor:pointer;font-size:13px;color:var(--accent);font-weight:60
 .muted{color:var(--muted)}
 .mono{font-family:var(--f-num)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* 강사료: 강사 종류 나누기 */
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:6px;overflow:hidden;flex-wrap:wrap}
+.seg button{font:inherit;font-weight:600;font-size:13.5px;border:none;background:var(--card);color:var(--muted);padding:8px 16px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line-strong)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.feecalc{font-family:var(--f-num);font-size:13px;background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:10px 12px;white-space:pre-wrap;margin:0;line-height:1.7}
+.finalbox{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 18px;border:1.5px solid var(--accent);border-radius:6px;padding:12px 14px;background:var(--accent-soft)}
+.settbl td{padding:4px 6px;vertical-align:middle}
+.settbl td input{padding:4px 6px;font-size:13px}
 footer.site{margin-top:28px;padding-top:14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
 footer.site p{margin:0 0 4px}
 footer.site a{color:inherit}
@@ -230,6 +239,15 @@ footer.site ul{margin:6px 0 0;padding-left:18px}
   <!-- ===== 4. 강사료 ===== -->
   <section class="panel" id="t4" role="tabpanel" hidden>
     <div class="step">
+      <h2><span class="k">종류</span>어떤 강사인가요?</h2>
+      <div class="seg" role="group" aria-label="강사 종류">
+        <button type="button" data-kind="ledger" aria-pressed="true">출근부 있는 강사 (강사 대장)</button>
+        <button type="button" data-kind="once" aria-pressed="false">일회성 강사 (특강·작가·연수)</button>
+      </div>
+      <p class="hint" id="t4kindHint">교육과정·방과후처럼 여러 차시 수업하고 출근부를 쓰는 강사입니다. 강사 대장의 시간당 강사료로 계산합니다.</p>
+    </div>
+    <div id="t4ledger" style="display:grid;gap:22px">
+    <div class="step">
       <h2><span class="k">입력</span>강사 대장 (엑셀) 또는 강사 관리 시트</h2>
       <label class="drop" id="t4drop">
         <input type="file" id="t4file" accept=".xlsx,.xls,.csv" hidden>
@@ -270,9 +288,71 @@ footer.site ul{margin:6px 0 0;padding-left:18px}
       <div id="t4check"></div>
     </div>
     <div class="step" id="t4out"></div>
+    </div>
+    <!-- 일회성 강사 -->
+    <div id="t4once" style="display:grid;gap:22px" hidden>
+      <div class="step">
+        <h2><span class="k">입력</span>행사 · 강사 정보</h2>
+        <div class="grid2">
+          <div class="field"><label for="oRel">1. 관련 (문서번호)</label><input type="text" id="oRel" placeholder="○○초등학교-0000(2026. 0. 0.)"></div>
+          <div class="field"><label for="oYear">학년도</label><input type="text" id="oYear"></div>
+          <div class="field"><label for="oBiz">예산/사업명</label><input type="text" id="oBiz" placeholder="예: 독서교육"></div>
+          <div class="field"><label for="oName">행사명</label><input type="text" id="oName" placeholder="예: 작가와의 만남 / 학부모 교육 / 교원 연수"></div>
+          <div class="field"><label for="oWho">대상</label><input type="text" id="oWho" placeholder="예: 4학년 학생 120명 / 학부모 / 교직원"></div>
+          <div class="field"><label for="oLect">강사명</label><input type="text" id="oLect"></div>
+          <div class="field"><label for="oDate">날짜</label><input type="text" id="oDate" placeholder="20261105" inputmode="numeric"></div>
+          <div class="field"><label for="oTime">시간</label><input type="text" id="oTime" placeholder="14:00~16:00"></div>
+          <div class="field"><label for="oAtt">붙임</label><input type="text" id="oAtt" value="강사카드 및 통장사본 1부."></div>
+        </div>
+      </div>
+      <div class="step">
+        <h2><span class="k">기준</span>강사수당 기준표로 계산</h2>
+        <div class="grid2">
+          <div class="field"><label for="oGrade">강사 등급</label><select id="oGrade"></select><span class="hint" id="oGradeWho"></span></div>
+          <div class="field"><label for="oH">강의 시간</label><div class="row"><input type="number" id="oH" min="0" value="1" style="width:80px"> 시간 <input type="number" id="oM" min="0" max="59" step="5" value="0" style="width:80px"> 분</div><span class="hint">30분 미만은 빼고, 30분 이상은 1시간으로 셉니다</span></div>
+          <div class="field"><label for="oCnt">수강 인원 (가산용)</label><input type="number" id="oCnt" min="0" placeholder="예: 120"><span class="hint" id="oCntHint">79명 이하는 가산 없음</span></div>
+          <div class="field"><label for="oTimes">같은 강의 횟수</label><input type="number" id="oTimes" min="1" value="1"><span class="hint">예: 반별로 3번 강의하면 3</span></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label for="oMs">원고료 · 국문 A4 (매)</label><input type="number" id="oMs" min="0" step="0.5" value="0"></div>
+          <div class="field"><label for="oPpt">원고료 · 파워포인트 (면)</label><input type="number" id="oPpt" min="0" value="0"></div>
+          <div class="field"><label for="oTravel">여비 · 교통비 (실비, 원)</label><input type="number" id="oTravel" min="0" step="100" value="0"></div>
+          <div class="field" style="align-content:end;gap:6px">
+            <label style="font-weight:500;color:var(--ink)"><input type="checkbox" id="oRec"> 강의 녹화 가산</label>
+            <label style="font-weight:500;color:var(--ink)"><input type="checkbox" id="oPub"> 강사가 공무원·교원 등 공직자</label>
+          </div>
+        </div>
+        <pre class="feecalc" id="oCalc"></pre>
+        <div id="oCheck"></div>
+        <details>
+          <summary>강사수당 기준표 보기 · 고치기</summary>
+          <div style="display:grid;gap:10px;margin-top:10px">
+            <p class="hint" id="feeSrc"></p>
+            <div class="tblwrap"><table class="settbl"><thead><tr><th>등급</th><th>대상</th><th class="num">기본 1시간</th><th class="num">초과 1시간당</th><th></th></tr></thead><tbody id="feeRows"></tbody></table></div>
+            <div class="grid2">
+              <div class="field"><label for="fMs">원고료 국문 A4 1매</label><input type="number" id="fMs"></div>
+              <div class="field"><label for="fMsMax">원고 시간당 한도 (매)</label><input type="number" id="fMsMax" step="0.5"></div>
+              <div class="field"><label for="fPpt">파워포인트 1면</label><input type="number" id="fPpt"></div>
+              <div class="field"><label for="fPptMax">PPT 시간당 한도 (면)</label><input type="number" id="fPptMax"></div>
+              <div class="field"><label for="fRec">녹화 가산 (시간당)</label><input type="number" id="fRec"></div>
+            </div>
+            <div class="row"><button class="btn small" id="feeAdd">＋ 등급 추가</button><button class="btn small primary" id="feeSave">기준표 저장</button><button class="btn small" id="feeReset">기본값으로</button><span class="hint">이 브라우저에만 저장됩니다</span></div>
+          </div>
+        </details>
+      </div>
+      <div class="step">
+        <h2><span class="k">최종</span>지급 금액 확인 · 수정</h2>
+        <div class="finalbox">
+          <div class="field"><label for="oFinal">강사료 최종 금액 (원)</label><input type="number" id="oFinal" min="0" step="10"><span class="hint" id="oFinalHint"></span></div>
+          <div class="field"><label for="oMsFinal">원고료 최종 금액 (원)</label><input type="number" id="oMsFinal" min="0" step="10"></div>
+          <div class="field" style="grid-column:1/-1"><label for="oCalcText">산출내역 (기안문에 들어감 · 고칠 수 있음)</label><input type="text" id="oCalcText"><span class="hint">금액이나 산출내역을 직접 고치면 그 값이 유지됩니다. <button class="btn small" id="oRecalc" type="button">기준표 금액으로 되돌리기</button></span></div>
+        </div>
+      </div>
+      <div class="step" id="t4onceOut"></div>
+    </div>
   </section>
   <footer class="site">
-    <p>에듀파인 품의 도우미 v1.0 · 2026-10-29 · 만든 사람: <a href="https://blog.naver.com/oderobong" target="_blank" rel="noopener">blog.naver.com/oderobong</a></p>
+    <p>에듀파인 품의 도우미 v1.1 · 2026-10-30 · 만든 사람: <a href="https://blog.naver.com/oderobong" target="_blank" rel="noopener">blog.naver.com/oderobong</a></p>
     <p>파일 내용은 서버로 전송되지 않고 이 브라우저 안에서만 처리됩니다. 처리용 공개 라이브러리만 CDN(cdnjs)에서 불러옵니다.</p>
     <details>
       <summary>만든 사람 · 사용한 공개 소프트웨어</summary>
@@ -1222,6 +1302,132 @@ $('#t4list').addEventListener('click',e=>{ const el=e.target.closest('.lect'); i
 $('#t4list').addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('lect')){ e.preventDefault(); t4Select(+e.target.dataset.idx);} });
 ['t4y','t4b','t4g','t4p','t4n','t4per','t4att','t4u','t4h','t4c','t4x','t4mt','t4ma','t4rel'].forEach(id=>$('#'+id).addEventListener('input',t4Output));
 $('#t4manual').addEventListener('change',t4Output);
+
+// ================= 4-2. 일회성 강사 (강사수당 기준표) =================
+const FEE_DEFAULT={
+  source:'2025 경기도교육비특별회계 예산편성 기본지침 35~36쪽 (학교회계 지침·학교 기준이 다르면 고쳐 쓰세요)',
+  grades:[
+    {name:'특별강사Ⅰ',who:'장관급 이상, 교육감·광역단체장·국회의원, 대학총장급, 해당 분야 권위자',base:400000,over:200000},
+    {name:'특별강사Ⅱ',who:'차관급, 공직유관단체장·정부출연 연구기관장, 인간문화재·유명 예술인',base:300000,over:150000},
+    {name:'일반강사Ⅰ',who:'대학 전임강사 이상, 기업 임원, 자격·면허 전문가, 4급 이상 공무원, 전·현직 학교장, 교육경력 30년 이상 교원 등',base:200000,over:100000},
+    {name:'일반강사Ⅱ',who:'대학 시간강사, 5급 이하 공무원, 교감·장학사·교사 등 (특별·일반Ⅰ이 아닌 사람)',base:130000,over:60000},
+    {name:'보조강사',who:'실기·실습 보조, 분반·분임활동 지도',base:40000,over:20000},
+  ],
+  ms:15000, msMax:2.5, ppt:5000, pptMax:9, rec:50000,
+  boost:[[80,1.2],[120,1.4],[160,1.6],[200,2.0]], // 인원 이상 → 배율
+};
+let FEE=JSON.parse(JSON.stringify(FEE_DEFAULT));
+try{ const v=JSON.parse(localStorage.getItem('pumui.feeTable')); if(v&&Array.isArray(v.grades)&&v.grades.length) FEE=Object.assign(JSON.parse(JSON.stringify(FEE_DEFAULT)),v); }catch(e){}
+const S4o={finalEdited:false,msEdited:false,textEdited:false,last:null};
+function feeGradeOptions(){ const cur=$('#oGrade').value; $('#oGrade').innerHTML=FEE.grades.map((g,i)=>`<option value="${i}">${esc(g.name)} · 기본 ${won(g.base)} / 초과 ${won(g.over)}</option>`).join('')+'<option value="direct">직접 입력 (정액·회당)</option>'; if(cur&&$(`#oGrade option[value="${cur}"]`)) $('#oGrade').value=cur; else $('#oGrade').value=String(Math.min(3,FEE.grades.length-1)); }
+function feeTableRender(){
+  $('#feeSrc').textContent='기준: '+FEE.source;
+  $('#feeRows').innerHTML=FEE.grades.map(g=>`<tr><td><input type="text" class="g-n" value="${esc(g.name)}" style="width:110px"></td><td><input type="text" class="g-w" value="${esc(g.who)}"></td><td class="num"><input type="number" class="g-b" value="${g.base}" style="width:100px"></td><td class="num"><input type="number" class="g-o" value="${g.over}" style="width:100px"></td><td><button class="btn small g-x" type="button">✕</button></td></tr>`).join('');
+  $('#fMs').value=FEE.ms; $('#fMsMax').value=FEE.msMax; $('#fPpt').value=FEE.ppt; $('#fPptMax').value=FEE.pptMax; $('#fRec').value=FEE.rec;
+}
+function countHours(h,m){ return Math.max(0,Math.floor(h)) + (m>=30?1:0); }
+function boostOf(n){ let r=1; FEE.boost.forEach(([min,x])=>{ if(n>=min) r=x; }); return r; }
+function onceDateStr(){ const v=$('#oDate').value.trim(); const m=v.match(/(20\d\d)\D*(\d{1,2})\D*(\d{1,2})/); if(!m) return v; const d=new Date(+m[1],+m[2]-1,+m[3]); return `${m[1]}. ${+m[2]}. ${+m[3]}.(${'일월화수목금토'[d.getDay()]})`; }
+function t4Once(){
+  const gi=$('#oGrade').value, direct=gi==='direct', g=direct?null:FEE.grades[+gi];
+  $('#oGradeWho').textContent= direct? '기준표에 없는 경우(작가 섭외비·회당 정액 등): 아래 최종 금액에 직접 넣으세요' : g.who;
+  const hh=Number($('#oH').value)||0, mm=Number($('#oM').value)||0, H=countHours(hh,mm), times=Math.max(1,Number($('#oTimes').value)||1);
+  const cnt=Number($('#oCnt').value)||0, bx=boostOf(cnt), rec=$('#oRec').checked;
+  $('#oCntHint').textContent= cnt? (bx>1?`${cnt}명 → ${Math.round(bx*100)}% 가산`:`${cnt}명 → 가산 없음 (80명 이상부터)`) : '79명 이하는 가산 없음 · 80명 120% · 120명 140% · 160명 160% · 200명 200%';
+  const lines=[], checks=[]; let fee=0, txt='';
+  if(!direct){
+    if(H<1){ checks.push(['warn','강의 시간이 30분 미만이면 강사수당 기준 시간에 들어가지 않습니다']); }
+    const one = H>=1? g.base + g.over*(H-1) : 0;
+    let per = Math.round(one*bx) + (rec? FEE.rec*H : 0);
+    fee = per*times;
+    const timeLabel = mm? `${hh}시간 ${mm}분 → ${H}시간` : `${H}시간`;
+    lines.push(`기본 ${won(g.base)}원${H>1?` + 초과 ${won(g.over)}원 × ${H-1}시간`:''} = ${won(one)}원   (${timeLabel})`);
+    if(bx>1) lines.push(`수강 인원 ${cnt}명 가산 × ${Math.round(bx*100)}% = ${won(Math.round(one*bx))}원`);
+    if(rec) lines.push(`녹화 가산 ${won(FEE.rec)}원 × ${H}시간 = ${won(FEE.rec*H)}원`);
+    if(times>1) lines.push(`${won(per)}원 × ${times}회 = ${won(fee)}원`);
+    lines.push(`강사료 계산 금액: ${won(fee)}원`);
+    txt = `${g.name} 기본 ${won(g.base)}원${H>1?`+초과 ${won(g.over)}원*${H-1}시간`:''}${bx>1?` (인원 가산 ${Math.round(bx*100)}%)`:''}${rec?` + 녹화 ${won(FEE.rec)}원*${H}시간`:''}${times>1?` *${times}회`:''} = ${won(fee)}원`;
+  } else { lines.push('직접 입력: 아래 최종 금액과 산출내역을 적어 주세요'); }
+  // 원고료
+  const ms=Number($('#oMs').value)||0, ppt=Number($('#oPpt').value)||0;
+  const msFee=Math.round(ms*FEE.ms + ppt*FEE.ppt);
+  if(ms||ppt){ lines.push(`원고료: ${ms?`국문 ${won(FEE.ms)}원 × ${ms}매`:''}${ms&&ppt?' + ':''}${ppt?`PPT ${won(FEE.ppt)}원 × ${ppt}면`:''} = ${won(msFee)}원`);
+    const hTot=Math.max(1,H)*times;
+    if(ms>FEE.msMax*hTot) checks.push(['warn',`원고 매수가 한도(시간당 ${FEE.msMax}매 × ${hTot}시간 = ${FEE.msMax*hTot}매)를 넘습니다`]);
+    if(ppt>FEE.pptMax*hTot) checks.push(['warn',`PPT 면수가 한도(시간당 ${FEE.pptMax}면 × ${hTot}시간 = ${FEE.pptMax*hTot}면)를 넘습니다`]); }
+  const travel=Number($('#oTravel').value)||0; if(travel) lines.push(`여비(실비): ${won(travel)}원`);
+  // 최종 금액 (직접 고친 값 유지)
+  if(!S4o.finalEdited) $('#oFinal').value = direct? '' : fee;
+  if(!S4o.msEdited) $('#oMsFinal').value = msFee||'';
+  const msTxt = (ms||ppt)? ` / 원고료 ${ms?`${won(FEE.ms)}원*${ms}매`:''}${ms&&ppt?'+':''}${ppt?`${won(FEE.ppt)}원*${ppt}면`:''} = ${won(Number($('#oMsFinal').value)||0)}원` : '';
+  const trTxt = travel? ` / 여비(실비) ${won(travel)}원` : '';
+  if(!S4o.textEdited) $('#oCalcText').value = direct? `${won(Number($('#oFinal').value)||0)}원${(hh||mm)?` (${hh?hh+'시간':''}${mm?' '+mm+'분':''}${times>1?`*${times}회`:''})`:''}`+msTxt+trTxt : (S4o.finalEdited && Number($('#oFinal').value)!==fee ? `${won(Number($('#oFinal').value)||0)}원 (기준 ${won(fee)}원에서 조정)` : txt) + msTxt + trTxt;
+  const finalFee=Number($('#oFinal').value)||0, finalMs=Number($('#oMsFinal').value)||0;
+  $('#oFinalHint').textContent= direct? '' : (finalFee!==fee? `기준표 계산 ${won(fee)}원과 ${won(Math.abs(finalFee-fee))}원 ${finalFee>fee?'많음':'적음'}` : '기준표 계산 금액 그대로');
+  if(!direct && finalFee>fee) checks.push(['warn','최종 금액이 기준표 계산보다 큽니다. 학교 기준·사유를 확인하세요']);
+  // 청탁금지법 (공직자 강사)
+  if($('#oPub').checked){ const per=(finalFee+finalMs)/times;
+    if(H<=1 && per>400000) checks.push(['err',`공직자 외부강의 사례금 상한(1시간 40만 원)을 넘습니다: 1회 ${won(per)}원`]);
+    else if(H>1 && per>600000) checks.push(['err',`공직자 외부강의 사례금 상한(1시간 초과 시 총 60만 원)을 넘습니다: 1회 ${won(per)}원`]);
+    else checks.push(['ok','공직자 외부강의 사례금 상한(1시간 40만 원, 초과해도 총 60만 원) 안입니다 · 여비 제외']); }
+  $('#oCalc').textContent=lines.join('\n');
+  $('#oCheck').innerHTML=checks.length?checksHtml(checks):'';
+  // 출력
+  const name=$('#oName').value.trim(), y=$('#oYear').value.trim(), b=$('#oBiz').value.trim(), lect=$('#oLect').value.trim();
+  const total=finalFee+finalMs+travel;
+  if(!name&&!lect){ renderOutput('t4onceOut',null); return; }
+  const cls=`${y?y+'학년도 ':''}${b?b+' ':''}${name}`.replace(/\s+/g,' ').trim();
+  const when=[onceDateStr(),$('#oTime').value.trim()].filter(Boolean).join(' ')+((hh||mm)?` (${hh?hh+'시간':''}${mm?(hh?' ':'')+mm+'분':''}${times>1?`, ${times}회`:''})`:'');
+  const body=[
+    `1. 관련: ${$('#oRel').value.trim()}`,
+    `2. ${cls} 강사비를 아래와 같이 지급하고자 합니다.`,
+    `  가. 행 사 명: ${name}`,
+    `  나. 일    시: ${when}`,
+    `  다. 대    상: ${$('#oWho').value.trim()}`,
+    `  라. 강 사 명: ${lect}${direct?'':` (${g.name})`}`,
+    `  마. 지급금액: ${won(total)}원(금${korAmount(total)}원정)${(finalMs||travel)?` - 강사료 ${won(finalFee)}원${finalMs?`, 원고료 ${won(finalMs)}원`:''}${travel?`, 여비 ${won(travel)}원`:''}`:''}`,
+    `  바. 산출내역: ${$('#oCalcText').value.trim()}`,
+    ``,
+    `붙임  ${$('#oAtt').value.trim()||'강사카드 및 통장사본 1부.'}  끝.`
+  ].join('\n');
+  const rows=[{name:`${cls} 강사료`,qty:1,price:finalFee}];
+  if(finalMs) rows.push({name:`${cls} 원고료`,qty:1,price:finalMs});
+  if(travel) rows.push({name:`${cls} 강사 여비`,qty:1,price:travel});
+  renderOutput('t4onceOut',{title:`${cls} 강사비 지급`, body, rows:rows.filter(r=>r.price>0).length?rows.filter(r=>r.price>0):rows, fname:`품목내역_강사료_${lect||name}_${today()}.xls`});
+}
+// 강사 종류 전환
+$$('#t4 .seg button').forEach(b=>b.addEventListener('click',()=>{
+  const once=b.dataset.kind==='once';
+  $$('#t4 .seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  $('#t4ledger').hidden=once; $('#t4once').hidden=!once;
+  $('#t4kindHint').textContent= once? '작가와의 만남, 학부모 교육, 교원 연수처럼 한 번(또는 몇 번) 오는 강사입니다. 강사수당 기준표(등급별 기본 1시간 + 초과 시간)로 계산하고, 최종 금액은 고칠 수 있습니다.' : '교육과정·방과후처럼 여러 차시 수업하고 출근부를 쓰는 강사입니다. 강사 대장의 시간당 강사료로 계산합니다.';
+  try{ localStorage.setItem('pumui.t4kind',b.dataset.kind); }catch(e){}
+  if(once) t4Once();
+}));
+// 날짜 숫자 이어 치기
+$('#oDate').addEventListener('input',()=>{ const d=$('#oDate').value.replace(/\D/g,''); if(/^\d{8}$/.test($('#oDate').value)) $('#oDate').value=`${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6)}`; });
+['oRel','oYear','oBiz','oName','oWho','oLect','oDate','oTime','oAtt','oGrade','oH','oM','oCnt','oTimes','oMs','oPpt','oTravel','oRec','oPub'].forEach(id=>$('#'+id).addEventListener('input',t4Once));
+['oGrade','oRec','oPub'].forEach(id=>$('#'+id).addEventListener('change',t4Once));
+$('#oFinal').addEventListener('input',()=>{ S4o.finalEdited=true; t4Once(); });
+$('#oMsFinal').addEventListener('input',()=>{ S4o.msEdited=true; t4Once(); });
+$('#oCalcText').addEventListener('input',()=>{ S4o.textEdited=true; t4Once(); });
+$('#oRecalc').addEventListener('click',()=>{ S4o.finalEdited=S4o.msEdited=S4o.textEdited=false; t4Once(); toast('기준표 금액으로 되돌렸습니다'); });
+// 기준표 고치기
+$('#feeRows').addEventListener('click',e=>{ if(e.target.classList.contains('g-x')) e.target.closest('tr').remove(); });
+$('#feeAdd').addEventListener('click',()=>{ $('#feeRows').insertAdjacentHTML('beforeend','<tr><td><input type="text" class="g-n" style="width:110px" placeholder="예: 작가(학교 기준)"></td><td><input type="text" class="g-w"></td><td class="num"><input type="number" class="g-b" style="width:100px"></td><td class="num"><input type="number" class="g-o" style="width:100px" value="0"></td><td><button class="btn small g-x" type="button">✕</button></td></tr>'); });
+$('#feeSave').addEventListener('click',()=>{
+  const grades=$$('#feeRows tr').map(tr=>({name:$('.g-n',tr).value.trim(),who:$('.g-w',tr).value.trim(),base:Number($('.g-b',tr).value)||0,over:Number($('.g-o',tr).value)||0})).filter(g=>g.name&&g.base>0);
+  if(!grades.length) return toast('등급을 하나 이상 넣어 주세요');
+  FEE=Object.assign({},FEE,{grades,ms:Number($('#fMs').value)||0,msMax:Number($('#fMsMax').value)||0,ppt:Number($('#fPpt').value)||0,pptMax:Number($('#fPptMax').value)||0,rec:Number($('#fRec').value)||0,source:'직접 고친 기준표 (기본: '+FEE_DEFAULT.source+')'});
+  try{ localStorage.setItem('pumui.feeTable',JSON.stringify(FEE)); }catch(e){}
+  feeGradeOptions(); feeTableRender(); t4Once(); toast('강사수당 기준표를 저장했습니다');
+});
+$('#feeReset').addEventListener('click',()=>{ FEE=JSON.parse(JSON.stringify(FEE_DEFAULT)); try{ localStorage.removeItem('pumui.feeTable'); }catch(e){} feeGradeOptions(); feeTableRender(); t4Once(); toast('기본 기준표로 되돌렸습니다'); });
+// 시작
+$('#oYear').value=String(new Date().getMonth()+1>=3?new Date().getFullYear():new Date().getFullYear()-1);
+feeGradeOptions(); feeTableRender();
+(function(){ ['oRel','oAtt'].forEach(id=>{ const el=$('#'+id); try{ const v=localStorage.getItem('pumui.'+id); if(v!=null) el.value=v; }catch(e){} el.addEventListener('input',()=>{ try{ localStorage.setItem('pumui.'+id, el.value); }catch(e){} }); });
+  try{ if(localStorage.getItem('pumui.t4kind')==='once') $('#t4 .seg button[data-kind="once"]').click(); }catch(e){} })();
 
 // 학교마다 다른 값(관련 문서번호, 기본 문구)은 이 브라우저에만 기억
 (function(){ const keep=['t1rel','t4rel','t4att','t2title','t2intro','t3title','t3purpose'];
