@@ -100,6 +100,21 @@ pre.calc{margin:0;font-family:var(--f-num);font-size:13px;background:var(--paper
 .toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:8px 16px;border-radius:4px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:20}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.howto{border:1px solid var(--accent);border-radius:4px;background:var(--card);padding:10px 0 0}
+.howto h3{margin:0 14px 8px;font-size:13.5px;color:var(--accent)}
+.howto ol{margin:0;padding:0 14px 12px 34px;display:grid;gap:6px;font-size:13.5px}
+.btn.help{display:inline-flex;align-items:center;gap:6px;color:var(--accent);border-color:var(--accent)}
+.btn.help::before{content:"?";display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:11.5px;font-weight:700;font-family:var(--f-body)}
+.btn.help[aria-expanded="true"]{background:var(--accent-soft)}
+.howto .path{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center}
+.howto .m{border:1px solid var(--line-strong);background:var(--paper);border-radius:3px;padding:0 6px;font-size:12.5px;white-space:nowrap}
+.howto .key{border:1.5px solid var(--accent);color:var(--accent);border-radius:3px;padding:0 6px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.howto .tip{color:var(--muted);font-size:12.5px}
+.settbl td{padding:4px 6px;vertical-align:middle}
+.settbl td input[type=text],.settbl td input[type=number],.settbl td select{padding:4px 6px;font-size:13.5px}
+.settbl td.c{text-align:center}
+.grp{border:1px solid var(--line);border-radius:4px;padding:12px 14px;display:grid;gap:10px}
+.grp > b{font-size:13px}
 footer.site{margin-top:28px;padding-top:14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
 footer.site p{margin:0 0 4px} footer.site a{color:inherit}
 footer.site summary{cursor:pointer;width:max-content;max-width:100%}
@@ -117,18 +132,29 @@ footer.site ul{margin:6px 0 0;padding-left:18px}
     <button role="tab" aria-selected="true" data-tab="t1"><span class="n">1</span>내 정보 · 통상시급</button>
     <button role="tab" aria-selected="false" data-tab="t2"><span class="n">2</span>연가보상비</button>
     <button role="tab" aria-selected="false" data-tab="t3"><span class="n">3</span>궁금한 것 찾아보기</button>
+    <button role="tab" aria-selected="false" data-tab="t4"><span class="n">⚙</span>설정 (단가표)</button>
   </nav>
 
   <!-- ① 내 정보 -->
   <section class="panel" id="t1" role="tabpanel">
     <div class="step">
       <h2><span class="k">01</span>나이스 급여명세서 엑셀 넣기 <span class="pill info">선택</span></h2>
-      <p class="hint">나이스 › 급여 › 급여명세서 조회에서 엑셀로 받은 파일을 끌어 놓으세요. 직종·주 소정근로시간·계약기간·근속연수·통상시급을 읽어 아래 칸을 채웁니다. 없으면 직접 입력해도 됩니다.</p>
+      <p class="hint">나이스 ‘나의지급명세서’에서 XLS data로 받은 파일을 끌어 놓으세요. 직종·주 소정근로시간·계약기간·근속연수·통상시급을 읽어 아래 칸을 채웁니다. 없으면 직접 입력해도 됩니다.</p>
       <label class="drop" id="dropPay">
         <input type="file" id="filePay" accept=".xlsx,.xls" hidden>
-        <strong>급여명세서 엑셀(.xlsx) 끌어 놓기</strong><span class="btn small">파일 고르기</span>
+        <strong>급여명세서 엑셀(.xlsx) 끌어 놓기</strong><span class="btn small">파일 고르기</span><button type="button" class="btn small help" aria-expanded="false" aria-controls="howPay">받는 방법</button>
         <span class="files" id="payInfo">아직 넣지 않았습니다.</span>
       </label>
+      <div class="howto" id="howPay" hidden>
+        <h3>나이스에서 급여명세서 엑셀 받는 방법</h3>
+        <ol>
+          <li><span class="path"><span class="m">기본 메뉴</span>›<span class="m">급여</span>›<span class="m">급여</span>›<span class="key">나의지급명세서</span></span></li>
+          <li><b>급여지급월</b>을 고르고 <b>급여구분</b>은 매달 받는 정기 급여로 고른 뒤 조회합니다. <span class="tip">(연가보상비용이면 사용기간 마지막 달, 학교는 2월 명세서)</span></li>
+          <li>명세서 위 도구 줄의 <span class="key">저장</span>(디스켓 모양) 아이콘을 누릅니다.</li>
+          <li>목록에서 <span class="key">XLS data</span>를 고릅니다. <span class="tip">‘XLS’가 아니라 그 아래 ‘XLS data’입니다. 문서 모양 없이 값만 저장되어야 읽을 수 있습니다.</span></li>
+          <li>받은 파일을 위 칸에 끌어 놓습니다.</li>
+        </ol>
+      </div>
       <div class="row"><button class="btn small" id="btnSample">예시 값으로 채워 보기</button><button class="btn small" id="btnClear">내 정보 지우기</button></div>
     </div>
 
@@ -180,12 +206,22 @@ footer.site ul{margin:6px 0 0;padding-left:18px}
 
     <div class="step">
       <h2><span class="k">03</span>쓴 연차 (나이스 복무 CSV)</h2>
-      <p class="hint">나이스 › 복무 › 개인근무상황 조회에서 위 사용기간으로 조회해 CSV로 받으세요. 연차·연차(조퇴·지각·외출)만 더하고, 병조퇴 등 다른 근무상황과 삭제·취소된 줄은 뺍니다. 줄마다 체크로 넣고 뺄 수 있습니다.</p>
+      <p class="hint">연차·연차(조퇴·지각·외출)만 더하고, 병조퇴 등 다른 근무상황과 삭제·취소된 줄은 뺍니다. 줄마다 체크로 넣고 뺄 수 있습니다.</p>
       <label class="drop" id="dropCsv">
         <input type="file" id="fileCsv" accept=".csv,text/csv" hidden>
-        <strong>복무 CSV 끌어 놓기</strong><span class="btn small">파일 고르기</span>
+        <strong>복무 CSV 끌어 놓기</strong><span class="btn small">파일 고르기</span><button type="button" class="btn small help" aria-expanded="false" aria-controls="howCsv">받는 방법</button>
         <span class="files" id="csvInfo">아직 넣지 않았습니다.</span>
       </label>
+      <div class="howto" id="howCsv" hidden>
+        <h3>나이스에서 복무 CSV 받는 방법</h3>
+        <ol>
+          <li><span class="path"><span class="m">기본 메뉴</span>›<span class="m">복무</span>›<span class="key">개인근무상황관리</span></span></li>
+          <li><b>기간</b>을 <span class="key mono" id="csvPeriod">2026-03-01 ~ 2027-02-28</span>로 넣습니다. <span class="tip">(위 ‘연차 사용기간’과 같게. 아직 끝나지 않았으면 오늘까지만 나와도 괜찮습니다)</span></li>
+          <li><b>근무상황</b>은 ‘전체’, <b>결재상태</b>도 ‘전체’로 두고 조회합니다. <span class="tip">걸러내는 건 이 도구가 합니다.</span></li>
+          <li>목록 위 <span class="key">엑셀내려받기</span>를 누르고 <span class="key">CSV</span>를 고른 뒤 <b>확인</b>을 누릅니다. <span class="tip">(‘엑셀’·‘한셀’이 아니라 CSV)</span></li>
+          <li>받은 파일을 위 칸에 끌어 놓습니다.</li>
+        </ol>
+      </div>
       <div class="tblwrap" id="useWrap" hidden><table><thead><tr><th>넣기</th><th>근무상황</th><th>날짜</th><th class="num">일수/기간</th><th>결재</th><th class="why">판단</th></tr></thead><tbody id="useBody"></tbody><tfoot id="useFoot"></tfoot></table></div>
       <div class="grid2">
         <div class="field"><label for="planD">앞으로 쓸 예정 (일)</label><input type="number" id="planD" min="0" step="1" value="0"></div>
@@ -218,8 +254,60 @@ footer.site ul{margin:6px 0 0;padding-left:18px}
     <div class="faq" id="faq"></div>
   </section>
 
+  <!-- ⚙ 설정 -->
+  <section class="panel" id="t4" role="tabpanel" hidden>
+    <div class="step">
+      <h2><span class="k">⚙</span>단가표 설정</h2>
+      <p class="hint">새 임금협약·매뉴얼이 나오면 여기서 숫자를 고치고 [저장하고 적용]을 누르세요. 이 브라우저에만 저장됩니다. 다른 사람과 같이 쓰려면 [내보내기]로 받은 파일을 전달해 [불러오기] 하면 됩니다.</p>
+      <p id="setState"></p>
+    </div>
+    <div class="step">
+      <h2><span class="k">01</span>기본 단가 (RATES)</h2>
+      <div class="grid2">
+        <div class="field"><label for="s_label">단가 기준 이름</label><input type="text" id="s_label" placeholder="예: 2027 경기"></div>
+        <div class="field" style="grid-column:span 2"><label for="s_source">근거 자료</label><input type="text" id="s_source" placeholder="예: 2027 경기도교육청 교육공무직원 급여 업무 매뉴얼"></div>
+      </div>
+      <div class="grp"><b>임금</b><div class="grid2">
+        <div class="field"><label for="s_base1">기본급 유형1 (월, 주 40시간)</label><input type="number" id="s_base1" data-k="base.1"></div>
+        <div class="field"><label for="s_base2">기본급 유형2 (월, 주 40시간)</label><input type="number" id="s_base2" data-k="base.2"></div>
+        <div class="field"><label for="s_living">생활임금 시간급 (시급제)</label><input type="number" id="s_living" data-k="living"></div>
+      </div></div>
+      <div class="grp"><b>각종수당</b><div class="grid2">
+        <div class="field"><label for="s_meal">정액급식비 (월)</label><input type="number" id="s_meal" data-k="meal"></div>
+        <div class="field"><label for="s_lon">근속수당 1년당 (월)</label><input type="number" id="s_lon" data-k="longevity"></div>
+        <div class="field"><label for="s_lonc">근속수당 상한 연수</label><input type="number" id="s_lonc" data-k="longevityCap"></div>
+        <div class="field"><label for="s_bonus">정기상여금 (연)</label><input type="number" id="s_bonus" data-k="bonus"></div>
+        <div class="field"><label for="s_hol">명절휴가비 (연)</label><input type="number" id="s_hol" data-k="holiday"></div>
+      </div></div>
+      <div class="grp"><b>가족수당 (월) · 복지</b><div class="grid2">
+        <div class="field"><label for="s_fs">배우자</label><input type="number" id="s_fs" data-k="family.spouse"></div>
+        <div class="field"><label for="s_fo">그 밖의 부양가족 1명당</label><input type="number" id="s_fo" data-k="family.other"></div>
+        <div class="field"><label for="s_c1">첫째 자녀</label><input type="number" id="s_c1" data-k="family.c1"></div>
+        <div class="field"><label for="s_c2">둘째 자녀</label><input type="number" id="s_c2" data-k="family.c2"></div>
+        <div class="field"><label for="s_c3">셋째 이후 자녀</label><input type="number" id="s_c3" data-k="family.c3"></div>
+        <div class="field"><label for="s_wel">맞춤형복지 (포인트/연)</label><input type="number" id="s_wel" data-k="welfare"></div>
+        <div class="field"><label for="s_chk">건강검진비 (포인트, 격년)</label><input type="number" id="s_chk" data-k="checkup"></div>
+      </div></div>
+    </div>
+    <div class="step">
+      <h2><span class="k">02</span>직종 · 직무관련수당 (JOBS)</h2>
+      <p class="hint">한 줄에 수당 하나씩 적습니다. 같은 직종 이름이 여러 줄이면 그 직종의 수당으로 묶입니다. 수당이 없는 직종은 수당 칸을 비워 두세요. ‘기본 체크’는 직종을 고르면 처음부터 켜져 있는 수당입니다.</p>
+      <div class="tblwrap"><table class="settbl"><thead><tr><th>직종</th><th>유형</th><th>직무관련수당 이름</th><th class="num">월 금액</th><th>기본 체크</th><th></th></tr></thead><tbody id="jobRows"></tbody></table></div>
+      <div class="row"><button class="btn small" id="btnAddJob">＋ 줄 추가</button></div>
+    </div>
+    <div class="step">
+      <div class="row">
+        <button class="btn primary" id="btnSaveSet">저장하고 적용</button>
+        <button class="btn" id="btnExport">내보내기 (.json)</button>
+        <label class="btn" for="fileSet">불러오기 (.json)</label><input type="file" id="fileSet" accept=".json,application/json" hidden>
+        <button class="btn" id="btnResetSet">기본값으로 되돌리기</button>
+      </div>
+      <p class="hint" id="defaultInfo"></p>
+    </div>
+  </section>
+
   <footer class="site">
-    <p>공무직 급여 도우미 v1.0 · 2026-10-30 · 단가 기준: <span id="rateYear"></span> · 만든 사람: <a href="https://blog.naver.com/oderobong" target="_blank" rel="noopener">blog.naver.com/oderobong</a></p>
+    <p>공무직 급여 도우미 v1.3 · 2026-10-30 · 단가 기준: <span id="rateYear"></span> · 만든 사람: <a href="https://blog.naver.com/oderobong" target="_blank" rel="noopener">blog.naver.com/oderobong</a></p>
     <p>계산 결과는 참고용입니다. 실제 지급액은 학교(행정실)·나이스 처리 결과를 따릅니다. 파일 내용은 서버로 보내지 않고 이 브라우저 안에서만 처리합니다.</p>
     <details>
       <summary>근거 자료 · 사용한 공개 소프트웨어</summary>
@@ -236,9 +324,9 @@ footer.site ul{margin:6px 0 0;padding-left:18px}
 
 <script>
 /* ==========================================================
-   ▼ 매년 바꾸는 곳: 단가표 (임금협약이 바뀌면 이 블록만 고치기)
+   ▼ 기본 단가표 (화면의 ⚙ 설정 탭에서 고치면 이 값 대신 저장한 값을 씀)
    ========================================================== */
-const RATES = {
+const DEFAULT_RATES = {
   label: '2026 경기',
   source: '2026 경기도교육청 교육공무직원 급여 업무 매뉴얼 (2026. 7.)',
   base: { 1: 2344500, 2: 2144500 },  // 기본급(주 40시간, 월)
@@ -251,7 +339,7 @@ const RATES = {
   welfare: 1050, checkup: 200,        // 맞춤형복지 포인트, 건강검진(격년)
 };
 /* 직종 → 기본급 유형, 직무관련수당 (on: 기본으로 체크) */
-const JOBS = [
+const DEFAULT_JOBS = [
   ['행정실무사',2,[['관리수당(중·고·특수 세입담당자)',30000,false]]],
   ['조리실무사',2,[['위험수당',70000,true]]],
   ['조리사',2,[['면허수당',107220,true],['위험수당',70000,true]]],
@@ -269,6 +357,16 @@ const JOBS = [
   ['기타(직접 확인)',2,[]],
 ].map(([name,type,duty])=>({name,type,duty}));
 /* ========================================================== */
+const clone=o=>JSON.parse(JSON.stringify(o));
+let RATES=clone(DEFAULT_RATES), JOBS=clone(DEFAULT_JOBS), R=RATES, F=RATES.family, customSet=false;
+(function loadSet(){
+  try{const s=JSON.parse(localStorage.getItem('staffpay.rates'));if(s&&s.rates&&Array.isArray(s.jobs)&&s.jobs.length){applySet(s.rates,s.jobs,true)}}catch(e){}
+})();
+function applySet(rates,jobs,custom){
+  const r=clone(DEFAULT_RATES);
+  for(const k in rates){if(rates[k]&&typeof rates[k]==='object'&&!Array.isArray(rates[k]))Object.assign(r[k]=r[k]||{},rates[k]);else if(rates[k]!==''&&rates[k]!=null)r[k]=rates[k]}
+  RATES=r; R=r; F=r.family; JOBS=jobs.map(j=>({name:String(j.name),type:+j.type===1?1:2,duty:(j.duty||[]).map(d=>[String(d[0]),+d[1]||0,!!d[2]])})); customSet=!!custom;
+}
 
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const fmt=n=>Math.round(n).toLocaleString('ko-KR');
@@ -304,7 +402,8 @@ $$('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
 }));
 
 /* 직종 목록 */
-$('#job').innerHTML=JOBS.map((j,i)=>`<option value="${i}">${esc(j.name)}</option>`).join('');
+function fillJobs(){$('#job').innerHTML=JOBS.map((j,i)=>`<option value="${i}">${esc(j.name)}</option>`).join('')}
+fillJobs();
 function job(){return JOBS[+$('#job').value]||JOBS[0]}
 function renderDuty(checked){
   const j=job();
@@ -412,6 +511,7 @@ function update(){
   const rate=calcRate();
   const {s,e}=period(), dayH=+$('#dayH').value||8;
   const school=$('#basis').value==='school', lastMonth=new Date(Date.UTC(e.getUTCFullYear(),e.getUTCMonth(),1));
+  $('#csvPeriod').textContent=`${fd(s)} ~ ${fd(e)}`;
   $('#periodInfo').innerHTML=`사용기간 <b>${dot(s)} ~ ${dot(e)}</b> · 보상비 청구권 발생 <b>${dot(addD(e,1))}</b> · 통상시급은 사용기간 마지막 달(<b>${lastMonth.getUTCFullYear()}년 ${lastMonth.getUTCMonth()+1}월</b>) 기준`;
 
   const a=autoLeave();
@@ -495,6 +595,8 @@ async function readPay(file){
   update();
 }
 
+/* 받는 방법 버튼 */
+$$('.btn.help').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const box=$('#'+b.getAttribute('aria-controls')),open=box.hidden;box.hidden=!open;b.setAttribute('aria-expanded',open)}));
 /* 끌어 놓기 */
 function bindDrop(id,input,fn){const d=$(id);['dragover','dragenter'].forEach(ev=>d.addEventListener(ev,e=>{e.preventDefault();d.classList.add('over')}));['dragleave','drop'].forEach(ev=>d.addEventListener(ev,()=>d.classList.remove('over')));d.addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f)fn(f).catch(err=>toast('파일을 읽지 못했습니다'))});$(input).addEventListener('change',e=>{const f=e.target.files[0];if(f)fn(f).catch(()=>toast('파일을 읽지 못했습니다'));e.target.value=''})}
 bindDrop('#dropPay','#filePay',readPay);
@@ -502,7 +604,7 @@ bindDrop('#dropCsv','#fileCsv',readCsv);
 
 /* 예시 · 저장 */
 $('#btnSample').addEventListener('click',()=>{
-  $('#job').value=0;$('#ptype').value=2;renderDuty();$('#hours').value=40;$('#dayH').value=8;$('#wtype').value='상시';
+  $('#job').value=Math.max(0,JOBS.findIndex(j=>j.name==='행정실무사'));$('#ptype').value=job().type;renderDuty();$('#hours').value=40;$('#dayH').value=8;$('#wtype').value='상시';
   $('#hire').value='2012-03-01';$('#cend').value='2036-02-29';$('#years').value=14;$('#neisRate').value=15027;
   $('#basis').value='school';fillYears();
   useRows=[['연차','2026-03-20 08:30 ~ 2026-03-20 17:30','1일0시간0분','완결',''],['연차(조퇴)','2026-04-02 14:30 ~ 2026-04-02 16:30','0일2시간0분','완결',''],['연차(조퇴)','2026-04-02 14:40 ~ 2026-04-02 16:40','0일2시간0분','완결(기결취소)','삭제'],['병조퇴','2026-04-06 15:30 ~ 2026-04-06 16:30','0일1시간0분','완결',''],['연차','2026-08-03 08:30 ~ 2026-08-03 17:30','1일0시간0분','완결',''],['연차(조퇴)','2026-10-27 16:00 ~ 2026-10-27 16:30','0일0시간30분','완결','']].map(([kind,per,dur,st,del])=>({kind,per,dur,st,del,on:null}));
@@ -510,9 +612,10 @@ $('#btnSample').addEventListener('click',()=>{
   delete $('#payRate').dataset.manual; delete $('#leaveDays').dataset.manual; update(); toast('예시 값으로 채웠습니다');
 });
 $('#btnClear').addEventListener('click',()=>{store.del('staffpay.profile');location.reload()});
-function saveProfile(){store.set('staffpay.profile',{job:$('#job').value,ptype:$('#ptype').value,hours:$('#hours').value,wtype:$('#wtype').value,hire:$('#hire').value,cend:$('#cend').value,years:$('#years').value,neisRate:$('#neisRate').value,duty:$$('#duty input:checked').map(c=>job().duty[+c.dataset.i][0]),basis:$('#basis').value})}
+function saveProfile(){store.set('staffpay.profile',{jobName:job().name,ptype:$('#ptype').value,hours:$('#hours').value,wtype:$('#wtype').value,hire:$('#hire').value,cend:$('#cend').value,years:$('#years').value,neisRate:$('#neisRate').value,duty:$$('#duty input:checked').map(c=>job().duty[+c.dataset.i][0]),basis:$('#basis').value})}
 function loadProfile(){const p=store.get('staffpay.profile');if(!p)return renderDuty();
-  ['job','ptype','hours','wtype','hire','cend','years','neisRate','basis'].forEach(k=>{if(p[k]!=null)$('#'+k).value=p[k]});
+  const ji=JOBS.findIndex(j=>j.name===p.jobName); $('#job').value=ji>=0?ji:0;
+  ['ptype','hours','wtype','hire','cend','years','neisRate','basis'].forEach(k=>{if(p[k]!=null)$('#'+k).value=p[k]});
   $('#dayH').value=Math.min(8,(+p.hours||40)/5); renderDuty(p.duty||[]);}
 
 /* ========== 궁금한 것 찾아보기 ========== */
@@ -521,7 +624,6 @@ let curCat='전체';
 $('#cats').innerHTML=CATS.map(c=>`<button aria-pressed="${c==='전체'}" data-c="${c}">${c}</button>`).join('');
 $('#cats').addEventListener('click',e=>{const c=e.target.dataset.c;if(!c)return;curCat=c;$$('#cats button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.c===c));renderFaq()});
 $('#q').addEventListener('input',renderFaq);
-const R=RATES, F=R.family;
 /* body(c): c = {job, type, hours, years, rate, vac}  → 'mine'은 내 경우 한 줄 */
 const FAQ=[
  {cat:'임금·수당',q:'내 기본급은 얼마인가요?',k:'기본급 유형1 유형2 월급 단시간 시급제 생활임금',p:'13',
@@ -565,8 +667,56 @@ function renderFaq(){
   $('#faq').innerHTML=list.length?list.map(f=>{const mine=f.mine?f.mine(c):'';return `<details data-i="${f.i}" ${open.has(String(f.i))||(q&&list.length<=2)?'open':''}><summary>${esc(f.q)}<span class="cat">${f.cat}</span></summary><div class="body">${mine?`<p class="mine"><b>내 경우</b> · ${esc(mine)}</p>`:''}${f.body(c)}<p class="src">근거: ${esc(R.source)} ${f.p}쪽</p></div></details>`}).join(''):'<div class="empty">찾는 내용이 없습니다. 다른 말로 찾아보세요.</div>';
 }
 
+/* ========== ⚙ 설정 (단가표) ========== */
+const getK=(o,k)=>k.split('.').reduce((a,x)=>a==null?a:a[x],o);
+function setK(o,k,v){const p=k.split('.');let a=o;p.slice(0,-1).forEach(x=>{a=a[x]=a[x]||{}});a[p[p.length-1]]=v}
+function jobRow(name,type,dn,amt,on){return `<tr><td><input type="text" class="j-n" value="${esc(name)}" aria-label="직종"></td><td><select class="j-t" aria-label="유형"><option value="2" ${type!=1?'selected':''}>유형2</option><option value="1" ${type==1?'selected':''}>유형1</option></select></td><td><input type="text" class="j-d" value="${esc(dn)}" placeholder="(없음)" aria-label="수당 이름"></td><td><input type="number" class="j-a" value="${amt||''}" style="width:110px" aria-label="월 금액"></td><td class="c"><input type="checkbox" class="j-o" ${on?'checked':''} aria-label="기본 체크"></td><td><button class="btn small j-x" title="줄 지우기">✕</button></td></tr>`}
+function renderSet(){
+  $('#s_label').value=RATES.label; $('#s_source').value=RATES.source;
+  $$('#t4 input[data-k]').forEach(el=>el.value=getK(RATES,el.dataset.k)??'');
+  $('#jobRows').innerHTML=JOBS.map(j=>j.duty.length?j.duty.map(d=>jobRow(j.name,j.type,d[0],d[1],d[2])).join(''):jobRow(j.name,j.type,'',0,false)).join('');
+  $('#setState').innerHTML=customSet?`<span class="pill warn">직접 저장한 단가 사용 중</span> ${esc(RATES.label)}`:`<span class="pill info">기본 단가 사용 중</span> ${esc(DEFAULT_RATES.label)}`;
+  $('#defaultInfo').textContent=`기본값: ${DEFAULT_RATES.label} (${DEFAULT_RATES.source})`;
+}
+function readSet(){
+  const r={label:$('#s_label').value.trim()||'직접 입력',source:$('#s_source').value.trim()||'직접 입력한 단가'};
+  let bad='';
+  $$('#t4 input[data-k]').forEach(el=>{const v=+el.value;if(!(v>=0)||el.value==='')bad=bad||el.closest('.field').querySelector('label').textContent;setK(r,el.dataset.k,v)});
+  const map=new Map();
+  $$('#jobRows tr').forEach(tr=>{
+    const n=tr.querySelector('.j-n').value.trim(); if(!n)return;
+    if(!map.has(n))map.set(n,{name:n,type:+tr.querySelector('.j-t').value,duty:[]});
+    const dn=tr.querySelector('.j-d').value.trim(); if(dn)map.get(n).duty.push([dn,+tr.querySelector('.j-a').value||0,tr.querySelector('.j-o').checked]);
+  });
+  const jobs=[...map.values()];
+  if(!jobs.length)bad=bad||'직종 목록';
+  return {rates:r,jobs,bad};
+}
+function afterApply(){
+  fillJobs(); loadProfile(); $('#rateYear').textContent=RATES.label; $('#rateSource').textContent=RATES.source;
+  delete $('#payRate').dataset.manual; renderSet(); update();
+}
+$('#btnAddJob').addEventListener('click',()=>{$('#jobRows').insertAdjacentHTML('beforeend',jobRow('',2,'',0,false));$('#jobRows tr:last-child .j-n').focus()});
+$('#jobRows').addEventListener('click',e=>{if(e.target.classList.contains('j-x'))e.target.closest('tr').remove()});
+$('#btnSaveSet').addEventListener('click',()=>{
+  const s=readSet(); if(s.bad){toast(`‘${s.bad}’ 칸을 확인하세요`);return}
+  applySet(s.rates,s.jobs,true); store.set('staffpay.rates',{rates:s.rates,jobs:s.jobs}); afterApply(); toast('단가표를 저장하고 적용했습니다');
+});
+$('#btnResetSet').addEventListener('click',()=>{if(!confirmReset())return;store.del('staffpay.rates');applySet({},DEFAULT_JOBS,false);afterApply();toast('기본 단가로 되돌렸습니다')});
+function confirmReset(){const b=$('#btnResetSet');if(b.dataset.ask){delete b.dataset.ask;b.textContent='기본값으로 되돌리기';return true}b.dataset.ask='1';b.textContent='한 번 더 누르면 되돌립니다';setTimeout(()=>{delete b.dataset.ask;b.textContent='기본값으로 되돌리기'},3000);return false}
+$('#btnExport').addEventListener('click',()=>{
+  const s=readSet(); const blob=new Blob([JSON.stringify({type:'staffpay-rates',v:1,rates:s.rates,jobs:s.jobs},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`staffpay-rates-${((s.rates.label||'').match(/\d{4}/)||['custom'])[0]}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+});
+$('#fileSet').addEventListener('change',async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{const s=JSON.parse(await f.text());if(!s.rates||!Array.isArray(s.jobs))throw 0;applySet(s.rates,s.jobs,true);store.set('staffpay.rates',{rates:RATES,jobs:JOBS});afterApply();toast(`‘${RATES.label}’ 단가표를 불러왔습니다`)}
+  catch(err){toast('단가표 파일이 아닙니다')}
+});
+
 /* 시작 */
 $('#rateYear').textContent=RATES.label; $('#rateSource').textContent=RATES.source;
+renderSet();
 loadProfile(); fillYears();
 const tab=store.get('staffpay.tab'); if(tab){const b=$(`nav.tabs button[data-tab="${tab}"]`);if(b)b.click()}
 update();
