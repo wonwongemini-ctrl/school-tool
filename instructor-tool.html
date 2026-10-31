@@ -240,7 +240,7 @@ footer.site ul{margin:6px 0 0;padding-left:18px}
         </div>
         <div id="cCourses"></div>
         <div class="grid">
-          <div class="field"><label for="cDate">계약서 작성일</label><input type="date" id="cDate"></div>
+          <div class="field"><label for="cDate">계약서 작성일</label><input type="text" class="dtext" inputmode="numeric" maxlength="10" placeholder="2026-03-01" id="cDate"></div>
           <div class="field"><label>&nbsp;</label><label class="chk"><input type="checkbox" id="cBlankDate"> 작성일 칸을 '    년    월    일'로 비워 두기</label></div>
           <div class="field"><label>&nbsp;</label><label class="chk"><input type="checkbox" id="cRecord" checked> 대장에 계약서 작성 표시</label></div>
         </div>
@@ -276,7 +276,7 @@ footer.site ul{margin:6px 0 0;padding-left:18px}
           <div class="field"><label for="eNo">발급번호 ( 제___호 )</label><input type="text" id="eNo" placeholder="2026-12"></div>
           <div class="field"><label for="eUse">용도</label><input type="text" id="eUse" value="제출용"></div>
           <div class="field"><label for="eRetire">퇴직사유</label><input type="text" id="eRetire" placeholder="계약기간 만료"></div>
-          <div class="field"><label for="eDate">발급일</label><input type="date" id="eDate"></div>
+          <div class="field"><label for="eDate">발급일</label><input type="text" class="dtext" inputmode="numeric" maxlength="10" placeholder="2026-03-01" id="eDate"></div>
           <div class="field"><label for="eAddr">주소</label><input type="text" id="eAddr"></div>
         </div>
         <div id="eBox"></div>
@@ -345,6 +345,7 @@ footer.site ul{margin:6px 0 0;padding-left:18px}
         <div id="calSmall"></div>
         <div class="legend" id="calLegend"></div>
       </div>
+      <div class="card" id="homeCalBox"></div>
       <div class="card">
         <p class="sub" id="dayTitle">할 일</p>
         <ul class="tasks" id="taskList"><li class="muted" style="display:block">대장을 열면 기한이 다가오는 일이 여기에 나옵니다.</li></ul>
@@ -352,7 +353,7 @@ footer.site ul{margin:6px 0 0;padding-left:18px}
     </aside>
   </div>
   <footer class="site">
-    <p>강사 관리 도우미 v1.0 · 2026-10-29 · 만든 사람: <a href="https://blog.naver.com/oderobong" target="_blank" rel="noopener">blog.naver.com/oderobong</a></p>
+    <p>강사 관리 도우미 v1.1 · 2026-10-31 · 만든 사람: <a href="https://blog.naver.com/oderobong" target="_blank" rel="noopener">blog.naver.com/oderobong</a></p>
     <p>파일 내용은 서버로 전송되지 않고 이 브라우저 안에서만 처리됩니다. 처리용 공개 라이브러리만 CDN(cdnjs)에서 불러옵니다.</p>
     <details>
       <summary>만든 사람 · 사용한 공개 소프트웨어</summary>
@@ -532,7 +533,7 @@ async function openLedger(file){
     const wb=/\.csv$/i.test(file.name)? XLSX.read(new TextDecoder('utf-8').decode(buf),{type:'string'}) : await readWorkbook(buf);
     const r=parseLedger(wb);
     if(!r.courses.length){ toast("'성명'(또는 '강사명')과 '강의명' 머리글이 있는 시트를 찾지 못했습니다"); return; }
-    COURSES=r.courses; PDOCS=r.pdocs; DIRTY=0; $('#dirtyBanner').hidden=true; $('#saveLedger').disabled=false; CARD=null;
+    COURSES=r.courses; PDOCS=r.pdocs; DEMO=false; DIRTY=0; $('#dirtyBanner').hidden=true; $('#saveLedger').disabled=false; CARD=null;
     toast(`${r.courses.length}건을 불러왔습니다`+(r.kind==='legacy'?' (기존 대장 형식: 내려받으면 새 형식으로 저장됩니다)':r.kind==='google'?' (구글 시트 형식)':''));
     if(r.kind!=='new') markDirty(0);
     refreshAll(true);
@@ -615,7 +616,7 @@ $('#demoLedger').onclick=()=>{
     mk({biz:'학교자율과제',name:'최유진',birth:'1990-01-09',grade:'6',title:'합창',start:addDays(t,16),end:addDays(t,41),sessions:10,classes:3}),
     mk({biz:'학교자율과제',name:'정민수',birth:'1983-08-30',grade:'1',title:'놀이체육',start:addDays(t,-10),end:addDays(t,30),sessions:16,classes:3,contractDate:addDays(t,-20),pumuiDate:addDays(t,-18),giveDate:addDays(t,-18)}),
     mk({biz:'학교자율과제',name:'김하늘',birth:'1981-03-14',year:y-1,grade:'4',title:'수묵화',start:`${y-1}-09-01`,end:`${y-1}-10-06`,sessions:10,classes:3,contractDate:'O',pumuiDate:'O',giveDate:'O',sendDate:'O'})];
-  PDOCS={}; PDOCS[pkey(y,'김하늘','1981-03-14')]={'이력서':addDays(t,-50),'통장 사본':addDays(t,-50),'성범죄·아동학대 회보서':addDays(t,-50)};
+  DEMO=true; PDOCS={}; PDOCS[pkey(y,'김하늘','1981-03-14')]={'이력서':addDays(t,-50),'통장 사본':addDays(t,-50),'성범죄·아동학대 회보서':addDays(t,-50)};
   PDOCS[pkey(y-1,'김하늘','1981-03-14')]={'자격증':`${y-1}-08-20`,'졸업증명서·학위기':`${y-1}-08-20`};
   DIRTY=0; $('#dirtyBanner').hidden=true; $('#saveLedger').disabled=false; CARD=null;
   toast('예시 데이터입니다. 실제 강사 정보가 아닙니다'); refreshAll(true);
@@ -643,6 +644,94 @@ function toggleAllDone(c){
 }
 function setDone(id,f,v){ const c=COURSES.find(x=>x.id===id); if(!c) return; c[f]= v===undefined? todayIso() : v; markDirty(); refreshAll(); }
 
+// ---------- 일정 우체통: 같은 사이트의 첫 화면(교무실 업무 도우미) 달력·오늘 할 일에 일정을 보냄 ----------
+let DEMO=false;
+/* ===== 첫 화면 달력으로 보내기 (일정 우체통 localStorage 'school-cal-v1') =====
+   도구마다 같은 코드. 쓰는 법:
+   var HC=HomeCal({src:'도구키', name:'표시 이름', color:'#RRGGBB', box:'붙일 요소 id', btn:'버튼 class',
+                   items:function(){return [{id,date,end?,title,kind:'task'|'event',done?}]},
+                   blocked:function(){return ''|'못 보내는 이유'}, toast:function(msg){}});
+   HC.send(false) 자동 보내기 · HC.send(true) 버튼 · HC.render() 상태 다시 그리기 */
+function HomeCal(o){
+  var KEY='school-cal-v1', HOME='https://wonwongemini-ctrl.github.io/school/', OFFK='homecal-off.'+o.src;
+  function rd(){try{var b=JSON.parse(localStorage.getItem(KEY)||'{}');return b&&typeof b==='object'?b:{};}catch(e){return {};}}
+  function off(){try{return localStorage.getItem(OFFK)==='1';}catch(e){return false;}}
+  function setOff(v){try{if(v)localStorage.setItem(OFFK,'1');else localStorage.removeItem(OFFK);}catch(e){}}
+  function pad(n){return (n<10?'0':'')+n;}
+  function when(iso){var d=new Date(iso);return isNaN(d)?'':(d.getMonth()+1)+'월 '+d.getDate()+'일 '+pad(d.getHours())+':'+pad(d.getMinutes());}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function list(){var why=o.blocked?o.blocked():'';if(why)return {why:why,items:[]};var it=(o.items()||[]).filter(function(x){return x&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)&&x.title;});return {why:it.length?'':'보낼 일정이 없습니다',items:it};}
+  function send(manual){
+    var L=list();
+    if(L.why){if(manual)o.toast(L.why);render();return 0;}
+    if(!manual&&off()){render();return 0;}
+    try{var b=rd();if(!b.sources||typeof b.sources!=='object')b.sources={};b.v=1;
+      b.sources[o.src]={name:o.name,color:o.color,url:location.protocol==='file:'?'':location.href.split(/[?#]/)[0],updated:new Date().toISOString(),items:L.items};
+      localStorage.setItem(KEY,JSON.stringify(b));}
+    catch(e){if(manual)o.toast('이 브라우저 저장 공간에 쓰지 못했습니다');render();return 0;}
+    if(manual){setOff(false);o.toast('첫 화면 달력으로 일정 '+L.items.length+'개를 보냈습니다');}
+    render();return L.items.length;
+  }
+  function remove(){try{var b=rd();if(b.sources&&b.sources[o.src]){delete b.sources[o.src];localStorage.setItem(KEY,JSON.stringify(b));}}catch(e){}
+    setOff(true);o.toast('첫 화면 달력에서 이 도구의 일정을 뺐습니다');render();}
+  function icsEsc(s){return String(s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');}
+  function nextDay(s){var p=s.split('-'),d=new Date(+p[0],p[1]-1,+p[2]+1);return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate());}
+  function ics(){
+    var L=list();if(L.why){o.toast(L.why);return;}
+    var stamp=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
+    var out=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//school-cal//KO','CALSCALE:GREGORIAN','X-WR-CALNAME:'+icsEsc(o.name),'X-SCHOOL-SOURCE:'+o.src,'X-SCHOOL-NAME:'+icsEsc(o.name),'X-SCHOOL-COLOR:'+o.color];
+    L.items.forEach(function(it){var end=it.end&&it.end>it.date?it.end:it.date;
+      out.push('BEGIN:VEVENT','UID:'+(o.src+'-'+it.id).replace(/[^\w-]/g,'')+'@school-cal','DTSTAMP:'+stamp,'DTSTART;VALUE=DATE:'+it.date.replace(/-/g,''),'DTEND;VALUE=DATE:'+nextDay(end),
+        'SUMMARY:'+icsEsc(it.title),'CATEGORIES:'+icsEsc(o.name),'X-SCHOOL-ID:'+icsEsc(it.id),'X-SCHOOL-KIND:'+(it.kind==='task'?'task':'event'));
+      if(it.done)out.push('X-SCHOOL-DONE:1');out.push('END:VEVENT');});
+    out.push('END:VCALENDAR');
+    var d=new Date(),a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([out.join('\r\n')+'\r\n'],{type:'text/calendar;charset=utf-8'}));
+    a.download='school-cal-'+o.src+'-'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'.ics';
+    document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},800);
+    o.toast('일정 '+L.items.length+'개를 .ics 파일로 저장했습니다');
+  }
+  function render(){
+    var box=document.getElementById(o.box);if(!box)return;
+    var L=list(),s=(rd().sources||{})[o.src],st;
+    if(L.why&&!s)st='<span style="color:#9a6200">●</span> '+esc(L.why);
+    else if(off())st='<span style="color:#9a6200">●</span> 보낸 일정을 뺀 상태입니다. [지금 보내기]를 누르면 다시 자동으로 보냅니다.';
+    else if(s&&Array.isArray(s.items))st='<span style="color:#1d7a4c">●</span> 보낸 일정 <b>'+s.items.length+'개</b> · '+esc(when(s.updated))+(L.why?'':' · 고치면 자동으로 다시 보냄');
+    else st='<span style="color:#9a6200">●</span> 아직 보내지 않았습니다.';
+    var file=location.protocol==='file:';
+    var rows=L.items.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0;}).slice(0,200).map(function(it){
+      var p=it.date.split('-');return '<li><span style="font-family:monospace">'+(+p[1])+'/'+(+p[2])+'</span> '+(it.kind==='task'?'☐ ':'')+esc(it.title)+(it.done?' (완료)':'')+'</li>';}).join('');
+    box.innerHTML='<p style="margin:0 0 4px;font-weight:700;font-size:13.5px">첫 화면 달력으로 보내기</p>'+
+      '<p style="margin:0 0 8px;font-size:12.5px;line-height:1.5">'+st+'</p>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
+        '<button type="button" class="'+o.btn+'" data-hc="send">'+(s&&!off()?'지금 다시 보내기':'지금 보내기')+'</button>'+
+        '<button type="button" class="'+o.btn+'" data-hc="ics">.ics 파일로 저장</button>'+
+        (s?'<button type="button" class="'+o.btn+'" data-hc="remove">보낸 일정 빼기</button>':'')+'</div>'+
+      (L.items.length?'<details style="margin-top:8px;font-size:12.5px"><summary style="cursor:pointer">보낼 일정 '+L.items.length+'개 보기</summary><ul style="margin:6px 0 0;padding-left:16px;max-height:220px;overflow:auto;display:grid;gap:2px">'+rows+'</ul></details>':'')+
+      '<p style="margin:8px 0 0;font-size:12px;opacity:.8;line-height:1.5">'+(file?
+        '지금은 PC에 저장한 파일로 열어서 <a href="'+HOME+'" target="_blank" rel="noopener">첫 화면</a>과 저장 공간이 다릅니다. [.ics 파일로 저장]한 뒤 첫 화면 달력의 [.ics 불러오기]로 넣으세요.':
+        '같은 브라우저로 <a href="'+HOME+'" target="_blank" rel="noopener">첫 화면</a>을 열면 달력의 ‘받은 일정’에 나옵니다. 업무망 PC에 저장한 첫 화면에는 [.ics 파일로 저장] → [.ics 불러오기]로 옮기세요.')+'</p>';
+  }
+  function bind(){var box=document.getElementById(o.box);if(!box||box._hc)return;box._hc=1;
+    box.addEventListener('click',function(e){var b=e.target.closest('[data-hc]');if(!b)return;var k=b.getAttribute('data-hc');if(k==='send')send(true);else if(k==='ics')ics();else if(k==='remove')remove();});}
+  window.addEventListener('storage',function(e){if(e.key===KEY||e.key===OFFK)render();});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind();render();});else{bind();}
+  return {send:send,remove:remove,ics:ics,render:function(){bind();render();}};
+}
+
+function calItems(){
+  const items=[];
+  for(const c of COURSES){ if(!isActive(c)) continue;
+    const label=`${c.grade?c.grade+'학년 ':''}${c.title||''}`.trim();
+    if(c.start) items.push({id:c.id+':p',date:c.start,end:c.end||c.start,title:`${label} 강의 (${c.name})`,kind:'event'});
+    for(const ms of MS){ const st=msState(c,ms); if(!st.due) continue; items.push({id:c.id+':'+ms[0],date:st.due,title:`${ms[1]} · ${label} ${c.name}`,kind:'task',done:st.st==='done'}); }
+  }
+  return items;
+}
+const HC=HomeCal({src:'instructor',name:'강사 관리',color:'#3FA34D',box:'homeCalBox',btn:'btn small',items:calItems,toast:m=>toast(m),
+  blocked:()=>DEMO?'예시 데이터는 첫 화면으로 보내지 않습니다':(!COURSES.length?'대장을 열면 일정을 보낼 수 있습니다':'')});
+function publishCal(){ HC.send(false); }
+setTimeout(()=>HC.render(),0);
 // ---------- 달력 ----------
 let CAL=new Date(); CAL.setDate(1); let SEL=null; const GOFF=new Set(load('goff',[]));
 function monthWeeks(y,m){ const first=new Date(y,m,1), last=new Date(y,m+1,0); const d=new Date(y,m,1-first.getDay()); const weeks=[]; while(d<=last){ const w=[]; for(let i=0;i<7;i++){ w.push(isoOf(d)); d.setDate(d.getDate()+1); } weeks.push(w); } return weeks; }
@@ -848,7 +937,7 @@ function refreshAll(reset){
   ['fYear','dYear','cYear','aYear','qYear'].forEach(id=>fillYearSelect($('#'+id),!reset));
   { const qb=$('#qBiz'), qv=qb.value; const bz2=[...new Set(COURSES.map(c=>c.biz).filter(Boolean))].sort(); qb.innerHTML='<option value="">전체</option>'+bz2.map(b=>`<option>${esc(b)}</option>`).join(''); if(bz2.includes(qv)) qb.value=qv; }
   const bz=[...new Set(COURSES.map(c=>c.biz).filter(Boolean))].sort(); const fb=$('#fBiz'), bv=fb.value; fb.innerHTML='<option value="">전체</option>'+bz.map(b=>`<option>${esc(b)}</option>`).join(''); if(bz.includes(bv)) fb.value=bv;
-  renderSearchList(); renderCard(); renderList(); renderPumuiList(); renderDocs(); renderContractForm(); renderAtt(); renderCertPeople(); renderCal(); renderTasks();
+  renderSearchList(); renderCard(); renderList(); renderPumuiList(); renderDocs(); renderContractForm(); renderAtt(); renderCertPeople(); renderCal(); renderTasks(); publishCal();
 }
 // 진행 칩: 누르면 완료(오늘 날짜) ↔ 취소. 강의 시작 전이라도 미리 표시할 수 있음
 function progCell(c){
@@ -1108,7 +1197,7 @@ $('#cMake').onclick=async()=>{
   const ids=$$('.cSel:checked').map(i=>i.value); const cs=COURSES.filter(c=>ids.includes(c.id)); if(!cs.length) return toast('계약서에 넣을 강의를 골라 주세요');
   const tpl=allTpls().find(t=>t.id===$('#cTpl').value); if(!tpl) return toast('계약서 서식을 골라 주세요');
   if(new Set(cs.map(c=>c.rate)).size>1) toast('강의마다 시간당 강사료가 달라 첫 강의 금액으로 넣었습니다');
-  const date=$('#cDate').value||todayIso(), blank=$('#cBlankDate').checked;
+  const date=dateVal('#cDate')||todayIso(), blank=$('#cBlankDate').checked;
   try{ const h=await openHwpx(tpl.b64); fillPlaceholders(h.doc, contractVals(cs,date,blank)); fitTablesToPage(h.doc); const blob=await saveHwpx(h);
     downloadBlob(blob, `계약서_${cs[0].biz}_${cs[0].name}.hwpx`);
     const left=(new XMLSerializer().serializeToString(h.doc).match(/\{\{[^}]+\}\}/g)||[]);
@@ -1157,7 +1246,7 @@ $('#eMake').onclick=async()=>{
   const ids=$$('.eSel:checked').map(i=>i.value); const cs=COURSES.filter(c=>ids.includes(c.id)).sort((a,b)=>String(a.start).localeCompare(String(b.start))); if(!cs.length) return toast('넣을 경력을 골라 주세요');
   try{
     const h=await openHwpx(HWPX_TPL.cert); const c0=cs[0];
-    fillPlaceholders(h.doc,{...schoolVals(), 발급번호:$('#eNo').value.trim()||'        ', 성명:c0.name, 생년월일:fmtDot(c0.birth), 주소:$('#eAddr').value.trim(), 용도:$('#eUse').value.trim(), 발급일:fmtKor($('#eDate').value||todayIso())});
+    fillPlaceholders(h.doc,{...schoolVals(), 발급번호:$('#eNo').value.trim()||'        ', 성명:c0.name, 생년월일:fmtDot(c0.birth), 주소:$('#eAddr').value.trim(), 용도:$('#eUse').value.trim(), 발급일:fmtKor(dateVal('#eDate')||todayIso())});
     const tbl=h.doc.getElementsByTagNameNS(HP,'tbl')[0];
     const FIRST=6, CAP=10; if(cs.length>CAP) insertRows(tbl, FIRST+CAP-1, cs.length-CAP);
     cs.forEach((c,i)=>{ const r=FIRST+i; setCell(cellAt(tbl,1,r),fmtDot(c.start)); setCell(cellAt(tbl,3,r),fmtDot(c.end)); setCell(cellAt(tbl,4,r),setting('sPos')||'강사'); setCell(cellAt(tbl,5,r),c.biz); setCell(cellAt(tbl,6,r),certNote(c)); });
@@ -1242,6 +1331,7 @@ document.addEventListener('focusin',e=>limitDate(e.target),true);
 document.addEventListener('pointerdown',e=>limitDate(e.target),true);
 $$('input[type=date]').forEach(limitDate);
 // 시작
+function dateVal(sel){ const v=normDateText(($(sel).value||'').trim()); const d=parseIso(v); return d&&isoOf(d)===v? v : ''; }
 loadSettings(); renderTplList(); $('#cDate').value=todayIso(); $('#eDate').value=todayIso(); refreshAll(true);
 if(!window.XLSX||!window.ExcelJS||!window.JSZip) setTimeout(()=>toast('일부 구성요소를 불러오지 못했습니다. 인터넷에 연결된 상태에서 열어 주세요'),400);
 </script>
