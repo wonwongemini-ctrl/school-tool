@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>나이스 학사일정 시험기</title>
+<style>
+:root{--paper:#f6f7f5;--card:#fff;--ink:#1d2a33;--muted:#5d6b73;--line:#d8dedb;--accent:#1f5e74;--ok:#1d7a4c;--okbg:#e2f2e9;--warn:#9a6200;--warnbg:#fbf0d9;--err:#b3261e;--errbg:#fbe5e3}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#141a1d;--card:#1b2327;--ink:#e4eaec;--muted:#9aa8ae;--line:#2e3a3f;--accent:#6cb6cc;--ok:#6fcf9b;--okbg:#173327;--warn:#e7b65a;--warnbg:#352a12;--err:#f08a80;--errbg:#3a1d1a;color-scheme:dark}}
+:root[data-theme="dark"]{--paper:#141a1d;--card:#1b2327;--ink:#e4eaec;--muted:#9aa8ae;--line:#2e3a3f;--accent:#6cb6cc;--ok:#6fcf9b;--okbg:#173327;--warn:#e7b65a;--warnbg:#352a12;--err:#f08a80;--errbg:#3a1d1a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;font-size:14.5px;line-height:1.55}
+.wrap{max-width:860px;margin:0 auto;padding:20px 16px 48px;display:grid;gap:18px}
+h1{margin:0;font-size:21px}
+h2{margin:0 0 8px;font-size:15.5px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px}
+.hint{color:var(--muted);font-size:13px;margin:4px 0 0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
+label{display:grid;gap:4px;font-size:12.5px;font-weight:700;color:var(--muted)}
+input{font:inherit;color:var(--ink);background:var(--card);border:1px solid #b9c3bf;border-radius:4px;padding:7px 9px;min-width:0}
+button{font:inherit;font-weight:700;border-radius:4px;border:1px solid #b9c3bf;background:var(--card);color:var(--ink);padding:7px 14px;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-size:15px;padding:9px 18px}
+button:disabled{opacity:.5;cursor:not-allowed}
+.schools{display:grid;gap:4px;margin-top:8px}
+.schools button{text-align:left;font-weight:500}
+.picked{font-weight:700;margin-top:8px}
+.test{border:1px solid var(--line);border-radius:6px;padding:10px 12px;display:grid;gap:6px}
+.test .h{display:flex;gap:8px;align-items:center;font-weight:700}
+.pill{font-size:12px;font-weight:700;border-radius:999px;padding:1px 9px;white-space:nowrap}
+.ok{background:var(--okbg);color:var(--ok)}.warn{background:var(--warnbg);color:var(--warn)}.err{background:var(--errbg);color:var(--err)}.wait{background:var(--line);color:var(--muted)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+td,th{border-bottom:1px solid var(--line);padding:4px 6px;text-align:left}
+th{color:var(--muted);font-weight:600}
+code{font-size:12px;word-break:break-all;color:var(--muted)}
+.verdict{border:2px solid var(--accent);border-radius:8px;padding:14px 16px;background:var(--card)}
+.verdict p{margin:4px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <h1>나이스 학사일정 시험기</h1>
+    <p class="hint">인증키 없이 나이스 개방 포털에서 학사일정을 얼마나 받을 수 있는지 확인합니다. 이 화면에서 나이스로 바로 요청하며, 학교 코드 말고는 아무것도 보내지 않습니다. 업무망(인터넷 차단) PC에서는 안 됩니다.</p>
+  </div>
+
+  <div class="card">
+    <h2>1. 학교 고르기</h2>
+    <div class="row">
+      <label style="flex:1">학교 이름<input id="sname" placeholder="예: ○○초등학교"></label>
+      <button id="sfind">학교 찾기</button>
+    </div>
+    <div class="schools" id="schools"></div>
+    <details style="margin-top:8px"><summary class="hint" style="cursor:pointer">코드를 알고 있으면 직접 넣기</summary>
+      <div class="row" style="margin-top:8px">
+        <label>교육청 코드<input id="atpt" placeholder="J10" style="width:90px"></label>
+        <label>학교 코드<input id="sd" placeholder="7자리" style="width:120px"></label>
+      </div>
+    </details>
+    <p class="picked" id="picked">아직 학교를 고르지 않았습니다.</p>
+  </div>
+
+  <div class="card">
+    <h2>2. 시험하기</h2>
+    <button class="primary" id="run" disabled>시험 시작</button>
+    <p class="hint">나이스에 13번 정도 요청합니다(약 10초). 끝나면 아래에 결과와 추천 방식이 나옵니다.</p>
+    <div id="tests" style="display:grid;gap:8px;margin-top:12px"></div>
+  </div>
+
+  <div class="verdict" id="verdict" hidden></div>
+  <p class="hint">결과를 캡처해 보여 주실 때는 학교명·학교 코드를 가려 주세요. · 시험용 도구 2026-10-31</p>
+</div>
+<script>
+const API='https://open.neis.go.kr/hub/';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate());
+const show=s=>s?`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6)}`:'';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let SCH={atpt:'',sd:'',name:''};
+
+async function call(svc,params){
+  const q=new URLSearchParams(Object.assign({Type:'json'},params)); const url=API+svc+'?'+q;
+  let r; try{ r=await fetch(url); }catch(e){
+    // 응답을 읽지 않는 방식(no-cors)으로 다시 요청: 닿으면 네트워크는 되고 브라우저(CORS)가 막은 것
+    let reach=false; try{ await fetch(url,{mode:'no-cors'}); reach=true; }catch(e2){}
+    return {ok:false,code:reach?'CORS':'NET',msg:reach?'나이스에는 연결되지만 브라우저가 응답을 막았습니다 (CORS)':'나이스에 닿지 못했습니다 (와이파이·인터넷이 막음)',rows:[],url};
+  }
+  if(!r.ok) return {ok:false,code:'HTTP'+r.status,msg:'응답 오류 '+r.status,rows:[],url};
+  let j; try{ j=await r.json(); }catch(e){ return {ok:false,code:'JSON',msg:'응답을 읽지 못했습니다',rows:[],url}; }
+  if(j.RESULT){ return {ok:j.RESULT.CODE==='INFO-200',code:j.RESULT.CODE,msg:j.RESULT.MESSAGE,rows:[],url,empty:j.RESULT.CODE==='INFO-200'}; }
+  const b=j[svc]; if(!Array.isArray(b)) return {ok:false,code:'FORMAT',msg:'모르는 응답 형식',rows:[],url};
+  const head=b[0].head||[], res=head.find(h=>h.RESULT), tot=head.find(h=>h.list_total_count!=null);
+  return {ok:!res||res.RESULT.CODE==='INFO-000',code:res?res.RESULT.CODE:'',msg:res?res.RESULT.MESSAGE:'',rows:(b[1]&&b[1].row)||[],total:tot?+tot.list_total_count:0,url};
+}
+
+// 학교 찾기
+$('#sfind').onclick=async()=>{
+  const n=$('#sname').value.trim(); if(!n) return;
+  $('#schools').innerHTML='<span class="hint">찾는 중…</span>';
+  const r=await call('schoolInfo',{pIndex:1,pSize:5,SCHUL_NM:n});
+  if(!r.rows.length){ $('#schools').innerHTML=`<span class="pill err">${esc(r.empty?'찾는 학교가 없습니다':r.msg)}</span>`+(r.code==='CORS'||r.code==='NET'?`<p class="hint">${r.code==='CORS'?'와이파이는 정상입니다. 브라우저가 막은 경우라 학교 코드를 직접 넣어도 시험 결과는 같습니다.':'와이파이 로그인 화면을 거쳤는지 확인하거나 핫스팟으로 해 보세요.'}</p>`:''); return; }
+  $('#schools').innerHTML=r.rows.map((s,i)=>`<button data-i="${i}">${esc(s.SCHUL_NM)} · ${esc(s.ATPT_OFCDC_SC_NM)} · ${esc(s.ORG_RDNMA||'')}</button>`).join('');
+  $('#schools').onclick=e=>{const b=e.target.closest('button');if(!b)return;const s=r.rows[+b.dataset.i];pick(s.ATPT_OFCDC_SC_CODE,s.SD_SCHUL_CODE,s.SCHUL_NM);};
+};
+$('#sname').addEventListener('keydown',e=>{if(e.key==='Enter')$('#sfind').click();});
+['#atpt','#sd'].forEach(id=>$(id).addEventListener('input',()=>{const a=$('#atpt').value.trim().toUpperCase(),s=$('#sd').value.trim();if(/^[A-Z]\d{2}$/.test(a)&&/^\d{7}$/.test(s))pick(a,s,'직접 넣은 코드');}));
+function pick(a,s,n){SCH={atpt:a,sd:s,name:n};$('#picked').textContent=`고른 학교: ${n} (${a} / ${s})`;$('#run').disabled=false;}
+// 학교 고르기를 첫 화면에서 해 두었으면 가져오기 (같은 사이트에서 열었을 때만)
+try{const ns=JSON.parse(localStorage.getItem('school-desk-v1')||'{}').neis;if(ns&&ns.sd)pick(ns.atpt,ns.sd,ns.name||'첫 화면 설정의 학교');}catch(e){}
+
+function box(id,title){$('#tests').insertAdjacentHTML('beforeend',`<div class="test" id="${id}"><div class="h"><span class="pill wait">진행 중</span>${title}</div><div class="b hint">요청하는 중…</div></div>`);}
+function setBox(id,state,label,html){const el=$('#'+id);el.querySelector('.pill').className='pill '+state;el.querySelector('.pill').textContent=label;el.querySelector('.b').innerHTML=html;el.querySelector('.b').className='b';}
+function table(rows){if(!rows.length)return '<p class="hint">받은 일정 없음</p>';return '<table><tr><th>날짜</th><th>일정</th><th>구분</th></tr>'+rows.map(r=>`<tr><td>${show(r.AA_YMD)}</td><td>${esc(r.EVENT_NM)}</td><td>${esc(r.SBTR_DD_SC_NM||'')}</td></tr>`).join('')+'</table>';}
+const isSat=r=>/토요휴업/.test(r.EVENT_NM||'');
+
+$('#run').onclick=async()=>{
+  $('#run').disabled=true; $('#tests').innerHTML=''; $('#verdict').hidden=true;
+  const base={ATPT_OFCDC_SC_CODE:SCH.atpt,SD_SCHUL_CODE:SCH.sd};
+  const t=new Date(); const today=ymd(t);
+  const sy=t.getMonth()<2?t.getFullYear()-1:t.getFullYear(); const end=(sy+1)+'0228';
+  const mon=new Date(t); mon.setDate(t.getDate()+((8-t.getDay())%7||7)); const fri=new Date(mon); fri.setDate(mon.getDate()+4);
+  const R={};
+
+  box('t1','① 오늘부터 학년도 끝까지 5건 받기');
+  R.t1=await call('SchoolSchedule',{...base,pIndex:1,pSize:5,AA_FROM_YMD:today,AA_TO_YMD:end});
+  if(R.t1.rows.length){
+    const ds=R.t1.rows.map(r=>r.AA_YMD), sorted=ds.every((d,i)=>!i||d>=ds[i-1]), fromToday=ds[0]>=today, sat=R.t1.rows.filter(isSat).length;
+    R.t1.sorted=sorted; R.t1.sat=sat;
+    setBox('t1',sorted&&fromToday?'ok':'warn',sorted&&fromToday?'날짜순 · 오늘부터':'순서 확인 필요',
+      `<p>${R.t1.rows.length}건 받음 (전체 ${R.t1.total||'?'}건) · ${sorted?'날짜순으로 옴':'<b>날짜순이 아님</b>'} · 토요휴업일 ${sat}건</p>${table(R.t1.rows)}<code>${esc(R.t1.url)}</code>`);
+  } else setBox('t1',R.t1.empty?'warn':'err',R.t1.empty?'일정 없음':'오류',`<p>${esc(R.t1.code)} ${esc(R.t1.msg)}</p><code>${esc(R.t1.url)}</code>`);
+
+  box('t2',`② 다음 주 평일만 받기 (${show(ymd(mon))} ~ ${show(ymd(fri))})`);
+  R.t2=await call('SchoolSchedule',{...base,pIndex:1,pSize:5,AA_FROM_YMD:ymd(mon),AA_TO_YMD:ymd(fri)});
+  setBox('t2',R.t2.ok?'ok':'err',R.t2.ok?(R.t2.rows.length?R.t2.rows.length+'건':'일정 없음(정상)'):'오류',
+    R.t2.ok?table(R.t2.rows):`<p>${esc(R.t2.code)} ${esc(R.t2.msg)}</p>`);
+
+  box('t3','③ 다음 쪽(pIndex=2) 받기');
+  R.t3=await call('SchoolSchedule',{...base,pIndex:2,pSize:5,AA_FROM_YMD:today,AA_TO_YMD:end});
+  const a=new Set((R.t1.rows||[]).map(r=>r.AA_YMD+r.EVENT_NM)); R.t3.newRows=R.t3.rows.filter(r=>!a.has(r.AA_YMD+r.EVENT_NM)).length;
+  R.t3.works=R.t3.rows.length>0&&R.t3.newRows>0;
+  setBox('t3',R.t3.works?'ok':'warn',R.t3.works?'된다':'안 된다',
+    R.t3.works?`<p>①과 다른 일정 ${R.t3.newRows}건이 왔습니다. 쪽을 넘겨 계속 받을 수 있습니다.</p>${table(R.t3.rows)}`:`<p>${R.t3.rows.length?'①과 같은 일정만 옴':esc((R.t3.code||'')+' '+(R.t3.msg||'일정 없음'))}</p>`);
+
+  box('t3b','③-2 한 번에 10건(pSize=10) 받기');
+  R.t3b=await call('SchoolSchedule',{...base,pIndex:1,pSize:10,AA_FROM_YMD:today,AA_TO_YMD:end});
+  R.t3b.works=R.t3b.rows.length>5;
+  setBox('t3b',R.t3b.works?'ok':'warn',R.t3b.works?R.t3b.rows.length+'건 옴':'5건까지만',`<p>${R.t3b.rows.length}건 받음 ${R.t3b.ok?'':esc(R.t3b.code+' '+R.t3b.msg)}</p>`);
+
+  box('t4','④ 연달아 10번 요청');
+  let okN=0, errs=[];
+  for(let i=0;i<10;i++){ const r=await call('SchoolSchedule',{...base,pIndex:1,pSize:5,AA_FROM_YMD:ymd(mon),AA_TO_YMD:ymd(fri)}); if(r.ok)okN++; else errs.push(r.code+' '+r.msg); $('#t4 .b').textContent=`${i+1}/10 요청함…`; await sleep(150); }
+  R.t4={okN,errs};
+  setBox('t4',okN===10?'ok':okN?'warn':'err',okN===10?'10번 모두 됨':`${okN}/10 성공`,`<p>${okN===10?'막히지 않았습니다.':'오류: '+esc([...new Set(errs)].join(' / '))}</p>`);
+
+  // 추천
+  let rec, why;
+  if(R.t1.code==='CORS'){ rec='브라우저가 막음 (네트워크는 정상)'; why=(location.protocol==='file:'?'내려받은 파일로 열어서 생긴 문제일 수 있습니다. 첫 화면처럼 웹 주소(github.io)에 올린 상태에서 다시 시험해야 정확합니다. ':'')+'나이스가 이 페이지의 요청을 허용하지 않습니다. 같은 문제가 첫 화면에서도 생기면 학사일정은 .ics 파일로 받아 넣는 방식으로 바꿔야 합니다.'; }
+  else if(R.t1.code==='NET'){ rec='나이스에 닿지 못함 (와이파이·인터넷 문제)'; why='공용 와이파이가 막고 있을 수 있습니다. 와이파이 로그인 화면을 거쳤는지 확인하거나 휴대폰 핫스팟으로 다시 시험하세요. 업무망 PC에서는 시험할 수 없습니다.'; }
+  else if(!R.t1.rows.length&&!R.t1.empty){ rec='나이스 응답 오류'; why=(R.t1.code||'')+' '+(R.t1.msg||'')+' — 학교 코드를 확인하세요.'; }
+  else if(R.t3b.works){ rec='한 번에 많이 받기'; why='인증키 없이도 5건 넘게 옵니다. 오늘부터 학년도 끝까지 한 번에 받으면 됩니다.'; }
+  else if(R.t3.works&&R.t4.okN===10){ rec='오늘부터 쪽 넘겨 받기'; why='다음 쪽(pIndex)이 되고 연달아 요청해도 막히지 않습니다. 오늘부터 5건씩 몇 쪽 넘겨 받으면 가장 간단합니다.'; }
+  else if(R.t2.ok&&R.t4.okN===10){ rec='평일 8주 나눠 받기'; why='다음 쪽은 안 되지만 주 단위 요청과 연달아 요청은 됩니다. 이번 주부터 8주 동안 월~금을 한 주씩 받는 방식이 맞습니다.'+(R.t1.sat?` (오늘부터 5건 중 토요휴업일이 ${R.t1.sat}건이라 나눠 받는 게 낫습니다.)`:''); }
+  else if(R.t2.ok&&R.t4.okN>0){ rec='가까운 2주만 받기'; why='연달아 요청하면 막힙니다. 키가 없으면 이번 주와 다음 주만 받고, 인증키를 안내하는 게 안전합니다.'; }
+  else { rec='인증키 안내만 하기'; why='키 없이는 쓸 만큼 받을 수 없습니다. 인증키를 넣도록 안내하는 쪽이 낫습니다.'; }
+  $('#verdict').innerHTML=`<h2>추천: ${esc(rec)}</h2><p>${esc(why)}</p><p class="hint">① ${R.t1.rows.length}건(${R.t1.sorted?'날짜순':'순서?'}, 토요휴업일 ${R.t1.sat??'-'}) · ② ${R.t2.ok?'됨':'안 됨'} · ③ ${R.t3.works?'됨':'안 됨'} · ③-2 ${R.t3b.works?'됨':'5건까지'} · ④ ${R.t4.okN}/10</p>`;
+  $('#verdict').hidden=false; $('#run').disabled=false;
+  $('#verdict').scrollIntoView({behavior:'smooth',block:'start'});
+};
+</script>
+</body>
+</html>
