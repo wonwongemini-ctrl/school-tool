@@ -13,360 +13,197 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
 <style>
-/* 레이아웃: 위쪽 탭 + 각 탭은 [입력·검증] → [품목] → [기안문·품목내역] 순서로 내려가는 결재 서류철 */
+/* v2: 한 화면에 질문 하나. 먼저 알아내고 확인만 받는 흐름 */
 :root{
-  --paper:#f6f7f5; --card:#ffffff; --ink:#1d2a33; --muted:#5d6b73; --line:#d8dedb; --line-strong:#b9c3bf;
+  --paper:#f4f6f5; --card:#ffffff; --ink:#18242c; --muted:#5b6970; --line:#dde3e0; --line-strong:#b9c3bf;
   --accent:#1f5e74; --accent-ink:#ffffff; --accent-soft:#e3eef1;
   --ok:#1d7a4c; --ok-soft:#e2f2e9; --warn:#9a6200; --warn-soft:#fbf0d9; --err:#b3261e; --err-soft:#fbe5e3;
   --doc:#fffefa; --doc-line:#cfc9b8;
   --f-body:"IBM Plex Sans KR","Malgun Gothic","맑은 고딕","Apple SD Gothic Neo",sans-serif;
   --f-doc:"Nanum Myeongjo","바탕","Batang","AppleMyungjo",serif;
   --f-num:"IBM Plex Mono",Consolas,"D2Coding",monospace;
-  --r:6px;
+  --r:14px;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --paper:#141a1d; --card:#1b2327; --ink:#e4eaec; --muted:#9aa8ae; --line:#2e3a3f; --line-strong:#43535a;
+  --paper:#12181b; --card:#1b2327; --ink:#e4eaec; --muted:#9aa8ae; --line:#2b373c; --line-strong:#43535a;
   --accent:#6cb6cc; --accent-ink:#0d1c22; --accent-soft:#1d3239;
   --ok:#6fcf9b; --ok-soft:#173327; --warn:#e7b65a; --warn-soft:#352a12; --err:#f08a80; --err-soft:#3a1d1a;
   --doc:#1f2629; --doc-line:#46504f; color-scheme:dark; } }
 :root[data-theme="dark"]{
-  --paper:#141a1d; --card:#1b2327; --ink:#e4eaec; --muted:#9aa8ae; --line:#2e3a3f; --line-strong:#43535a;
+  --paper:#12181b; --card:#1b2327; --ink:#e4eaec; --muted:#9aa8ae; --line:#2b373c; --line-strong:#43535a;
   --accent:#6cb6cc; --accent-ink:#0d1c22; --accent-soft:#1d3239;
   --ok:#6fcf9b; --ok-soft:#173327; --warn:#e7b65a; --warn-soft:#352a12; --err:#f08a80; --err-soft:#3a1d1a;
   --doc:#1f2629; --doc-line:#46504f; color-scheme:dark; }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{margin:0}
-body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:14.5px;line-height:1.55}
-.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
-header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 24px;border-bottom:2px solid var(--ink);padding-bottom:10px}
-header.top h1{margin:0;font-size:22px;letter-spacing:-.01em;text-wrap:balance}
-header.top h1 small{display:block;font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.04em}
-header.top .privacy{font-size:12.5px;color:var(--muted);max-width:430px}
-nav.tabs{display:flex;flex-wrap:wrap;gap:4px;margin:18px 0 0;border-bottom:1px solid var(--line-strong)}
-nav.tabs button{font:inherit;font-weight:600;border:1px solid transparent;border-bottom:none;background:none;color:var(--muted);padding:9px 16px 8px;border-radius:var(--r) var(--r) 0 0;cursor:pointer;display:flex;gap:8px;align-items:baseline}
-nav.tabs button .n{font-family:var(--f-num);font-size:12px;opacity:.8}
-nav.tabs button[aria-selected="true"]{background:var(--card);color:var(--ink);border-color:var(--line-strong);margin-bottom:-1px}
-nav.tabs button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-section.panel{background:var(--card);border:1px solid var(--line-strong);border-top:none;padding:20px clamp(14px,2.5vw,26px) 28px;display:grid;gap:22px}
-.step{display:grid;gap:10px;min-width:0}
-.step > h2{margin:0;font-size:15px;display:flex;align-items:center;gap:10px}
-.step > h2 .k{font-family:var(--f-num);font-size:11.5px;font-weight:500;color:var(--accent);border:1px solid var(--accent);border-radius:3px;padding:0 6px;letter-spacing:.04em}
-.hint{color:var(--muted);font-size:13px;margin:0}
-.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px 18px}
-.field{display:grid;gap:4px;min-width:0}
-.field label{font-size:12.5px;font-weight:600;color:var(--muted)}
-input[type=text],input[type=number],select,textarea{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line-strong);border-radius:4px;padding:7px 9px;width:100%;min-width:0}
-input[type=number]{font-family:var(--f-num)}
-textarea{resize:vertical}
-.drop{border:1.5px dashed var(--line-strong);border-radius:var(--r);padding:18px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;background:var(--paper);cursor:pointer;transition:border-color .15s,background .15s}
-.drop.over{border-color:var(--accent);background:var(--accent-soft)}
-.drop strong{font-size:14.5px}
-.drop .files{flex-basis:100%;font-size:13px;color:var(--muted)}
-.btn{font:inherit;font-weight:600;font-size:13.5px;border-radius:4px;border:1px solid var(--line-strong);background:var(--card);color:var(--ink);padding:7px 13px;cursor:pointer;white-space:nowrap}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* 위 막대 */
+.bar{position:sticky;top:0;z-index:5;background:var(--paper)}
+.bar-in{max-width:1080px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:10px max(16px,env(safe-area-inset-left,0px)) 8px}
+.bar .back{border:none;background:none;padding:6px 8px;margin-left:-8px;border-radius:8px;cursor:pointer;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:4px}
+.bar .back:hover{background:var(--line)}
+.bar .brand{font-weight:700;font-size:14px;color:var(--muted);letter-spacing:-.01em;cursor:pointer;border:none;background:none;padding:6px 0}
+.bar .sp{flex:1}
+.prog{height:3px;background:var(--line);max-width:1080px;margin:0 auto}
+.prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .35s ease}
+
+/* 무대 */
+.stage{max-width:580px;margin:0 auto;padding:12px max(16px,env(safe-area-inset-left,0px)) 120px;animation:rise .28s ease both}
+.stage.wide{max-width:1080px}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.stage{animation:none}.prog i{transition:none}}
+h1.q{font-size:clamp(23px,4.6vw,28px);line-height:1.35;letter-spacing:-.025em;margin:26px 0 8px;font-weight:700;text-wrap:balance}
+p.qs{margin:0 0 22px;color:var(--muted);font-size:15.5px}
+.stage h2{font-size:15px;margin:26px 0 10px}
+
+/* 큰 놓기 칸 */
+.bigdrop{display:grid;justify-items:center;gap:6px;text-align:center;border:2px dashed var(--line-strong);border-radius:20px;padding:46px 20px;background:var(--card);cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
+.bigdrop:hover{border-color:var(--accent)}
+.bigdrop.over{border-color:var(--accent);background:var(--accent-soft);transform:scale(1.01)}
+.bigdrop svg{width:46px;height:46px;color:var(--accent)}
+.bigdrop strong{font-size:19px;letter-spacing:-.02em}
+.bigdrop span{color:var(--muted);font-size:13.5px}
+.minidrop{display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px dashed var(--line-strong);border-radius:12px;padding:14px;cursor:pointer;color:var(--muted);font-weight:600;font-size:14px;background:transparent}
+.minidrop.over,.minidrop:hover{border-color:var(--accent);color:var(--accent)}
+
+/* 고르기 카드 */
+.choices{display:grid;gap:10px}
+.choice{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;text-align:left;width:100%;border:1.5px solid var(--line);background:var(--card);border-radius:var(--r);padding:16px 18px;cursor:pointer;transition:border-color .12s,background .12s}
+.choice:hover{border-color:var(--line-strong)}
+.choice[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.choice .ic{width:40px;height:40px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:17px}
+.choice[aria-pressed="true"] .ic{background:var(--accent);color:var(--accent-ink)}
+.choice b{display:block;font-size:16px;letter-spacing:-.01em}
+.choice span.d{display:block;color:var(--muted);font-size:13.5px;margin-top:1px}
+.choice .chev{color:var(--muted)}
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:520px){.twocol{grid-template-columns:1fr}}
+
+/* 입력 */
+.fld{display:grid;gap:6px;margin-bottom:16px;min-width:0}
+.fld > label,.fld > .lab{font-size:13.5px;font-weight:600;color:var(--muted)}
+.fld .help{font-size:12.5px;color:var(--muted)}
+input[type=text],input[type=number],input[type=search],select,textarea{width:100%;min-width:0;background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font-size:16px;transition:border-color .12s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none}
+input.big{font-size:20px;font-weight:600;padding:14px 16px}
+textarea{resize:vertical;line-height:1.6}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:0 12px}
+@media (max-width:520px){.grid2,.grid3{grid-template-columns:1fr}}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:7px 14px;cursor:pointer;font-weight:600;font-size:14px}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
+.found{background:var(--ok-soft);color:var(--ok);border-radius:10px;padding:9px 12px;font-size:14px;font-weight:600}
+
+/* 아래 고정 버튼 */
+.cta{position:fixed;left:0;right:0;bottom:0;z-index:6;padding:14px max(16px,env(safe-area-inset-left,0px)) calc(14px + env(safe-area-inset-bottom,0px));background:linear-gradient(to top,var(--paper) 72%,transparent)}
+.cta-in{max-width:580px;margin:0 auto;display:flex;gap:8px}
+.stage.wide + .cta .cta-in{max-width:1080px}
+.btn{border:1.5px solid var(--line-strong);background:var(--card);border-radius:12px;padding:10px 16px;font-weight:600;font-size:14.5px;cursor:pointer;white-space:nowrap}
 .btn:hover{border-color:var(--ink)}
+.btn.small{font-size:13px;padding:5px 10px;border-radius:8px;font-weight:500}
+.btn.link{border:none;background:none;color:var(--accent);padding:6px 4px}
+.btn.link:hover{text-decoration:underline}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.btn.primary:hover{filter:brightness(1.08)}
-.btn.small{font-size:12.5px;padding:3px 8px;font-weight:500}
-.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn:disabled{opacity:.4;cursor:not-allowed;filter:none}
+.btn.go{flex:1;padding:16px;font-size:17px;border-radius:14px}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:4px}
-table{border-collapse:collapse;width:100%;font-size:13.5px}
-th,td{border-bottom:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
-th{background:var(--paper);font-weight:600;font-size:12.5px;color:var(--muted);white-space:nowrap}
-td.num,th.num{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap}
-tfoot td{font-weight:700;border-top:1.5px solid var(--line-strong);border-bottom:none}
-tr.bad td{background:var(--err-soft)}
-tr.warnrow td{background:var(--warn-soft)}
-td input[type=text],td input[type=number]{padding:4px 6px;font-size:13.5px}
-td input.qty{width:70px} td input.price{width:110px}
-.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;border-radius:999px;padding:1px 9px;white-space:nowrap}
+
+/* 파일 카드 */
+.cards{display:grid;gap:10px;margin-bottom:12px}
+.fcard{background:var(--card);border:1.5px solid var(--line);border-radius:var(--r);padding:14px 16px;display:grid;gap:8px}
+.fcard.err{border-color:color-mix(in srgb,var(--err) 45%,var(--line))}
+.fcard .top{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+.fcard .ttl{font-weight:700;font-size:16px;letter-spacing:-.01em}
+.fcard .fn{font-size:12.5px;color:var(--muted);word-break:break-all}
+.fcard .sum{font-size:14.5px}
+.fcard .sum b{font-family:var(--f-num);font-weight:600}
+.facts{display:flex;flex-wrap:wrap;gap:6px}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;border-radius:999px;padding:2px 10px;white-space:nowrap}
 .pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.err{background:var(--err-soft);color:var(--err)} .pill.info{background:var(--accent-soft);color:var(--accent)}
 .checks{list-style:none;margin:0;padding:0;display:grid;gap:5px}
 .checks li{display:flex;gap:10px;align-items:baseline;font-size:13.5px}
-.checks li .pill{flex:none;min-width:44px;justify-content:center}
-.empty{color:var(--muted);font-size:13.5px;padding:14px;border:1px dashed var(--line);border-radius:4px;text-align:center}
-/* 기안문 미리보기: 공문 느낌 */
-.docbox{background:var(--doc);border:1px solid var(--doc-line);border-radius:3px;padding:18px 22px;font-family:var(--f-doc);font-size:15px;line-height:1.85;display:grid;gap:10px}
-.docbox .docrow{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:start}
-.docbox .lab{font-family:var(--f-body);font-size:12px;font-weight:600;color:var(--muted);padding-top:6px;letter-spacing:.1em}
-.docbox input.title{font-family:var(--f-doc);font-weight:700;font-size:15.5px;background:transparent}
-.docbox textarea{font-family:var(--f-doc);font-size:15px;line-height:1.85;background:transparent;min-height:200px;white-space:pre-wrap}
-.outgrid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px}
-@media (max-width:860px){.outgrid{grid-template-columns:1fr}}
-.sub{font-size:13px;font-weight:700;margin:0 0 6px;color:var(--ink)}
-.toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:8px 16px;border-radius:4px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:20}
+.checks li .pill{flex:none;min-width:46px;justify-content:center}
+details > summary{cursor:pointer;font-size:13.5px;color:var(--accent);font-weight:600;width:max-content;max-width:100%}
+details[open] > summary{margin-bottom:8px}
+.muted{color:var(--muted)} .mono{font-family:var(--f-num)}
+.note{font-size:13.5px;color:var(--muted);margin:8px 0 0}
+
+/* 표 */
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border-bottom:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:middle}
+th{background:var(--paper);font-weight:600;font-size:12.5px;color:var(--muted);white-space:nowrap}
+td.num,th.num{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+tfoot td{font-weight:700;border-top:1.5px solid var(--line-strong);border-bottom:none}
+tbody tr:last-child td{border-bottom:none}
+tr.bad td{background:var(--err-soft)} tr.warnrow td{background:var(--warn-soft)}
+td input[type=text],td input[type=number],td select{padding:5px 7px;font-size:13.5px;border-radius:7px;border-width:1px}
+td input.w-qty{width:72px} td input.w-price{width:110px} td input.w-unit{width:64px} td input.w-spec{min-width:110px}
+.pick tr{cursor:pointer} .pick tr:hover td{background:var(--accent-soft)} .pick tr.sel td{background:var(--accent);color:var(--accent-ink)}
+.pick td{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
+
+/* 완성 화면 */
+.done-head{display:flex;align-items:center;gap:12px;margin:22px 0 4px}
+.done-head .tick{width:40px;height:40px;border-radius:50%;background:var(--ok);color:#fff;display:grid;place-items:center;flex:none}
+.done-head h1.q{margin:0}
+.outgrid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:880px){.outgrid{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;display:grid;gap:10px;min-width:0}
+.panel .ph{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.panel .ph b{font-size:14.5px}
+.docbox{background:var(--doc);border:1px solid var(--doc-line);border-radius:6px;padding:14px 16px;font-family:var(--f-doc);display:grid;gap:8px}
+.docbox textarea.title{font-family:var(--f-doc);font-weight:700;font-size:16px;line-height:1.5;background:transparent;border:1px solid transparent;border-radius:6px;padding:6px 8px;resize:none;field-sizing:content;min-height:0}
+.out-items th:first-child,.out-items td:first-child{min-width:190px}
+.out-items td:nth-child(3){white-space:nowrap}
+.docbox textarea.body{field-sizing:content;min-height:180px}
+.docbox textarea{font-family:var(--f-doc);font-size:15px;line-height:1.85;background:transparent;border:1px solid transparent;border-radius:6px;padding:6px 8px;white-space:pre-wrap}
+.docbox textarea.title:hover,.docbox textarea:hover{border-color:var(--doc-line)}
+.bigsum{font-family:var(--f-num);font-size:clamp(30px,7vw,40px);font-weight:600;letter-spacing:-.02em}
+.kor{color:var(--muted);font-size:15px}
+.calcline{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-family:var(--f-num);font-size:14px}
+
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(16px);background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:20;max-width:calc(100vw - 32px)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.filecard{border:1px solid var(--line);border-radius:4px;padding:10px 12px;display:grid;gap:6px}
-.filecard .fname{font-weight:600;font-size:13.5px;word-break:break-all}
-details summary{cursor:pointer;font-size:13px;color:var(--accent);font-weight:600}
-.lecturers{display:grid;gap:6px;max-height:340px;overflow:auto;padding-right:4px}
-.lect{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:4px;padding:8px 10px;cursor:pointer}
-.lect:hover{border-color:var(--line-strong)}
-.lect.sel{border-color:var(--accent);background:var(--accent-soft)}
-.lect .t{font-weight:600}
-.lect .d{font-size:12.5px;color:var(--muted)}
-.muted{color:var(--muted)}
-.mono{font-family:var(--f-num)}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
-/* 강사료: 강사 종류 나누기 */
-.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:6px;overflow:hidden;flex-wrap:wrap}
-.seg button{font:inherit;font-weight:600;font-size:13.5px;border:none;background:var(--card);color:var(--muted);padding:8px 16px;cursor:pointer}
-.seg button+button{border-left:1px solid var(--line-strong)}
-.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
-.feecalc{font-family:var(--f-num);font-size:13px;background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:10px 12px;white-space:pre-wrap;margin:0;line-height:1.7}
-.finalbox{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 18px;border:1.5px solid var(--accent);border-radius:6px;padding:12px 14px;background:var(--accent-soft)}
-.settbl td{padding:4px 6px;vertical-align:middle}
-.settbl td input{padding:4px 6px;font-size:13px}
-footer.site{margin-top:28px;padding-top:14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
-footer.site p{margin:0 0 4px}
-footer.site a{color:inherit}
-footer.site details{margin-top:6px}
-footer.site summary{cursor:pointer;width:max-content;max-width:100%}
+.spin{display:inline-block;width:18px;height:18px;border:2.5px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-3px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+footer.site{max-width:1080px;margin:0 auto;padding:18px max(16px,env(safe-area-inset-left,0px)) 110px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+footer.site p{margin:0 0 4px} footer.site a{color:inherit}
+footer.site details summary{color:inherit;font-weight:500;font-size:12.5px}
 footer.site ul{margin:6px 0 0;padding-left:18px}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="top">
-    <h1><small>교무실 · 에듀파인 지출 품의</small>에듀파인 품의 도우미</h1>
-    <p class="privacy">올린 파일은 이 브라우저 안에서만 읽고, 어디에도 저장하거나 보내지 않습니다. 기안문 본문과 에듀파인에 올릴 품목내역 엑셀(.xls)을 만듭니다.</p>
-  </header>
+<div class="bar"><div class="bar-in">
+  <button class="back" id="backBtn" hidden aria-label="뒤로"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>뒤로</button>
+  <button class="brand" id="homeBtn">에듀파인 품의 도우미</button>
+  <span class="sp"></span>
+</div><div class="prog"><i id="progFill"></i></div></div>
 
-  <nav class="tabs" role="tablist">
-    <button role="tab" aria-selected="true" data-tab="t1"><span class="n">1</span>학습준비물</button>
-    <button role="tab" aria-selected="false" data-tab="t2"><span class="n">2</span>정보화 기자재</button>
-    <button role="tab" aria-selected="false" data-tab="t3"><span class="n">3</span>G마켓·SSG 구입</button>
-    <button role="tab" aria-selected="false" data-tab="t4"><span class="n">4</span>강사료</button>
-  </nav>
+<main id="stage" class="stage" aria-live="polite"></main>
+<div class="cta" id="cta" hidden><div class="cta-in" id="ctaIn"></div></div>
 
-  <!-- ===== 1. 학습준비물 ===== -->
-  <section class="panel" id="t1" role="tabpanel">
-    <div class="step">
-      <h2><span class="k">입력</span>학년별 학습준비물 신청 엑셀</h2>
-      <div class="grid2">
-        <div class="field"><label for="t1year">학년도</label><input type="text" id="t1year" placeholder="2026"></div>
-        <div class="field"><label for="t1term">학기</label><select id="t1term"><option value="1">1학기</option><option value="2" selected>2학기</option></select></div>
-        <div class="field"><label for="t1rel">1. 관련 (문서번호)</label><input type="text" id="t1rel" placeholder="○○초등학교-0000(2026. 0. 0.)"></div>
-        <div class="field"><label for="t1att">붙임 (비우면 자동)</label><input type="text" id="t1att" placeholder="자동: 신청내역 또는 학년별 견적서 N부"></div>
-      </div>
-      <div class="filecard">
-        <div class="fname">학년별 수합 양식 내려받기</div>
-        <p class="hint">학년에 나눠 줄 신청서 엑셀입니다. 금액·소계·집계는 수식으로 자동 계산되고, 다 모이면 그대로 아래에 올리면 됩니다. 위의 학년도·학기가 제목에 들어갑니다.</p>
-        <div class="row">
-          <label for="t1lines" class="muted" style="font-size:12.5px;font-weight:600">학년별 줄 수</label>
-          <input type="number" id="t1lines" min="5" max="200" value="30" style="width:80px">
-          <button class="btn primary" id="t1form">전체 양식 (1~6학년 + 집계)</button>
-          <span class="muted" style="font-size:12.5px">학년별 파일:</span>
-          <button class="btn small" data-formg="1">1학년</button><button class="btn small" data-formg="2">2학년</button><button class="btn small" data-formg="3">3학년</button><button class="btn small" data-formg="4">4학년</button><button class="btn small" data-formg="5">5학년</button><button class="btn small" data-formg="6">6학년</button>
-        </div>
-      </div>
-      <label class="drop" id="t1drop">
-        <input type="file" id="t1file" accept=".xlsx,.xls,.pdf" multiple hidden>
-        <strong>신청서 엑셀이나 견적서를 끌어다 놓거나 클릭해서 고르세요</strong>
-        <span class="hint">신청서(전체 또는 학년별), 아이스크림몰 견적서 엑셀(.xls), 견적서 PDF를 섞어서 여러 개 올려도 됩니다. 계속 추가로 올릴 수 있습니다. 파일 이름에 '3학년'처럼 학년이 있으면 자동으로 지정됩니다.</span>
-        <span class="files" id="t1fname"></span>
-      </label>
-    </div>
-    <div class="step">
-      <h2><span class="k">검증</span>단가 · 수량 · 금액 · 소계 · 총액 확인</h2>
-      <div id="t1check"><div class="empty">파일을 올리면 학년별로 다시 계산한 금액과 시트의 소계, 집계 시트를 비교합니다.</div></div>
-    </div>
-    <div class="step" id="t1out"></div>
-  </section>
-
-  <!-- ===== 2. 정보화 기자재 ===== -->
-  <section class="panel" id="t2" role="tabpanel" hidden>
-    <div class="step">
-      <h2><span class="k">입력</span>견적서 PDF · 엑셀 (여러 장 가능)</h2>
-      <label class="drop" id="t2drop">
-        <input type="file" id="t2file" accept=".pdf,.xls,.xlsx" multiple hidden>
-        <strong>견적서(PDF 또는 엑셀)를 끌어다 놓거나 클릭해서 고르세요</strong>
-        <span class="hint">견적서의 품목 표(품목명·수량·단가·금액)를 자동으로 읽습니다. 읽지 못한 품목은 아래 표에 직접 입력하세요.</span>
-        <span class="files" id="t2fname"></span>
-      </label>
-      <div class="grid2">
-        <div class="field"><label for="t2title">제목</label><input type="text" id="t2title" value="정보화기기 관리 소모품 구입"></div>
-        <div class="field"><label for="t2item">1. 물품 (비우면 자동)</label><input type="text" id="t2item" placeholder="자동: 금액이 가장 큰 품목 외 N종"></div>
-        <div class="field" style="grid-column:1/-1"><label for="t2intro">개요 문장</label><input type="text" id="t2intro" value="원활한 정보화기기 관리를 위하여 아래와 같이 정보화 소모품을 구입하고자 합니다."></div>
-        <div class="field"><label for="t2att">붙임 견적서 부수</label><input type="number" id="t2att" min="0" value="1"></div>
-      </div>
-    </div>
-    <div class="step">
-      <h2><span class="k">검증</span>견적서 금액 확인</h2>
-      <div id="t2check"><div class="empty">견적서를 올리면 수량×단가, 공급가액+부가세, 한글 금액과 숫자 금액, 총합계를 비교합니다.</div></div>
-    </div>
-    <div class="step">
-      <h2><span class="k">품목</span>품목 확인 · 수정</h2>
-      <p class="hint">품목명은 품목내역의 '내용' 칸에 그대로 들어갑니다. [간단히]를 누르면 대괄호 안 호환 기종 목록을 첫 모델명만 남깁니다.</p>
-      <div id="t2rows"></div>
-      <div class="row"><button class="btn small" id="t2add">+ 품목 직접 추가</button></div>
-    </div>
-    <div class="step" id="t2out"></div>
-  </section>
-
-  <!-- ===== 3. G마켓·SSG ===== -->
-  <section class="panel" id="t3" role="tabpanel" hidden>
-    <div class="step">
-      <h2><span class="k">입력</span>G마켓 · SSG · 아이스크림몰 견적서 PDF · 엑셀 (여러 장 가능)</h2>
-      <label class="drop" id="t3drop">
-        <input type="file" id="t3file" accept=".pdf,.xls,.xlsx" multiple hidden>
-        <strong>견적서(PDF 또는 엑셀)를 끌어다 놓거나 클릭해서 고르세요</strong>
-        <span class="hint">엑셀 견적서(장바구니 견적 내려받기)가 가장 정확합니다. PDF는 크롬·엣지 인쇄 화면에서 'PDF로 저장'으로 만든 파일이어야 글자를 읽을 수 있고, 한컴 PDF로 저장한 파일은 그림이라 읽지 못합니다.</span>
-        <span class="files" id="t3fname"></span>
-      </label>
-      <div class="grid2">
-        <div class="field"><label for="t3title">제목</label><input type="text" id="t3title" value="교육활동 물품 구입"></div>
-        <div class="field"><label for="t3purpose">목적 ( ___을/를 위하여 )</label><input type="text" id="t3purpose" value="원활한 교육활동"></div>
-        <div class="field"><label for="t3item">1. 물품 (비우면 자동)</label><input type="text" id="t3item" placeholder="자동: 금액이 가장 큰 품목 외 N종"></div>
-        <div class="field"><label for="t3att">붙임 견적서 부수</label><input type="number" id="t3att" min="0" value="1"></div>
-        <div class="field"><label><input type="checkbox" id="t3opt" checked> 품목명 뒤에 선택 옵션을 (괄호)로 붙이기</label></div>
-      </div>
-    </div>
-    <div class="step">
-      <h2><span class="k">검증</span>견적서 금액 확인</h2>
-      <div id="t3check"><div class="empty">견적서를 올리면 공급가액−할인금액=공급합계, 품목 합계, 배송비, 총 구매금액을 비교합니다.</div></div>
-    </div>
-    <div class="step">
-      <h2><span class="k">품목</span>품목 확인 · 수정</h2>
-      <p class="hint">단가는 할인 후 금액 ÷ 수량입니다. 나누어떨어지지 않으면 [수량 1로]를 눌러 금액을 그대로 한 줄로 넣을 수 있습니다.</p>
-      <div id="t3rows"></div>
-      <div class="row"><button class="btn small" id="t3add">+ 품목 직접 추가</button></div>
-    </div>
-    <div class="step" id="t3out"></div>
-  </section>
-
-  <!-- ===== 4. 강사료 ===== -->
-  <section class="panel" id="t4" role="tabpanel" hidden>
-    <div class="step">
-      <h2><span class="k">종류</span>어떤 강사인가요?</h2>
-      <div class="seg" role="group" aria-label="강사 종류">
-        <button type="button" data-kind="ledger" aria-pressed="true">출근부 있는 강사 (강사 대장)</button>
-        <button type="button" data-kind="once" aria-pressed="false">일회성 강사 (특강·작가·연수)</button>
-      </div>
-      <p class="hint" id="t4kindHint">교육과정·방과후처럼 여러 차시 수업하고 출근부를 쓰는 강사입니다. 강사 대장의 시간당 강사료로 계산합니다.</p>
-    </div>
-    <div id="t4ledger" style="display:grid;gap:22px">
-    <div class="step">
-      <h2><span class="k">입력</span>강사 대장 (엑셀) 또는 강사 관리 시트</h2>
-      <label class="drop" id="t4drop">
-        <input type="file" id="t4file" accept=".xlsx,.xls,.csv" hidden>
-        <strong>시트 파일을 끌어다 놓거나 클릭해서 고르세요</strong>
-        <span class="hint">강사 관리 도우미에서 저장한 강사 대장, 또는 구글 시트에서 [파일 → 다운로드 → Microsoft Excel]로 받은 파일</span>
-        <span class="files" id="t4fname"></span>
-      </label>
-      <div class="grid2">
-        <div class="field"><label for="t4rel">1. 관련 (문서번호)</label><input type="text" id="t4rel" placeholder="○○초등학교-0000(2026. 0. 0.)"></div>
-        <div class="field"><label for="t4year">학년도</label><select id="t4year"><option value="">전체</option></select></div>
-        <div class="field"><label for="t4grade">학년</label><select id="t4grade"><option value="">전체</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
-        <div class="field"><label>&nbsp;</label><label style="font-weight:500;color:var(--ink)"><input type="checkbox" id="t4todo"> 강사비 품의 안 한 건만 보기</label></div>
-      </div>
-      <div id="t4list"><div class="empty">시트를 올리면 학년별 강사·프로그램 목록이 나옵니다.</div></div>
-    </div>
-    <div class="step" id="t4edit" hidden>
-      <h2><span class="k">확인</span>선택한 강사 정보 · 산출내역</h2>
-      <div class="grid2">
-        <div class="field"><label for="t4y">학년도</label><input type="text" id="t4y"></div>
-        <div class="field"><label for="t4b">예산/구분</label><input type="text" id="t4b"></div>
-        <div class="field"><label for="t4g">학년</label><input type="text" id="t4g"></div>
-        <div class="field"><label for="t4p">프로그램명</label><input type="text" id="t4p"></div>
-        <div class="field"><label for="t4n">강사명</label><input type="text" id="t4n"></div>
-        <div class="field"><label for="t4per">수업기간</label><input type="text" id="t4per" placeholder="2026. 8. 31. ~ 10. 12.(12회)"></div>
-        <div class="field"><label for="t4att">붙임</label><input type="text" id="t4att" value="강사카드 및 통장사본 1부."></div>
-      </div>
-      <div class="grid2">
-        <div class="field"><label for="t4u">시간당 단가(원)</label><input type="number" id="t4u" min="0" step="1000"></div>
-        <div class="field"><label for="t4h">시간(회)</label><input type="number" id="t4h" min="0"></div>
-        <div class="field"><label for="t4c">학급</label><input type="number" id="t4c" min="0"></div>
-        <div class="field"><label for="t4x">추가시간 (발표회 등)</label><input type="number" id="t4x" min="0" value="0"></div>
-        <div class="field"><label><input type="checkbox" id="t4manual"> 산출내역 직접 입력 (인원당 재료비 등)</label></div>
-      </div>
-      <div class="grid2" id="t4manualbox" hidden>
-        <div class="field"><label for="t4mt">산출내역 문구</label><input type="text" id="t4mt" placeholder="11,000원*45명 = 495,000"></div>
-        <div class="field"><label for="t4ma">금액(원)</label><input type="number" id="t4ma" min="0"></div>
-      </div>
-      <div id="t4check"></div>
-    </div>
-    <div class="step" id="t4out"></div>
-    </div>
-    <!-- 일회성 강사 -->
-    <div id="t4once" style="display:grid;gap:22px" hidden>
-      <div class="step">
-        <h2><span class="k">입력</span>행사 · 강사 정보</h2>
-        <div class="grid2">
-          <div class="field"><label for="oRel">1. 관련 (문서번호)</label><input type="text" id="oRel" placeholder="○○초등학교-0000(2026. 0. 0.)"></div>
-          <div class="field"><label for="oYear">학년도</label><input type="text" id="oYear"></div>
-          <div class="field"><label for="oBiz">예산/사업명</label><input type="text" id="oBiz" placeholder="예: 독서교육"></div>
-          <div class="field"><label for="oName">행사명</label><input type="text" id="oName" placeholder="예: 작가와의 만남 / 학부모 교육 / 교원 연수"></div>
-          <div class="field"><label for="oWho">대상</label><input type="text" id="oWho" placeholder="예: 4학년 학생 120명 / 학부모 / 교직원"></div>
-          <div class="field"><label for="oLect">강사명</label><input type="text" id="oLect"></div>
-          <div class="field"><label for="oDate">날짜</label><input type="text" id="oDate" placeholder="20261105" inputmode="numeric"></div>
-          <div class="field"><label for="oTime">시간</label><input type="text" id="oTime" placeholder="14:00~16:00"></div>
-          <div class="field"><label for="oAtt">붙임</label><input type="text" id="oAtt" value="강사카드 및 통장사본 1부."></div>
-        </div>
-      </div>
-      <div class="step">
-        <h2><span class="k">기준</span>강사수당 기준표로 계산</h2>
-        <div class="grid2">
-          <div class="field"><label for="oGrade">강사 등급</label><select id="oGrade"></select><span class="hint" id="oGradeWho"></span></div>
-          <div class="field"><label for="oH">강의 시간</label><div class="row"><input type="number" id="oH" min="0" value="1" style="width:80px"> 시간 <input type="number" id="oM" min="0" max="59" step="5" value="0" style="width:80px"> 분</div><span class="hint">30분 미만은 빼고, 30분 이상은 1시간으로 셉니다</span></div>
-          <div class="field"><label for="oCnt">수강 인원 (가산용)</label><input type="number" id="oCnt" min="0" placeholder="예: 120"><span class="hint" id="oCntHint">79명 이하는 가산 없음</span></div>
-          <div class="field"><label for="oTimes">같은 강의 횟수</label><input type="number" id="oTimes" min="1" value="1"><span class="hint">예: 반별로 3번 강의하면 3</span></div>
-        </div>
-        <div class="grid2">
-          <div class="field"><label for="oMs">원고료 · 국문 A4 (매)</label><input type="number" id="oMs" min="0" step="0.5" value="0"></div>
-          <div class="field"><label for="oPpt">원고료 · 파워포인트 (면)</label><input type="number" id="oPpt" min="0" value="0"></div>
-          <div class="field"><label for="oTravel">여비 · 교통비 (실비, 원)</label><input type="number" id="oTravel" min="0" step="100" value="0"></div>
-          <div class="field" style="align-content:end;gap:6px">
-            <label style="font-weight:500;color:var(--ink)"><input type="checkbox" id="oRec"> 강의 녹화 가산</label>
-            <label style="font-weight:500;color:var(--ink)"><input type="checkbox" id="oPub"> 강사가 공무원·교원 등 공직자</label>
-          </div>
-        </div>
-        <pre class="feecalc" id="oCalc"></pre>
-        <div id="oCheck"></div>
-        <details>
-          <summary>강사수당 기준표 보기 · 고치기</summary>
-          <div style="display:grid;gap:10px;margin-top:10px">
-            <p class="hint" id="feeSrc"></p>
-            <div class="tblwrap"><table class="settbl"><thead><tr><th>등급</th><th>대상</th><th class="num">기본 1시간</th><th class="num">초과 1시간당</th><th></th></tr></thead><tbody id="feeRows"></tbody></table></div>
-            <div class="grid2">
-              <div class="field"><label for="fMs">원고료 국문 A4 1매</label><input type="number" id="fMs"></div>
-              <div class="field"><label for="fMsMax">원고 시간당 한도 (매)</label><input type="number" id="fMsMax" step="0.5"></div>
-              <div class="field"><label for="fPpt">파워포인트 1면</label><input type="number" id="fPpt"></div>
-              <div class="field"><label for="fPptMax">PPT 시간당 한도 (면)</label><input type="number" id="fPptMax"></div>
-              <div class="field"><label for="fRec">녹화 가산 (시간당)</label><input type="number" id="fRec"></div>
-            </div>
-            <div class="row"><button class="btn small" id="feeAdd">＋ 등급 추가</button><button class="btn small primary" id="feeSave">기준표 저장</button><button class="btn small" id="feeReset">기본값으로</button><span class="hint">이 브라우저에만 저장됩니다</span></div>
-          </div>
-        </details>
-      </div>
-      <div class="step">
-        <h2><span class="k">최종</span>지급 금액 확인 · 수정</h2>
-        <div class="finalbox">
-          <div class="field"><label for="oFinal">강사료 최종 금액 (원)</label><input type="number" id="oFinal" min="0" step="10"><span class="hint" id="oFinalHint"></span></div>
-          <div class="field"><label for="oMsFinal">원고료 최종 금액 (원)</label><input type="number" id="oMsFinal" min="0" step="10"></div>
-          <div class="field" style="grid-column:1/-1"><label for="oCalcText">산출내역 (기안문에 들어감 · 고칠 수 있음)</label><input type="text" id="oCalcText"><span class="hint">금액이나 산출내역을 직접 고치면 그 값이 유지됩니다. <button class="btn small" id="oRecalc" type="button">기준표 금액으로 되돌리기</button></span></div>
-        </div>
-      </div>
-      <div class="step" id="t4onceOut"></div>
-    </div>
-  </section>
-  <footer class="site">
-    <p>에듀파인 품의 도우미 v1.1 · 2026-10-30 · 만든 사람: <a href="https://blog.naver.com/oderobong" target="_blank" rel="noopener">blog.naver.com/oderobong</a></p>
-    <p>파일 내용은 서버로 전송되지 않고 이 브라우저 안에서만 처리됩니다. 처리용 공개 라이브러리만 CDN(cdnjs)에서 불러옵니다.</p>
-    <details>
-      <summary>만든 사람 · 사용한 공개 소프트웨어</summary>
-      <ul>
-      <li>만든 사람: <a href="https://blog.naver.com/oderobong" target="_blank" rel="noopener">blog.naver.com/oderobong</a> · 소스: <a href="https://github.com/wonwongemini-ctrl/school-tool" target="_blank" rel="noopener">github.com/wonwongemini-ctrl/school-tool</a></li>
-      <li><a href="https://sheetjs.com" target="_blank" rel="noopener">SheetJS</a> 0.18.5 (Apache-2.0) · 엑셀 읽기</li>
-      <li><a href="https://github.com/exceljs/exceljs" target="_blank" rel="noopener">ExcelJS</a> 4.4.0 (MIT) · 엑셀 만들기</li>
-      <li><a href="https://stuk.github.io/jszip/" target="_blank" rel="noopener">JSZip</a> 3.10.1 (MIT) · 엑셀 파일 묶기</li>
-      <li><a href="https://mozilla.github.io/pdf.js/" target="_blank" rel="noopener">pdf.js</a> 3.11.174 (Apache-2.0) · PDF 견적서 읽기</li>
-      <li><a href="https://github.com/IBM/plex" target="_blank" rel="noopener">IBM Plex Sans KR · Mono</a> (SIL OFL 1.1) · 화면 글꼴, Google Fonts로 불러옴</li>
-      </ul>
-    </details>
-  </footer>
-</div>
+<footer class="site">
+  <p>에듀파인 품의 도우미 v2.2 · 2026-11-03 · 만든 사람: <a href="https://blog.naver.com/oderobong" target="_blank" rel="noopener">blog.naver.com/oderobong</a></p>
+  <p>올린 파일은 이 브라우저 안에서만 읽고 서버로 보내지 않습니다. 고른 답(배송비 넣기, 기안 문구, 강사 목록 등)만 이 브라우저에 기억합니다. <button class="btn link" id="forget" style="font-size:12.5px;padding:0">기억한 내용 지우기</button></p>
+  <details>
+    <summary>만든 사람 · 사용한 공개 소프트웨어</summary>
+    <ul>
+    <li>만든 사람: <a href="https://blog.naver.com/oderobong" target="_blank" rel="noopener">blog.naver.com/oderobong</a> · 소스: <a href="https://github.com/wonwongemini-ctrl/school-tool" target="_blank" rel="noopener">github.com/wonwongemini-ctrl/school-tool</a></li>
+    <li><a href="https://sheetjs.com" target="_blank" rel="noopener">SheetJS</a> 0.18.5 (Apache-2.0) · 엑셀 읽기·만들기</li>
+    <li><a href="https://github.com/exceljs/exceljs" target="_blank" rel="noopener">ExcelJS</a> 4.4.0 (MIT) · 신청서 양식 만들기</li>
+    <li><a href="https://stuk.github.io/jszip/" target="_blank" rel="noopener">JSZip</a> 3.10.1 (MIT) · 엑셀 파일 정리</li>
+    <li><a href="https://mozilla.github.io/pdf.js/" target="_blank" rel="noopener">pdf.js</a> 3.11.174 (Apache-2.0) · PDF 견적서 읽기</li>
+    <li><a href="https://github.com/IBM/plex" target="_blank" rel="noopener">IBM Plex Sans KR · Mono</a>, <a href="https://fonts.google.com/specimen/Nanum+Myeongjo" target="_blank" rel="noopener">나눔명조</a> (SIL OFL 1.1) · Google Fonts</li>
+    </ul>
+  </details>
+</footer>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -583,7 +420,7 @@ const $ = (s,el=document)=>el.querySelector(s);
 const $$ = (s,el=document)=>[...el.querySelectorAll(s)];
 const won = n => (n==null||isNaN(n)) ? '' : Math.round(n).toLocaleString('ko-KR');
 const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),1800); }
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2000); }
 function korAmount(n){
   n=Math.round(n); if(!n) return '영';
   const D=['','일','이','삼','사','오','육','칠','팔','구'], S=['천','백','십',''], B=['','만','억','조'];
@@ -597,17 +434,18 @@ function numK(v){ // "40.000원" "1,200,000" 23 -> number
   let s=String(v).replace(/\s/g,'').replace(/(\d)\.(\d{3})(?!\d)/g,'$1$2').replace(/,/g,'');
   const m=s.match(/-?\d+(\.\d+)?/); return m? Number(m[0]) : null;
 }
+const norm = v => String(v??'').replace(/\s/g,'').replace(/[:：]$/,'');
 async function copyText(text, label){
-  try{ await navigator.clipboard.writeText(text); toast(label+' 복사했습니다'); }
-  catch(e){ const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy'); toast(label+' 복사했습니다');}catch(_){toast('복사하지 못했습니다. 직접 선택해 복사하세요');} ta.remove(); }
+  try{ await navigator.clipboard.writeText(text); toast(label+' 복사했어요'); }
+  catch(e){ const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy'); toast(label+' 복사했어요');}catch(_){toast('복사하지 못했어요. 직접 선택해 복사해 주세요');} ta.remove(); }
 }
 function today(){ const d=new Date(); return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); }
 function checksHtml(list){
   if(!list.length) return '';
-  return '<ul class="checks">'+list.map(c=>`<li><span class="pill ${c[0]}">${{ok:'맞음',warn:'주의',err:'오류',info:'안내'}[c[0]]}</span><span>${c[1]}</span></li>`).join('')+'</ul>';
+  return '<ul class="checks">'+list.map(c=>`<li><span class="pill ${c[0]}">${{ok:'맞음',warn:'확인',err:'오류',info:'안내'}[c[0]]}</span><span>${c[1]}</span></li>`).join('')+'</ul>';
 }
-function bindDrop(dropId, inputId, onFiles){
-  const d=$('#'+dropId), inp=$('#'+inputId);
+function bindDrop(d, onFiles){
+  const inp=$('input[type=file]',d);
   inp.addEventListener('change',()=>{ if(inp.files.length) onFiles([...inp.files]); inp.value=''; });
   ['dragenter','dragover'].forEach(ev=>d.addEventListener(ev,e=>{e.preventDefault(); d.classList.add('over');}));
   ['dragleave','drop'].forEach(ev=>d.addEventListener(ev,e=>{e.preventDefault(); d.classList.remove('over');}));
@@ -627,103 +465,36 @@ async function readWorkbook(buf){
   return wb;
 }
 function readBuf(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsArrayBuffer(file); }); }
-function libsOk(names){ const miss=names.filter(n=>!window[n]); if(miss.length){ toast('프로그램 구성요소를 불러오지 못했습니다. 인터넷 연결을 확인하세요'); return false;} return true; }
+function libsOk(names){ const miss=names.filter(n=>!window[n]); if(miss.length){ toast('프로그램 구성요소를 불러오지 못했어요. 인터넷 연결을 확인해 주세요'); return false;} return true; }
+// 날짜 칸: 숫자 이어 치기 20260301 → 2026-03-01
+function fmtDate(v){ const s=String(v||'').trim(); if(!/^\d{5,8}$/.test(s)) return s; return s.length<=6? `${s.slice(0,4)}-${s.slice(4)}` : `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6)}`; }
+
+// ---------- 이 브라우저에 기억 ----------
+const MEM='pumui2.';
+function mem(k,def){ try{ const v=localStorage.getItem(MEM+k); return v==null?def:JSON.parse(v); }catch(e){ return def; } }
+function memSet(k,v){ try{ localStorage.setItem(MEM+k, JSON.stringify(v)); }catch(e){} }
 
 // ---------- 품목내역 엑셀 (에듀파인 품목 업로드 서식 .xls) ----------
-// 서식: 시트 '품목내역', 1행 머리글 [내용, 규격, 단위, 수량, 예상단가], 2행부터 품목
+// 시트 '품목내역', 1행 머리글 [내용, 규격, 단위, 수량, 예상단가], 2행부터 품목
 function buildItemXls(rows){
   const aoa=[['내용','규격','단위','수량','예상단가']].concat(rows.map(r=>[r.name, r.spec||null, r.unit||null, r.qty, r.price]));
   const ws=XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols']=[{wch:60},{wch:14},{wch:10},{wch:10},{wch:14}];
+  ws['!cols']=[{wch:60},{wch:18},{wch:8},{wch:10},{wch:14}];
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'품목내역');
   return new Blob([XLSX.write(wb,{bookType:'xls',type:'array'})],{type:'application/vnd.ms-excel'});
 }
-async function downloadItems(rows, fname){
+function badRows(rows){ return rows.filter(r=>!r.name||!(r.qty>0)||!Number.isInteger(r.price)||r.price<0); }
+function downloadItems(rows, fname){
   if(!libsOk(['XLSX'])) return;
-  const bad=rows.filter(r=>!r.name||!(r.qty>0)||!Number.isInteger(r.price)||r.price<0);
-  if(bad.length){ toast('내용·수량·단가를 확인하세요 (단가는 원 단위 정수)'); return; }
+  if(badRows(rows).length){ toast('품목 이름·수량·단가를 확인해 주세요 (단가는 원 단위 정수)'); return; }
   const blob=buildItemXls(rows);
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fname; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},500);
-  toast('품목내역 엑셀(.xls)을 내려받았습니다');
-}
-// ---------- 출력 영역 ----------
-function renderOutput(boxId, out){
-  const box=$('#'+boxId);
-  if(!out){ box.innerHTML=''; return; }
-  const total=out.rows.reduce((s,r)=>s+r.qty*r.price,0);
-  box.innerHTML=`
-    <h2><span class="k">출력</span>기안문 · 품목내역</h2>
-    <div class="outgrid">
-      <div>
-        <p class="sub">기안문</p>
-        <div class="docbox">
-          <div class="docrow"><span class="lab">제목</span><input type="text" class="title" value="${esc(out.title)}" aria-label="제목"><button class="btn small" data-copy="title">복사</button></div>
-          <div class="docrow"><span class="lab">본문</span><textarea aria-label="본문" rows="${Math.max(9,Math.ceil(out.body.split('\n').length*1.5)+1)}">${esc(out.body)}</textarea><button class="btn small" data-copy="body">복사</button></div>
-        </div>
-        <p class="hint" style="margin-top:6px">여기서 고친 내용은 위 입력값을 바꾸면 다시 만들어집니다. 마지막에 복사하세요.</p>
-      </div>
-      <div>
-        <p class="sub">품목내역 (에듀파인 품목 업로드 서식 .xls)</p>
-        <div class="tblwrap"><table>
-          <thead><tr><th class="num">#</th><th>내용</th><th>규격</th><th>단위</th><th class="num">수량</th><th class="num">예상단가</th><th class="num">금액</th></tr></thead>
-          <tbody>${out.rows.map((r,i)=>`<tr><td class="num">${i+1}</td><td>${esc(r.name)}</td><td>${esc(r.spec||'')}</td><td>${esc(r.unit||'')}</td><td class="num">${won(r.qty)}</td><td class="num">${won(r.price)}</td><td class="num">${won(r.qty*r.price)}</td></tr>`).join('')}</tbody>
-          <tfoot><tr><td></td><td>합계</td><td></td><td></td><td></td><td></td><td class="num">${won(total)}</td></tr></tfoot>
-        </table></div>
-        <div class="row" style="margin-top:10px"><button class="btn primary" data-dl>품목내역 엑셀 내려받기</button><span class="hint">${esc(out.fname)}</span></div>
-      </div>
-    </div>`;
-  $('[data-copy="title"]',box).onclick=()=>copyText($('input.title',box).value,'제목을');
-  $('[data-copy="body"]',box).onclick=()=>copyText($('textarea',box).value,'본문을');
-  $('[data-dl]',box).onclick=()=>downloadItems(out.rows,out.fname);
+  toast('품목내역 파일을 내려받았어요');
 }
 
-// 탭 전환
-$$('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
-  $$('nav.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b?'true':'false'));
-  $$('section.panel').forEach(p=>p.hidden = p.id!==b.dataset.tab);
-}));
-
-// ================= 1. 학습준비물 =================
-const S1={grades:[],summary:null,quotes:[],dup:[],multi:false,sheetFiles:0};
+// ================= 견적서 읽기 =================
 function findCol(row, re){ if(!row) return -1; return row.findIndex(c=>c!=null && re.test(String(c).replace(/\s/g,''))); }
-function parseSupplyBook(wb){
-  const grades=[]; let summary=null;
-  for(const sn of wb.SheetNames){
-    const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:null,blankrows:true});
-    let hr=aoa.findIndex(r=>r && findCol(r,/^품목$/)>=0 && findCol(r,/^수량$/)>=0);
-    if(hr<0){ // 집계 시트?
-      const rows=aoa.filter(r=>r&&r.some(c=>c!=null));
-      const sm=[]; let totalRow=null;
-      rows.forEach(r=>{ const gi=r.findIndex(c=>/^\s*\d\s*학년\s*$/.test(String(c??''))); const nums=r.filter(c=>typeof c==='number');
-        if(gi>=0 && nums.length>=2) sm.push({grade:+String(r[gi]).match(/\d/)[0], count:nums[0], amount:nums[nums.length-1]});
-        else if(gi<0 && nums.length>=2 && sm.length) totalRow={count:nums[0],amount:nums[nums.length-1]}; });
-      if(sm.length) summary={sheet:sn, rows:sm, total:totalRow};
-      continue;
-    }
-    const H=aoa[hr], H2=aoa[hr+1]||[];
-    const col={ no:findCol(H,/^번호$/), name:findCol(H,/^품목$/), spec:findCol(H,/^규격$/), qty:findCol(H,/^수량$/), unit:findCol(H,/^단위$/), price:findCol(H,/^단가$/), amt:findCol(H,/^금액$/) };
-    let link=findCol(H,/구입처|링크|주소/); if(link<0) link=findCol(H2,/구입처|링크|주소/);
-    const top=aoa.slice(0,hr).flat().filter(c=>c!=null).join(' ');
-    const gm=(sn.match(/(\d)\s*학년/)||top.match(/(\d)\s*학년/));
-    const titleYear=(top.match(/(20\d\d)\s*학년도/)||[])[1], titleTerm=(top.match(/(\d)\s*학기/)||[])[1];
-    const g={sheet:sn, grade:gm?+gm[1]:null, items:[], subtotal:null, titleYear, titleTerm, skipped:[]};
-    for(let r=hr+1;r<aoa.length;r++){
-      const row=aoa[r]; if(!row||!row.some(c=>c!=null&&String(c).trim()!=='')) continue;
-      const txt=row.map(c=>String(c??'')).join('|').replace(/\s/g,'');
-      if(/소계|합계/.test(txt)){ const v=row[col.amt]; g.subtotal = typeof v==='number'? v : numK(v); g.subRow=true; break; }
-      const name=row[col.name]; const nm=name==null?'':String(name).trim();
-      const qty=numK(row[col.qty]), price=numK(row[col.price]), amt=numK(row[col.amt]);
-      if(!nm && qty==null && price==null && amt==null) continue; // 머리글 둘째 줄 등
-      if(!nm && qty==null && price==null){ g.skipped.push(r+1); continue; }
-      g.items.push({row:r+1, no:row[col.no], name:nm, spec:col.spec>=0&&row[col.spec]!=null?String(row[col.spec]).trim():'', qty, unit:col.unit>=0&&row[col.unit]!=null?String(row[col.unit]).trim():'', price, amt, link:link>=0?row[link]:null});
-    }
-    g.calc=g.items.reduce((s,it)=>s+(it.amt||0),0);
-    grades.push(g);
-  }
-  grades.sort((a,b)=>(a.grade??99)-(b.grade??99));
-  return {grades,summary};
-}
-// 아이스크림몰 등 '견적서(장바구니) 엑셀' 읽기: 상품명·수량·합계금액 머리글이 있는 표
+// --- 1) 쇼핑몰 장바구니 견적서 (아이스크림몰·G마켓·SSG): 기존 형식 그대로 ---
 function parseEstimateBook(wb){
   let found=null;
   const sheets=wb.SheetNames.map(sn=>XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,defval:null}));
@@ -740,19 +511,17 @@ function parseEstimateBook(wb){
       if(/^합\s*계/.test(first)){ sumRow={qty:numK(row[c.qty]), amt:numK(row[c.amt]), count:numK((first.match(/(\d+)\s*종/)||[])[1])}; break; }
       const full=String(row[c.name]??'').trim(); if(!full) continue;
       const qv=numK(row[c.qty]), av=numK(row[c.amt]);
-      if(qv==null && av==null && items.length){ // G마켓: 상품 아래 줄의 선택 옵션
-        const prev=items[items.length-1]; prev.option=[prev.option,full].filter(Boolean).join(' / '); continue; }
+      if(qv==null && av==null && items.length){ const prev=items[items.length-1]; prev.option=[prev.option,full].filter(Boolean).join(' / '); continue; }
       const m=full.match(/^(.*?)\s*\[\d{4,}\]\s*(.*)$/);
       const qty=numK(row[c.qty]), amt=numK(row[c.amt]);
       const price= c.unit>=0? numK(row[c.unit]) : (qty? amt/qty : null);
-      const it={full, name:(m?m[1]:full).trim(), option:m?m[2].replace(/^[^:]*:\s*/,'').replace(/^단일\s*상품$/,'').trim():'', qty, price, amt, seller:c.seller>=0?row[c.seller]:''};
+      const it={full, name:(m?m[1]:full).trim(), option:m?m[2].replace(/^[^:]*:\s*/,'').replace(/^단일\s*상품$/,'').trim():'', qty, price, amt};
       if(c.unit<0 && c.supply>=0 && c.disc>=0){ const sp=numK(row[c.supply]), dc=numK(row[c.disc])||0; if(sp!=null && sp-dc!==amt) it.bad=`공급가액−할인 ${won(sp-dc)} ≠ 합계 ${won(amt)}`; }
       items.push(it);
     }
     found={items,sumRow}; break;
   }
   if(!found) return null;
-  // 최종견적금액 (상품가격 / 배송비 / 합계금액)
   for(const aoa of sheets){
     const hi=aoa.findIndex(r=>r&&findCol(r,/^배송비$/)>=0&&findCol(r,/합계금액|^합계$/)>=0&&!(findCol(r,/상품명/)>=0));
     if(hi<0) continue;
@@ -761,7 +530,7 @@ function parseEstimateBook(wb){
     const R=aoa[fi]; found.final={goods:numK(R[findCol(H,/상품가격|상품금액/)]), ship:numK(R[findCol(H,/^배송비$/)]), total:numK(R[findCol(H,/합계금액|^합계$/)])};
     break;
   }
-  if(!found.final){ // '배송비', '총 구매금액' 이 줄 단위로 있는 양식
+  if(!found.final){
     let ship=null,total=null;
     for(const aoa of sheets) for(const r of aoa){ if(!r) continue; const first=String(r.find(v=>v!=null)??'').replace(/\s/g,''); const nums=r.map(v=>numK(v)).filter(v=>v!=null);
       if(/^배송비$/.test(first)&&nums.length) ship=nums[nums.length-1];
@@ -770,169 +539,895 @@ function parseEstimateBook(wb){
   }
   return found;
 }
-// 엑셀형 견적서 → 공통 결과 (품목·배송비·검증)
-function excelVendor(wb){ const t=wb.SheetNames.map(n=>JSON.stringify(wb.Sheets[n])).join(' ');
+function mallVendor(wb){ const t=wb.SheetNames.map(n=>JSON.stringify(wb.Sheets[n])).join(' ');
   if(/필수선택\s*\/\s*추가구성/.test(t)) return 'G마켓'; if(/옵션\s*\/\s*추가구성\s*정보/.test(t)) return 'SSG';
-  if(/아이스크림/.test(t)) return '아이스크림몰'; if(/지마켓|G\s*마켓|gmarket/i.test(t)) return 'G마켓'; if(/에스에스지|SSG/i.test(t)) return 'SSG'; if(/쿠팡/.test(t)) return '쿠팡'; if(/학교장터|S2B/i.test(t)) return '학교장터'; return ''; }
-function excelQuote(wb){
+  if(/아이스크림/.test(t)) return '아이스크림몰'; if(/지마켓|G\s*마켓|gmarket/i.test(t)) return 'G마켓'; if(/에스에스지|SSG/i.test(t)) return 'SSG'; if(/쿠팡/.test(t)) return '쿠팡'; return ''; }
+function mallQuote(wb){
   const e=parseEstimateBook(wb); if(!e) return null;
-  const q={vendor:excelVendor(wb), items:e.items, shipping:e.final?e.final.ship||0:0, checks:[]};
-  const bad=e.items.filter(i=>i.qty==null||i.amt==null||i.bad||(i.price!=null&&Number.isInteger(i.price)&&i.qty*i.price!==i.amt));
-  bad.forEach(i=>q.checks.push(['err',`${esc(i.name)}: ${i.bad||'수량×단가 ≠ 합계금액'}`]));
+  const q={vendor:mallVendor(wb)||'쇼핑몰', items:[], shipping:e.final?e.final.ship||0:0, checks:[]};
+  const bad=e.items.filter(i=>i.qty==null||i.amt==null||i.bad);
+  bad.forEach(i=>q.checks.push(['err',`${esc(i.name)}: ${i.bad||'수량이나 금액이 비어 있어요'}`]));
   if(!bad.length && e.items.length) q.checks.push(['ok',`품목 ${e.items.length}개 모두 (할인 적용) 단가 × 수량 = 합계금액`]);
-  if(!e.items.length) q.checks.push(['err','품목을 찾지 못했습니다']);
   const sum=e.items.reduce((s,i)=>s+(i.amt||0),0), qsum=e.items.reduce((s,i)=>s+(i.qty||0),0);
   if(e.sumRow){ const ok=e.sumRow.amt===sum && (e.sumRow.count==null||e.sumRow.count===e.items.length) && (e.sumRow.qty==null||e.sumRow.qty===qsum);
-    const L=(c,q,a)=>[c!=null?c+'종':'',q!=null?q+'개':'',won(a)+'원'].filter(Boolean).join(' ');
-    q.checks.push([ok?'ok':'err',`견적서 합계 ${L(e.sumRow.count,e.sumRow.qty,e.sumRow.amt)} ${ok?'=':'≠'} 다시 계산 ${L(e.sumRow.count!=null?e.items.length:null,e.sumRow.qty!=null?qsum:null,sum)}`]); }
-  if(e.final){ const ok=sum+q.shipping===e.final.total; q.checks.push([ok?'ok':'err',`상품 ${won(sum)} + 배송비 ${won(q.shipping)} ${ok?'=':'≠'} 최종견적금액 ${won(e.final.total)}원`]); }
-  else q.checks.push(['warn','최종 견적금액(배송비 포함)을 찾지 못했습니다. 배송비를 확인하세요']);
-  if(q.shipping) q.checks.push(['info',`배송비 ${won(q.shipping)}원을 품목에 한 줄로 넣었습니다`]);
+    q.checks.push([ok?'ok':'err',`견적서 합계 ${won(e.sumRow.amt)}원 ${ok?'=':'≠'} 다시 계산 ${won(sum)}원`]); }
+  if(e.final){ const ok=sum+q.shipping===e.final.total; q.checks.push([ok?'ok':'err',`상품 ${won(sum)} + 배송비 ${won(q.shipping)} ${ok?'=':'≠'} 최종 견적금액 ${won(e.final.total)}원`]); }
+  else q.checks.push(['warn','최종 견적금액(배송비 포함)을 찾지 못했어요. 배송비를 확인해 주세요']);
+  q.checks.push(['info','쇼핑몰 견적 금액은 부가세가 포함된 금액이에요']);
+  q.items=e.items.map(it=>({name:it.name, option:it.option, qty:it.qty, price:it.price, amt:it.amt}));
   return q;
 }
-function gradeFromName(n){ const m=String(n).match(/([1-6])\s*학년/); return m? +m[1] : null; }
-async function t1Load(files){
-  if(!libsOk(['XLSX'])) return;
-  const byGrade=new Map(S1.grades.map(g=>[g.grade??g.sheet,g]));
-  for(const f of files){
-    try{
-      if(/\.pdf$/i.test(f.name)){
-        if(!libsOk(['pdfjsLib'])) continue;
-        const pages=await pdfPages(f); const r=qpParse(pages);
-        const q={file:f.name, vendor:vendorOf(pages), grade:gradeFromName(f.name), kind:'pdf', items:[], shipping:r.totals.shipping||0, checks:[]};
-        if(!r.hasText) q.checks.push(['err','글자가 없는 PDF입니다. 크롬·엣지에서 [인쇄 → PDF로 저장]으로 다시 저장해 올려 주세요']);
-        else if(!r.items.length) q.checks.push(['err','품목 표를 찾지 못했습니다']);
-        r.items.forEach(it=>q.items.push({name:it.name, option:it.option, qty:it.qty, price:it.amount/(it.qty||1), amt:it.amount}));
-        const sum=r.items.reduce((s,i)=>s+i.amount,0);
-        r.items.filter(i=>i.checks.length).forEach(i=>q.checks.push(['err',`${esc(i.name)}: ${i.checks.join(', ')}`]));
-        const sl=r.totals.sumLine? r.totals.sumLine[r.totals.sumLine.length-1] : (r.totals.bottom??r.totals.won);
-        if(sl!=null) q.checks.push([sl===sum?'ok':'err',`품목 합계 ${won(sum)}원 ${sl===sum?'=':'≠'} 견적서 합계 ${won(sl)}원`]);
-        if(r.totals.grand!=null) q.checks.push([sum+q.shipping===r.totals.grand?'ok':'err',`품목 ${won(sum)} + 배송비 ${won(q.shipping)} ${sum+q.shipping===r.totals.grand?'=':'≠'} 총 구매금액 ${won(r.totals.grand)}원`]);
-        S1.quotes.push(q); continue;
-      }
-      const wb=await readWorkbook(await readBuf(f));
-      const r=parseSupplyBook(wb);
-      if(r.grades.length){
-        S1.sheetFiles++;
-        for(const g of r.grades){ const key=g.grade??g.sheet;
-          if(byGrade.has(key)){ const prev=byGrade.get(key); if(!g.items.length) continue; if(prev.items.length) S1.dup.push(key); }
-          g.file=f.name; byGrade.set(key,g); }
-        if(r.summary) S1.summary=r.summary;
-        continue;
-      }
-      const xq=excelQuote(wb);
-      if(xq){ S1.quotes.push({file:f.name, grade:gradeFromName(f.name), kind:'xls', ...xq}); continue; }
-      toast(f.name+': 신청서나 견적서 표를 찾지 못했습니다');
-    }catch(err){ console.error(err); toast(f.name+': 파일을 읽지 못했습니다'); }
+// --- 2) 그 밖의 표 (문구점 견적서, 학교장터·S2B, 학년별 신청서, 붙여넣은 표) ---
+const FIELD={
+  no:/^(no\.?|번호|순번|연번)$/i,
+  name:/^(품명|품목|품목명|상품명|내용|물품명|제품명|품명및규격|품명\/규격)$/,
+  spec:/^(규격|사양|규격\/사양|모델|모델명|옵션)$/,
+  unit:/^(단위)$/,
+  qty:/^(수량|구매수량|주문수량|신청수량)$/,
+  price:/^(단가|예상단가|판매가|판매단가|할인적용금액|할인후단가|할인적용가|1개당금액|단가\(원\)|단가\(vat포함\)|단가\(부가세포함\))$/i,
+  amt:/^(금액|합계금액|합계|공급합계|결제금액|총액|금액\(원\)|금액\(vat포함\)|금액\(부가세포함\))$/i,
+  supply:/^(공급가액|공급가)$/,
+  vat:/^(세액|부가세|부가가치세)$/,
+  code:/^(물품번호|물품분류번호|물품식별번호)$/,
+  link:/구입처|링크|주소|url/i
+};
+const FIELD_KO={name:'품명',spec:'규격',unit:'단위',qty:'수량',price:'단가',amt:'금액',code:'물품번호'};
+function headerCols(row){ const c={}; for(const k of Object.keys(FIELD)) c[k]=-1; if(!row) return c;
+  row.forEach((v,i)=>{ const t=norm(v); if(!t) return; for(const k of Object.keys(FIELD)) if(c[k]<0 && FIELD[k].test(t)) { c[k]=i; break; } }); return c; }
+const sigOf = row => (row||[]).map(norm).filter(Boolean).join('|');
+function findHeader(aoa){
+  const maps=mem('maps',[]);
+  for(let r=0;r<Math.min(aoa.length,80);r++){
+    const row=aoa[r]; if(!row) continue;
+    const sig=sigOf(row); const saved=sig && maps.find(m=>m.sig===sig);
+    if(saved) return {hr:r, start:r+1, cols:{...headerCols(null), ...saved.cols}, saved:true};
+    const c=headerCols(row);
+    if(c.name>=0 && c.qty>=0 && (c.price>=0||c.amt>=0||c.supply>=0)) return {hr:r, start:r+1, cols:c};
+    if(c.name>=0 && (c.qty<0||(c.price<0&&c.amt<0)) && aoa[r+1]){ // 머리글이 두 줄인 표
+      const c2=headerCols(aoa[r+1]); const m={...c}; for(const k in m) if(m[k]<0 && c2[k]>=0) m[k]=c2[k];
+      if(m.qty>=0 && (m.price>=0||m.amt>=0||m.supply>=0)) return {hr:r, start:r+2, cols:m};
+    }
   }
-  S1.grades=[...byGrade.values()].sort((a,b)=>(a.grade??99)-(b.grade??99));
-  S1.multi=S1.sheetFiles>1; if(S1.multi) S1.summary=null;
-  const g0=S1.grades.find(g=>g.titleYear);
-  if(g0){ $('#t1year').value=g0.titleYear; if(g0.titleTerm) $('#t1term').value=g0.titleTerm; }
-  $('#t1fname').textContent='불러온 파일: '+[...new Set([...S1.grades.map(g=>g.file),...S1.quotes.map(q=>q.file)])].join(', ');
-  t1Render();
+  return null;
 }
-function t1Reset(){ S1.grades=[]; S1.summary=null; S1.quotes=[]; S1.dup=[]; S1.multi=false; S1.sheetFiles=0; $('#t1fname').textContent=''; t1Render(); }
-// 신청서 + 견적서를 학년별로 합친 결과
-function t1Merged(){
-  const M=new Map();
-  const get=g=>{ if(!M.has(g)) M.set(g,{grade:g,items:[],shipping:0,src:[]}); return M.get(g); };
-  S1.grades.filter(g=>g.items.length&&g.grade).forEach(g=>{ const m=get(g.grade); m.items.push(...g.items); m.src.push('신청서'); });
-  S1.quotes.filter(q=>q.grade&&q.items.length).forEach(q=>{ const m=get(q.grade); m.items.push(...q.items); m.shipping+=q.shipping; m.src.push('견적서'); });
-  const out=[...M.values()].sort((a,b)=>a.grade-b.grade);
-  out.forEach(m=>{ m.goods=m.items.reduce((s,i)=>s+(i.amt||0),0); m.calc=m.goods+m.shipping; });
+const GRADE_ROW=/^([1-6])학년(학습준비물|준비물)?$/;
+const TOT=/^(소계|합계|총계|총합계|공급가|공급가액|세액|부가세|총액|합계금액|계|총금액)$/;
+function nextNum(row,i){ for(let j=i+1;j<row.length;j++){ const v=row[j]; if(v==null||String(v).trim()==='') continue; const n=numK(v); if(n!=null && /\d/.test(String(v))) return n; } return null; }
+function nextText(row,i){ for(let j=i+1;j<row.length;j++){ const v=row[j]; if(v!=null&&String(v).trim()!=='') return {v:String(v).trim(),j}; } return null; }
+function grabTotals(row, T){
+  row.forEach((v,i)=>{ const t=norm(v);
+    if(/^(공급가|공급가액)$/.test(t)) T.supply=nextNum(row,i)??T.supply;
+    else if(/^(세액|부가세|부가가치세)$/.test(t)) T.vat=nextNum(row,i)??T.vat;
+    else if(/^(합계|총계|총합계|총액|합계금액|계|총금액)$/.test(t)) T.total=nextNum(row,i)??T.total;
+    else if(/^소계$/.test(t)) T.sub=nextNum(row,i)??T.sub; });
+}
+function readMeta(aoa, hr){
+  const M={};
+  let supIdx=-1;
+  const rows=aoa.slice(0,Math.max(0,hr));
+  rows.forEach(r=>(r||[]).forEach((v,i)=>{ if(/^공급자$/.test(norm(v)) && supIdx<0) supIdx=i; }));
+  const names=[];
+  rows.forEach(r=>(r||[]).forEach((v,i)=>{ const t=norm(v);
+    if(/^(상호|상호명|상호\(법인\)명|업체명|회사명)$/.test(t)){ const n=nextText(r,i); if(n) names.push({i,v:n.v}); }
+    if(/^(발행일자|견적일자|견적일|작성일자|작성일|견적날짜)$/.test(t)&&!M.date){ const n=nextText(r,i); if(n) M.date=n.v; }
+    if(/^(합계금액|총합계|총액|견적금액)$/.test(t)&&M.top==null){ M.top=nextNum(r,i); } }));
+  if(names.length){ const pick=supIdx>=0? (names.find(n=>n.i>=supIdx)||names[names.length-1]) : names[names.length-1]; M.vendor=pick.v; }
+  const top=rows.flat().filter(c=>c!=null).join(' ');
+  M.year=(top.match(/(20\d\d)\s*학년도/)||[])[1]; M.term=(top.match(/(\d)\s*학기/)||[])[1];
+  const g=top.match(/([1-6])\s*학년/); if(g) M.grade=+g[1];
+  M.isApp=/신청서|신청\s*내역/.test(top);
+  return M;
+}
+function parseTable(aoa, H, sheetName){
+  const c=H.cols, items=[], T={}, skipped=[]; let grade=null, ended=false, sections=0;
+  const cell=(row,k)=>c[k]>=0? row[c[k]] : null;
+  for(let r=H.start;r<aoa.length;r++){
+    const row=aoa[r]; if(!row||!row.some(v=>v!=null&&String(v).trim()!=='')) continue;
+    const nameV=String(cell(row,'name')??'').trim(), nN=norm(nameV);
+    const tot=row.some(v=>TOT.test(norm(v))) && (!nameV || TOT.test(nN));
+    if(tot){ grabTotals(row,T); ended=true; continue; }
+    if(ended) continue;
+    if(FIELD.name.test(nN) && norm(cell(row,'qty'))&&FIELD.qty.test(norm(cell(row,'qty')))) continue; // 다음 쪽 머리글 반복
+    let qty=numK(cell(row,'qty')), price=numK(cell(row,'price')), amt=numK(cell(row,'amt'));
+    const gm=nN.match(GRADE_ROW);
+    if(gm && !price && !amt){ grade=+gm[1]; sections++; continue; }
+    if(amt==null && c.supply>=0){ const sp=numK(cell(row,'supply')), vt=numK(cell(row,'vat')); if(sp!=null) amt=sp+(vt||0); }
+    if(!nameV){ if(qty!=null||amt!=null) skipped.push(r+1); continue; }
+    if(qty==null && amt==null && price==null) continue;
+    if(qty==null) qty=1;
+    if(price==null && amt!=null && qty) price=amt/qty;
+    if(amt==null && price!=null) amt=price*qty;
+    const s=k=>{ const v=cell(row,k); return v==null?'':String(v).trim(); };
+    items.push({row:r+1, name:nameV, spec:s('spec'), unit:s('unit'), qty, price, amt, code:s('code'), grade, link:s('link')});
+  }
+  return {items, T, skipped, sections, sheet:sheetName};
+}
+function parseSummary(aoa){
+  const rows=aoa.filter(r=>r&&r.some(c=>c!=null)); const sm=[]; let total=null;
+  rows.forEach(r=>{ const gi=r.findIndex(c=>/^\s*\d\s*학년\s*$/.test(String(c??''))); const nums=r.filter(c=>typeof c==='number');
+    if(gi>=0 && nums.length>=2) sm.push({grade:+String(r[gi]).match(/\d/)[0], count:nums[0], amount:nums[nums.length-1]});
+    else if(gi<0 && nums.length>=2 && sm.length) total={count:nums[0],amount:nums[nums.length-1]}; });
+  return sm.length? {rows:sm,total} : null;
+}
+// 표 하나 → 파일 기록 (부가세 맞추기·검산 포함)
+function tableRecord(rec, aoa, H, sheetName){
+  const P=parseTable(aoa,H,sheetName); const M=readMeta(aoa,H.hr);
+  const checks=rec.checks;
+  if(M.vendor && !rec.vendor) rec.vendor=M.vendor; if(M.date && !rec.date) rec.date=M.date;
+  if(M.year) rec.year=M.year; if(M.term) rec.term=M.term;
+  if(M.isApp || H.cols.link>=0) rec.isApp=true;
+  const sg=(String(sheetName||'').match(/([1-6])\s*학년/)||[])[1];
+  const g0=sg? +sg : (M.grade||null);
+  P.items.forEach(it=>{ if(it.grade==null && g0) it.grade=g0; });
+  const its=P.items; if(!its.length) return P;
+  const sum=its.reduce((s,i)=>s+(i.amt||0),0);
+  const tag=sheetName&&rec.multiSheet? `${sheetName}: ` : '';
+  // 행 검산
+  const bad=its.filter(i=>H.cols.price>=0 && H.cols.amt>=0 && i.price!=null && i.amt!=null && Math.abs(i.qty*i.price-i.amt)>0.5);
+  bad.forEach(i=>checks.push(['err',`${tag}${esc(i.name)}: 수량×단가(${won(i.qty*i.price)}) ≠ 금액(${won(i.amt)}) · ${i.row}행`]));
+  if(!bad.length && H.cols.price>=0 && H.cols.amt>=0) checks.push(['ok',`${tag}품목 ${its.length}개 모두 수량 × 단가 = 금액`]);
+  // 부가세 포함 금액으로 맞추기
+  const total=P.T.total ?? P.T.sub ?? M.top;
+  const near=(a,b)=>a!=null&&b!=null&&Math.abs(a-b)<=Math.max(1,its.length);
+  if(total!=null && Math.abs(sum-total)<1){ checks.push(['ok',`${tag}품목 합계 ${won(sum)}원 = 견적서 ${P.T.total!=null||M.top!=null?'합계':'소계'} ${won(total)}원`]);
+    if(P.T.supply!=null&&P.T.vat!=null) checks.push(['info',`품목 금액이 이미 부가세 포함 금액이에요 (공급가 ${won(P.T.supply)} + 세액 ${won(P.T.vat)})`]); }
+  else if(P.T.supply!=null && near(sum,P.T.supply)){
+    its.forEach(i=>{ i.price=Math.ceil(i.price*11/10-1e-9); i.amt=i.qty*i.price; i.vatAdded=true; });
+    const ns=its.reduce((s,i)=>s+i.amt,0);
+    checks.push(['info',`견적서 품목 금액이 공급가(부가세 별도)라서 단가마다 부가세 10%를 더하고 원 단위는 올렸어요`]);
+    if(total!=null) checks.push([ns===total?'ok':'warn', ns===total? `부가세를 더한 합계 ${won(ns)}원 = 견적서 합계 ${won(total)}원` : (ns>total? `원 단위를 올려서 견적서 합계 ${won(total)}원보다 ${won(ns-total)}원 많아요 (품의 금액이 실제 결제액보다 적지 않게)` : `부가세를 더한 합계 ${won(ns)}원이 견적서 합계 ${won(total)}원보다 ${won(total-ns)}원 적어요. 견적서를 확인해 주세요`)]);
+  }
+  else if(total!=null) checks.push(['err',`${tag}품목 합계 ${won(sum)}원 ≠ 견적서 합계 ${won(total)}원`]);
+  else if(/예상단가/.test(norm((aoa[H.hr]||[])[H.cols.price]))) checks.push(['info','에듀파인 품목내역 양식(예상단가) 그대로예요. 부가세 포함 금액으로 봤어요']);
+  else checks.push(['warn',`${tag}견적서 합계를 찾지 못했어요. 부가세 포함 금액인지 확인해 주세요`]);
+  if(P.sections) checks.push(['info',`표 안에서 학년 구분 줄 ${P.sections}개를 찾아 학년별로 나눴어요`]);
+  if(P.skipped.length) checks.push(['warn',`품명 없이 숫자만 있는 줄은 건너뛰었어요 (${P.skipped.join(', ')}행)`]);
+  if(H.saved) checks.push(['info','전에 직접 골라 준 열 설정으로 읽었어요']);
+  rec.items.push(...its);
+  return P;
+}
+function newRec(name, kind){ return {id:'f'+Math.random().toString(36).slice(2,8), file:name, kind, vendor:'', items:[], shipping:0, checks:[], sheets:[]}; }
+function sheetsOf(wb){ return wb.SheetNames.map(sn=>({name:sn, aoa:XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:null,blankrows:true})})); }
+function readSheets(rec){
+  rec.items=[]; rec.checks=[]; rec.summary=null; rec.multiSheet=rec.sheets.filter(s=>findHeader(s.aoa)).length>1;
+  for(const s of rec.sheets){
+    const H=findHeader(s.aoa);
+    if(!H){ const sm=parseSummary(s.aoa); if(sm) rec.summary=sm; continue; }
+    tableRecord(rec, s.aoa, H, s.name);
+  }
+  if(rec.summary && rec.items.length){ // 학년별 신청서의 집계 시트와 비교
+    const by=g=>rec.items.filter(i=>i.grade===g); const bad=rec.summary.rows.filter(r=>{ const it=by(r.grade); return it.length!==r.count || Math.abs(it.reduce((s,i)=>s+i.amt,0)-r.amount)>0.5; });
+    rec.checks.push([bad.length?'err':'ok', bad.length? `집계 시트와 다른 학년: ${bad.map(b=>b.grade+'학년').join(', ')}` : '학년별 품목 수·금액이 집계 시트와 같아요']);
+  }
+  rec.failed=!rec.items.length;
+}
+async function loadFile(f){
+  const rec=newRec(f.name,'table');
+  try{
+    if(/\.pdf$/i.test(f.name)){
+      rec.kind='pdf'; if(!libsOk(['pdfjsLib'])) { rec.failed=true; rec.checks.push(['err','PDF 읽기 도구를 불러오지 못했어요']); return rec; }
+      const pages=await pdfPages(f); const r=qpParse(pages); rec.vendor=vendorOf(pages);
+      if(!r.hasText){ rec.failed=true; rec.checks.push(['err','글자가 없는 PDF예요 (그림처럼 저장됨). 크롬·엣지 인쇄 화면에서 [PDF로 저장]으로 다시 저장하거나, 엑셀 견적서를 받아 주세요']); return rec; }
+      if(!r.items.length){ rec.failed=true; rec.checks.push(['err','PDF에서 품목 표를 찾지 못했어요. 엑셀 견적서나 표 붙여넣기를 써 주세요']); return rec; }
+      r.items.forEach(it=>rec.items.push({name:it.name, option:it.option, qty:it.qty||1, price:(it.unit!=null&&it.qty&&Math.abs(it.unit*it.qty-it.amount)<1)?it.unit:it.amount/(it.qty||1), amt:it.amount}));
+      const sum=r.items.reduce((s,i)=>s+i.amount,0); rec.shipping=r.totals.shipping||0;
+      const bad=r.items.filter(i=>i.checks.length); bad.forEach(i=>rec.checks.push(['err',`${esc(i.name)}: ${i.checks.join(', ')}`]));
+      if(!bad.length) rec.checks.push(['ok',`품목 ${r.items.length}개 모두 금액 계산이 맞아요`]);
+      const T=r.totals; const ref=(T.sumLine&&T.sumLine[T.sumLine.length-1])??T.bottom??T.won;
+      if(ref!=null) rec.checks.push([ref===sum?'ok':'err',`품목 합계 ${won(sum)}원 ${ref===sum?'=':'≠'} 견적서 합계 ${won(ref)}원`]);
+      if(T.korean!=null) rec.checks.push([T.korean===sum?'ok':'err',`한글 금액 '${esc(T.koreanText)}원' = ${won(T.korean)}원`]);
+      if(T.grand!=null) rec.checks.push([sum+rec.shipping===T.grand?'ok':'err',`품목 ${won(sum)} + 배송비 ${won(rec.shipping)} ${sum+rec.shipping===T.grand?'=':'≠'} 총 구매금액 ${won(T.grand)}원`]);
+      return rec;
+    }
+    if(!libsOk(['XLSX'])){ rec.failed=true; return rec; }
+    let wb;
+    if(/\.csv$/i.test(f.name)){ const buf=await readBuf(f); let t=new TextDecoder('utf-8').decode(buf); if(/�/.test(t)){ try{ t=new TextDecoder('euc-kr').decode(buf); }catch(e){} } wb=XLSX.read(t,{type:'string'}); }
+    else wb=await readWorkbook(await readBuf(f));
+    const raw=wb.SheetNames.map(n=>JSON.stringify(wb.Sheets[n])).join(' ');
+    const isMall=/할인적용금액|할인\s*적용\s*금액|필수선택\s*\/\s*추가구성|옵션\s*\/\s*추가구성\s*정보|최종\s*견적\s*금액/.test(raw);
+    if(isMall){ const q=mallQuote(wb); if(q&&q.items.length){ rec.kind='mall'; Object.assign(rec,{vendor:q.vendor,items:q.items,shipping:q.shipping,checks:q.checks}); return rec; } }
+    rec.sheets=sheetsOf(wb); readSheets(rec);
+    if(rec.failed){ const q=mallQuote(wb); if(q&&q.items.length){ rec.kind='mall'; Object.assign(rec,{vendor:q.vendor||'',items:q.items,shipping:q.shipping,checks:q.checks,failed:false}); } }
+    if(rec.failed) rec.checks=[['err','품명·수량·금액이 있는 표를 찾지 못했어요. [표에서 직접 고르기]를 눌러 주세요']];
+  }catch(err){ console.error(err); rec.failed=true; rec.checks=[['err','파일을 읽지 못했어요']]; }
+  return rec;
+}
+function pasteRecord(text){
+  const rows=String(text).replace(/\r/g,'').split('\n').filter(l=>l.trim()!=='').map(l=>l.split('\t').map(c=>{ const t=c.trim(); return t===''?null:t; }));
+  const rec=newRec('붙여넣은 표','paste'); rec.vendor='붙여넣은 표'; rec.sheets=[{name:'',aoa:rows}]; readSheets(rec);
+  if(rec.failed) rec.checks=[['err','머리글(품명·수량·단가)을 찾지 못했어요. [표에서 직접 고르기]를 눌러 주세요']];
+  return rec;
+}
+// --- PDF ---
+async function pdfPages(file){
+  try{ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; }catch(e){}
+  const doc=await pdfjsLib.getDocument({data:new Uint8Array(await readBuf(file))}).promise;
+  const pages=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const pg=await doc.getPage(p); const vp=pg.getViewport({scale:1}); const tc=await pg.getTextContent();
+    pages.push({items:tc.items.filter(it=>'str' in it).map(it=>{ const h=it.height||Math.abs(it.transform[3])||8; return {str:it.str,x:it.transform[4],y:vp.height-it.transform[5]-h,w:it.width,h}; })});
+  }
+  return pages;
+}
+function vendorOf(pages){
+  const t=pages.map(p=>p.items.map(i=>i.str).join('')).join(' ');
+  if(/지마켓|G\s*마켓|Gmarket/i.test(t)) return 'G마켓'; if(/에스에스지닷컴|SSG\.COM/i.test(t)) return 'SSG'; if(/쿠팡/.test(t)) return '쿠팡'; if(/아이스크림/.test(t)) return '아이스크림몰';
+  return '';
+}
+function simplifyName(s){ return String(s).replace(/\[\s*([^\]\/,]+)[^\]]*\]/g,(m,a)=>a.trim()).replace(/\s+/g,' ').trim(); }
+
+// ================= 강사 대장 읽기 (선택) =================
+function parseLecturerSheet(aoa){
+  const hr=aoa.slice(0,6).findIndex(r=>r&&r.some(c=>/^(강사명|성명)$/.test(String(c??'').replace(/\s/g,''))));
+  if(hr<0) return [];
+  const H=aoa[hr].map(c=>String(c??'').replace(/\s/g,''));
+  const ci=re=>H.findIndex(h=>re.test(h));
+  const ledger = ci(/^성명$/)>=0 && ci(/강의명/)>=0;
+  const col={name:ci(/^(강사명|성명)$/),grade:ci(/^학년$/),prog:ci(/프로그램명|강의명/),budget:ci(/^(사업명|예산\/?구분|구분)$/),year:ci(/^학년도$/),start:ci(/^시작/),end:ci(/종료일/),calc:ci(/산출/),
+    sess:ci(/^(횟수|강의횟수)$/),cls:ci(/^(학급|강의학급)$/),extra:ci(/추가시간/),rate:ci(/^(시간당강사료|회당강사료)$/),basis:ci(/^(근거공문|근거|관련공문)$/),pumui:ci(/^(강사비품의|강사료품의일)$/)};
+  if(col.grade<0 && ledger){ H.forEach((h,i)=>{ if(h||col.grade>=0) return; let n=0,t=0; for(let r=hr+1;r<aoa.length;r++){ const v=aoa[r]&&aoa[r][i]; if(v==null||v==='') continue; t++; if(/^[1-6]$/.test(String(v).trim())) n++; } if(t&&n/t>=0.6) col.grade=i; }); }
+  const out=[];
+  for(let r=hr+1;r<aoa.length;r++){
+    const row=aoa[r]; if(!row) continue; const g=i=>i>=0?row[i]:null;
+    const name=String(g(col.name)??'').trim(); if(!name) continue;
+    const cells=row.map(c=>String(c??'').trim()); const clean=s=>String(s??'').replace(/\s*\n\s*/g,'').trim();
+    let sessions=numK(g(col.sess)), classes=numK(g(col.cls));
+    if(sessions==null){ const s=cells.find(c=>/^\d+\s*회$/.test(c)); if(s) sessions=parseInt(s); }
+    if(classes==null){ const s=cells.find(c=>/^\d+\s*학급$/.test(c)); if(s) classes=parseInt(s); }
+    const dfix=v=>{ const t=String(v??'').replace(/\n/g,' ').trim(); return /^\d{5}(\.\d+)?$/.test(t)&&+t>20000&&+t<80000? XLSX.SSF.format('yyyy-mm-dd',+t) : t; };
+    const start=dfix(g(col.start));
+    const pv=String(g(col.pumui)??'').trim();
+    const rec={ name, year:String(g(col.year)??'').trim()||(start.match(/(20\d\d)/)||[])[1]||'', grade:String(g(col.grade)??'').replace(/학년/,'').trim(), prog:clean(g(col.prog)).replace(/\s+/g,' '), budget:clean(g(col.budget)),
+      start, end:dfix(g(col.end)), sessions, classes, calc:String(g(col.calc)??'').replace(/\s*\n\s*/g,' ').trim(), basis:col.basis>=0?String(g(col.basis)??'').trim():'', done: col.pumui>=0 && pv && !/^x$/i.test(pv) };
+    if(ledger && col.rate>=0) rec.direct={unit:numK(g(col.rate))||0, hours:sessions||0, classes:classes||1, extra:numK(g(col.extra))||0};
+    out.push(rec);
+  }
   return out;
 }
-function t1Render(){
-  const G=S1.grades;
-  if(!G.length && !S1.quotes.length){ $('#t1check').innerHTML='<div class="empty">파일을 올리면 학년별로 다시 계산한 금액과 시트의 소계, 집계 시트, 견적서 합계를 비교합니다.</div>'; renderOutput('t1out',null); return; }
-  const sheetHtml = G.length? t1SheetHtml(G) : '';
-  $('#t1check').innerHTML = sheetHtml + t1QuoteHtml() + t1MergedHtml() + '<div class="row"><button class="btn small" id="t1reset">올린 파일 모두 지우기</button></div>';
-  $('#t1reset').onclick=t1Reset;
-  $$('#t1check select[data-q]').forEach(sel=>sel.onchange=()=>{ S1.quotes[+sel.dataset.q].grade=sel.value?+sel.value:null; t1Render(); });
-  t1Output();
+function parseCalc(s){
+  const t=String(s).replace(/[×xX]/g,'*');
+  const m=t.match(/([\d.,]+)\s*원?\s*\*\s*(\d+)\s*시간\s*\*\s*(\d+)\s*학급\s*=?\s*([\d.,]+)?/);
+  if(m) return {unit:numK(m[1]),hours:+m[2],classes:+m[3],total:m[4]!=null?numK(m[4]):null, std:true};
+  const tot=t.match(/=\s*([\d.,]+)\s*원?\s*$/); return {std:false,total:tot?numK(tot[1]):null};
 }
-function t1SheetHtml(G){
-  const checks=[]; let anyErr=false;
-  const sm=S1.summary;
-  const rowsHtml=G.map(g=>{
-    const s=sm&&sm.rows.find(x=>x.grade===g.grade);
-    const errs=g.items.filter(it=>it.qty==null||it.price==null||it.amt==null||it.qty*it.price!==it.amt||!it.name);
-    const noUnit=g.items.filter(it=>!it.unit).length;
-    const subOk=g.subtotal==null? null : g.subtotal===g.calc;
-    const smOk=!s? null : (s.amount===g.calc && s.count===g.items.length);
-    const st = !g.items.length? 'none' : errs.length||subOk===false||smOk===false ? 'err' : (noUnit||subOk===null)?'warn':'ok';
-    if(st==='err') anyErr=true;
-    if(errs.length) checks.push(['err',`${g.grade}학년: 수량×단가와 금액이 다르거나 빈 칸이 있는 행 ${errs.length}개 (엑셀 ${errs.map(e=>e.row+'행').join(', ')})`]);
-    if(subOk===false) checks.push(['err',`${g.grade}학년: 시트 소계 ${won(g.subtotal)}원 ≠ 다시 계산한 합계 ${won(g.calc)}원`]);
-    if(subOk===null && g.items.length) checks.push(['warn', g.subRow? `${g.grade}학년: 소계 칸이 비어 있습니다 (엑셀에서 열어 저장하면 계산값이 들어갑니다)` : `${g.grade}학년: 소계 행을 찾지 못했습니다`]);
-    if(smOk===false) checks.push(['err',`${g.grade}학년: 집계 시트(${s.count}종, ${won(s.amount)}원)와 다릅니다 (${g.items.length}종, ${won(g.calc)}원)`]);
-    if(noUnit) checks.push(['warn',`${g.grade}학년: 단위가 빈 품목 ${noUnit}개 (품목내역에는 영향 없음)`]);
-    if(g.skipped.length) checks.push(['info',`${g.grade}학년: 품목 없이 값만 있는 행은 건너뜀 (엑셀 ${g.skipped.join(', ')}행)`]);
-    return `<tr class="${st==='err'?'bad':''}"><td>${g.grade?g.grade+'학년':esc(g.sheet)}</td><td class="num">${g.items.length}</td><td class="num">${won(g.calc)}</td><td class="num">${g.subtotal==null?'—':won(g.subtotal)}</td><td class="num">${s?won(s.amount):'—'}</td><td>${st==='none'?'<span class="muted">신청 없음</span>':`<span class="pill ${st}">${{ok:'맞음',warn:'주의',err:'오류'}[st]}</span>`}</td></tr>`;
-  }).join('');
-  const total=G.reduce((s,g)=>s+g.calc,0), cnt=G.reduce((s,g)=>s+g.items.length,0);
-  const tOk=sm&&sm.total? (sm.total.amount===total&&sm.total.count===cnt) : null;
-  if(tOk===false){ checks.push(['err',`총액: 집계 시트 ${sm.total.count}종 ${won(sm.total.amount)}원 ≠ 다시 계산 ${cnt}종 ${won(total)}원`]); anyErr=true; }
-  if(!sm) checks.push([S1.multi?'info':'warn', S1.multi?'학년별 파일 여러 개를 합쳤습니다. 집계 시트 대신 학년별 소계로 비교했습니다':'집계 시트를 찾지 못해 학년별 소계만 비교했습니다']);
-  (S1.dup||[]).forEach(k=>checks.push(['err',`${k}학년 품목이 두 파일에 있습니다. 나중에 올린 파일 기준으로 계산했으니 확인하세요`]));
-  G.filter(g=>!g.items.length).forEach(g=>checks.push(['info',`${g.grade?g.grade+'학년':g.sheet}: 신청 품목이 없습니다`]));
-  if(!checks.some(c=>c[0]==='err')) checks.unshift(['ok',`${cnt}개 품목 모두 수량×단가=금액, 학년 소계와 총액 ${won(total)}원이 일치합니다`]);
-  const detail=G.map(g=>`<details><summary>${g.grade}학년 품목 ${g.items.length}개 보기</summary><div class="tblwrap" style="margin-top:6px"><table><thead><tr><th class="num">번호</th><th>품목</th><th>규격</th><th class="num">수량</th><th>단위</th><th class="num">단가</th><th class="num">금액</th><th class="num">수량×단가</th></tr></thead><tbody>${g.items.map(it=>{const bad=it.qty==null||it.price==null||it.qty*it.price!==it.amt;return `<tr class="${bad?'bad':''}"><td class="num">${esc(it.no??'')}</td><td>${esc(it.name)}</td><td>${esc(it.spec)}</td><td class="num">${won(it.qty)}</td><td>${esc(it.unit)||'<span class="muted">—</span>'}</td><td class="num">${won(it.price)}</td><td class="num">${won(it.amt)}</td><td class="num">${won((it.qty||0)*(it.price||0))}</td></tr>`}).join('')}</tbody></table></div></details>`).join('');
-  return `<p class="sub">학년별 신청서</p><div class="tblwrap"><table><thead><tr><th>학년</th><th class="num">품목 수</th><th class="num">다시 계산한 합계</th><th class="num">시트 소계</th><th class="num">집계 시트</th><th>판정</th></tr></thead><tbody>${rowsHtml}</tbody>
-    <tfoot><tr><td>합계</td><td class="num">${cnt}</td><td class="num">${won(total)}</td><td></td><td class="num">${sm&&sm.total?won(sm.total.amount):'—'}</td><td>${tOk===false?'<span class="pill err">오류</span>':tOk?'<span class="pill ok">맞음</span>':''}</td></tr></tfoot></table></div>
-    ${checksHtml(checks)}<div style="display:grid;gap:4px">${detail}</div>`;
+function anyDate(t){ const m=String(t||'').match(/(20\d\d)\s*[.\-\/년]\s*(\d{1,2})\s*[.\-\/월]\s*(\d{1,2})/); return m? new Date(+m[1],+m[2]-1,+m[3]) : null; }
+function periodStr(start,end,n){ const a=anyDate(start), b=anyDate(end); if(!a) return String(start||'').trim(); const f=(d,y)=>`${y?d.getFullYear()+'. ':''}${d.getMonth()+1}. ${d.getDate()}.`; return `${f(a,true)}${b?` ~ ${f(b,b.getFullYear()!==a.getFullYear())}`:''}${n?`(${n}회)`:''}`; }
+// ================= 흐름 상태 =================
+const ST={step:'home', hist:[], files:[], kind:null, ship:null, items:[], meta:{}, lect:{}, ledger:[], mapFor:null, mapHr:null, busy:false};
+const KINDS={
+  supply:{ic:'학',name:'학습준비물',desc:'학년별로 묶어 품목내역을 학년마다 한 줄로'},
+  goods:{ic:'물',name:'교육활동 물품',desc:'품목마다 한 줄 · 일반 물품 구입'},
+  it:{ic:'정',name:'정보화 기자재·소모품',desc:'토너, 잉크, 주변기기 등'}
+};
+const STEPS={};
+function plan(){
+  if(ST.flow==='lect') return ST.lect.type==='one'? ['l-type','l-who','l-event','l-rate','l-pay1','l-ok','done'] : ['l-type','l-who','l-class','l-pay','l-ok','done'];
+  if(ST.flow==='goods'){ const p=['files','kind']; if(shipTotal()>0) p.push('ship'); p.push('title','done'); return p; }
+  return ['home'];
 }
-function t1QuoteHtml(){
-  if(!S1.quotes.length) return '';
-  return '<p class="sub" style="margin-top:6px">견적서</p><div style="display:grid;gap:8px">'+S1.quotes.map((q,i)=>{
-    const goods=q.items.reduce((s,it)=>s+(it.amt||0),0);
-    const sel=`<select data-q="${i}" aria-label="학년 지정" style="width:auto"><option value="">학년 선택</option>${[1,2,3,4,5,6].map(g=>`<option value="${g}" ${q.grade===g?'selected':''}>${g}학년</option>`).join('')}</select>`;
-    const c=[...q.checks]; if(!q.grade) c.unshift(['warn','학년을 골라 주세요. 학년을 정해야 기안문에 들어갑니다']);
-    return `<div class="filecard"><div class="row" style="justify-content:space-between"><div class="fname">${esc(q.file)} ${q.vendor?`<span class="pill info">${esc(q.vendor)}</span>`:''}</div>${sel}</div>
-      <div class="hint">품목 ${q.items.length}종 · 상품 ${won(goods)}원${q.shipping?` + 배송비 ${won(q.shipping)}원`:''} = <b>${won(goods+q.shipping)}원</b></div>${checksHtml(c)}
-      <details><summary>품목 보기</summary><div class="tblwrap" style="margin-top:6px"><table><thead><tr><th class="num">#</th><th>상품명</th><th>옵션</th><th class="num">수량</th><th class="num">단가</th><th class="num">금액</th></tr></thead><tbody>${q.items.map((it,k)=>`<tr class="${it.qty*it.price!==it.amt?'bad':''}"><td class="num">${k+1}</td><td>${esc(it.name)}</td><td class="muted">${esc(it.option||'')}</td><td class="num">${won(it.qty)}</td><td class="num">${won(it.price)}</td><td class="num">${won(it.amt)}</td></tr>`).join('')}</tbody></table></div></details></div>`;
-  }).join('')+'</div>';
+function go(step){ if(ST.step!==step) ST.hist.push(ST.step); ST.step=step; draw(); }
+function back(){ const s=ST.hist.pop(); if(s!=null){ ST.step=s; if(s==='home'){ ST.flow=null; } draw(); } }
+function goHome(){ ST.hist=[]; ST.step='home'; ST.flow=null; draw(); }
+function draw(){
+  const S=STEPS[ST.step]; const el=$('#stage');
+  el.className='stage'+(S.wide?' wide':''); el.innerHTML=S.html();
+  el.style.animation='none'; void el.offsetWidth; el.style.animation='';
+  const cta=S.cta? S.cta() : '';
+  $('#cta').hidden=!cta; $('#ctaIn').innerHTML=cta||'';
+  if(S.bind) S.bind(el);
+  $('#backBtn').hidden=!ST.hist.length;
+  const p=plan(), i=p.indexOf(ST.step); $('#progFill').style.width= ST.step==='home'? '0%' : `${Math.round(((i<0?0:i)+1)/p.length*100)}%`;
+  window.scrollTo({top:0});
+  const f=$('[autofocus]',el); if(f) setTimeout(()=>f.focus({preventScroll:true}),60);
 }
-function t1MergedHtml(){
-  if(!S1.quotes.length) return '';
-  const M=t1Merged(); if(!M.length) return '';
-  const tot=M.reduce((s,m)=>s+m.calc,0), cnt=M.reduce((s,m)=>s+m.items.length,0);
-  return `<p class="sub" style="margin-top:6px">학년별 합계 (기안문에 들어가는 금액)</p><div class="tblwrap"><table><thead><tr><th>학년</th><th>자료</th><th class="num">품목 수</th><th class="num">상품 금액</th><th class="num">배송비</th><th class="num">합계</th></tr></thead><tbody>${M.map(m=>`<tr><td>${m.grade}학년</td><td>${[...new Set(m.src)].join(' + ')}</td><td class="num">${m.items.length}</td><td class="num">${won(m.goods)}</td><td class="num">${won(m.shipping)}</td><td class="num">${won(m.calc)}</td></tr>`).join('')}</tbody><tfoot><tr><td>합계</td><td></td><td class="num">${cnt}</td><td></td><td></td><td class="num">${won(tot)}</td></tr></tfoot></table></div>`;
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter'||e.isComposing) return; const t=e.target;
+  if(t.tagName==='TEXTAREA'||t.tagName==='BUTTON'||t.tagName==='SELECT'||t.closest('table')) return;
+  const b=$('#ctaIn [data-primary]'); if(b&&!b.disabled){ e.preventDefault(); b.click(); }
+});
+$('#backBtn').onclick=back; $('#homeBtn').onclick=goHome;
+$('#forget').onclick=()=>{ try{ Object.keys(localStorage).filter(k=>k.startsWith(MEM)).forEach(k=>localStorage.removeItem(k)); }catch(e){} toast('이 브라우저에 기억한 내용을 지웠어요'); };
+function ieyo(w){ const c=String(w).trim().slice(-1).charCodeAt(0); return (c>=0xAC00&&c<=0xD7A3&&(c-0xAC00)%28)? '이에요':'예요'; }
+const ICON_DOWN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 11v6M9.5 14.5 12 17l2.5-2.5"/></svg>';
+const chev='<span class="chev" aria-hidden="true">›</span>';
+
+// ================= 처음 화면 =================
+STEPS.home={
+  html:()=>`
+    <h1 class="q">무엇을 품의할까요?</h1>
+    <p class="qs">견적서를 놓으면 알아서 읽고, 기안문과 에듀파인 품목내역 파일을 만들어 드려요.</p>
+    <label class="bigdrop" id="drop">
+      <input type="file" multiple hidden accept=".xlsx,.xls,.xlsm,.csv,.pdf,.html,.htm">
+      ${ICON_DOWN}
+      <strong>견적서를 여기에 놓으세요</strong>
+      <span>엑셀 · PDF · 쇼핑몰 장바구니 견적서 · 여러 개 함께 가능</span>
+    </label>
+    <div style="margin-top:12px">
+      <button class="choice" data-go="lect"><span class="ic">강</span><span><b>강사료 품의</b><span class="d">정규 프로그램 · 학부모 연수 · 작가와의 만남 같은 1회 강의</span></span>${chev}</button>
+    </div>
+    <details style="margin-top:22px">
+      <summary>학년별 학습준비물 신청서 양식 내려받기</summary>
+      <div class="panel">
+        <p class="note" style="margin:0">학년에 나눠 줄 신청서 엑셀이에요. 금액·소계·집계는 수식으로 계산되고, 다 모이면 그대로 여기에 놓으면 돼요.</p>
+        <div class="grid3">
+          <div class="fld"><label for="fy">학년도</label><input type="text" id="fy" inputmode="numeric" value="${new Date().getFullYear()}"></div>
+          <div class="fld"><label for="ft">학기</label><select id="ft"><option value="1">1학기</option><option value="2" ${termNow()==2?'selected':''}>2학기</option></select></div>
+          <div class="fld"><label for="fl">학년별 줄 수</label><input type="number" id="fl" min="5" max="200" value="30"></div>
+        </div>
+        <div class="row"><button class="btn primary" id="formAll">1~6학년 + 집계</button>${[1,2,3,4,5,6].map(g=>`<button class="btn small" data-formg="${g}">${g}학년</button>`).join('')}</div>
+      </div>
+    </details>`,
+  bind:el=>{
+    bindDrop($('#drop',el), files=>{ newGoods(); addFiles(files); });
+    $$('[data-go]',el).forEach(b=>b.onclick=()=>{ if(b.dataset.go==='lect'){ startLect(); } else { newGoods(); go('paste'); } });
+    $('#formAll',el).onclick=()=>makeForm([1,2,3,4,5,6]);
+    $$('[data-formg]',el).forEach(b=>b.onclick=()=>makeForm([+b.dataset.formg]));
+  }
+};
+function newGoods(){ Object.assign(ST,{flow:'goods', hist:[], files:[], kind:null, ship:null, items:[], meta:{}}); }
+function termNow(){ const m=new Date().getMonth()+1; return (m>=3&&m<=7)?1:2; }
+
+// ================= 물품: 읽은 견적서 확인 =================
+async function addFiles(files){
+  ST.busy=true; if(ST.step!=='files') go('files'); else draw();
+  for(const f of files){ ST.files.push(await loadFile(f)); }
+  ST.busy=false; draw();
 }
-function t1Output(){
-  const G=t1Merged(); if(!G.length){ renderOutput('t1out',null); return; }
-  const y=$('#t1year').value.trim()||String(new Date().getFullYear()), term=$('#t1term').value, rel=$('#t1rel').value.trim();
-  const pick=items=>items.reduce((b,it)=>(it.amt||0)>(b.amt||0)?it:b, items[0]);
-  const all=G.flatMap(g=>g.items);
-  const top=pick(all);
-  const total=G.reduce((s,g)=>s+g.calc,0);
-  const gs=G.map(g=>g.grade);
-  const contiguous=gs.every((v,i)=>i===0||v===gs[i-1]+1);
-  const target= gs.length===1? `${gs[0]}학년` : contiguous? `${gs[0]}학년~${gs[gs.length-1]}학년` : gs.join(', ')+'학년';
-  const itemLine= all.length>1? `${top.name} 외 ${all.length-1}종` : top.name;
-  const title=`${y}학년도 ${term}학기 학습준비물 물품 구입`;
-  const hasSheet=G.some(g=>g.src.includes('신청서')), nq=S1.quotes.filter(q=>q.grade&&q.items.length).length;
-  const custom=$('#t1att').value.trim();
-  let att;
-  if(custom) att=`붙임  ${custom}  끝.`;
-  else if(hasSheet && nq) att=`붙임  1. ${y}학년도 ${term}학기 학습준비물 신청내역 및 구매링크 1부.\n      2. 학년별 견적서 ${nq}부.  끝.`;
-  else if(nq) att=`붙임  ${y}학년도 ${term}학기 학습준비물 학년별 견적서 ${nq}부.  끝.`;
-  else att=`붙임  ${y}학년도 ${term}학기 학습준비물 신청내역 및 구매링크 1부.  끝.`;
-  const body=[
-    `1. 관련: ${rel||'(관련 문서번호를 입력하세요)'}`,
-    `2. 원활한 교육활동을 위하여 아래와 같이 구입하고자 합니다.`,
-    `  가. 대상: ${target}`,
-    `  나. 품목: ${itemLine}`,
-    `  다. 금액: 금${won(total)}원(금${korAmount(total)}원)`,
-    ``,
-    att
-  ].join('\n');
-  const rows=G.map(g=>{ const t=pick(g.items); return {name:`${g.grade}학년 학습준비물(${t.name}${g.items.length>1?` 외 ${g.items.length-1}종`:''})`, qty:1, price:g.calc}; });
-  renderOutput('t1out',{title,body,rows,fname:`품목내역_학습준비물_${today()}.xls`});
+const goodsSum=()=>ST.files.reduce((s,f)=>s+f.items.reduce((a,i)=>a+(i.amt||0),0),0);
+const shipTotal=()=>ST.files.reduce((s,f)=>s+(f.shipping||0),0);
+function fileStatus(f){ if(f.failed) return 'err'; if(f.checks.some(c=>c[0]==='err')) return 'err'; if(f.checks.some(c=>c[0]==='warn')) return 'warn'; return 'ok'; }
+function gradeList(items){ return [...new Set(items.map(i=>i.grade).filter(Boolean))].sort((a,b)=>a-b); }
+function gradeRange(gs){ if(!gs.length) return ''; const c=gs.every((v,i)=>i===0||v===gs[i-1]+1); return gs.length===1? `${gs[0]}학년` : c? `${gs[0]}~${gs[gs.length-1]}학년` : gs.join(', ')+'학년'; }
+function fileTitle(f){ if(f.kind==='paste') return '붙여넣은 표';
+  const v=f.vendor||''; if(f.isApp) return v? `${v} 학습준비물 신청서` : '학습준비물 신청서';
+  if(f.sheets.length && f.sheets.some(s=>findHeader(s.aoa)&&/예상단가/.test(norm((s.aoa[findHeader(s.aoa).hr]||[]).join('|'))))) return '에듀파인 품목내역 양식';
+  return v? `${v} 견적서` : '견적서'; }
+function fileCard(f,i){
+  const st=fileStatus(f); const sum=f.items.reduce((s,it)=>s+(it.amt||0),0); const gs=gradeList(f.items);
+  const facts=[];
+  if(!f.failed){ facts.push(`<span class="pill ${st}">${{ok:'금액 맞음',warn:'확인할 것 있음',err:'틀린 곳 있음'}[st]}</span>`);
+    if(gs.length) facts.push(`<span class="pill info">${gradeRange(gs)}</span>`);
+    if(f.items.some(x=>x.vatAdded)) facts.push('<span class="pill info">부가세 더함</span>');
+    if(f.shipping) facts.push(`<span class="pill info">배송비 ${won(f.shipping)}원</span>`); }
+  const preview=f.items.length? `<details><summary>품목 ${f.items.length}개 보기</summary><div class="tblwrap"><table><thead><tr>${gs.length?'<th>학년</th>':''}<th>품명</th><th>규격</th><th>단위</th><th class="num">수량</th><th class="num">단가</th><th class="num">금액</th></tr></thead><tbody>${f.items.map(it=>`<tr>${gs.length?`<td>${it.grade?it.grade+'학년':'—'}</td>`:''}<td>${esc(it.name)}${it.option?`<div class="muted" style="font-size:12px">${esc(it.option)}</div>`:''}</td><td>${esc(it.spec||'')}</td><td>${esc(it.unit||'')}</td><td class="num">${won(it.qty)}</td><td class="num">${won(it.price)}</td><td class="num">${won(it.amt)}</td></tr>`).join('')}</tbody></table></div></details>` : '';
+  return `<div class="fcard ${f.failed?'err':''}" data-f="${i}">
+    <div class="top"><div><div class="ttl">${esc(f.failed?'읽지 못한 파일':fileTitle(f))}</div><div class="fn">${esc(f.file)}${f.date?` · ${esc(f.date)}`:''}</div></div><button class="btn small" data-del="${i}" aria-label="이 파일 빼기">빼기</button></div>
+    ${f.failed? '' : `<div class="sum">품목 ${f.items.length}개 · <b>${won(sum)}원</b> <span class="muted">(부가세 포함)</span></div><div class="facts">${facts.join('')}</div>`}
+    ${f.failed? checksHtml(f.checks) : `<details ${st==='ok'?'':'open'}><summary>검산 결과 보기</summary>${checksHtml(f.checks)}</details>`}
+    ${preview}
+    ${f.sheets.length? `<div><button class="btn small" data-map="${i}">${f.failed?'표에서 직접 고르기':'열을 잘못 읽었나요? 직접 고르기'}</button></div>` : ''}
+  </div>`;
 }
-bindDrop('t1drop','t1file',t1Load);
-// ---------- 학년별 수합 양식 ----------
+STEPS.files={
+  html:()=>{
+    if(ST.busy) return `<h1 class="q"><span class="spin"></span> 견적서를 읽고 있어요</h1><p class="qs">파일은 이 브라우저 안에서만 읽어요.</p>`;
+    const ok=ST.files.filter(f=>!f.failed); const sum=goodsSum(), ship=shipTotal();
+    const one=ST.files.length===1&&ok.length===1;
+    const head= !ST.files.length? '견적서를 놓아 주세요' : !ok.length? '표를 찾지 못했어요' : one? `${fileTitle(ok[0])}${ieyo(fileTitle(ok[0]))}` : `파일 ${ST.files.length}개를 읽었어요`;
+    const sub= ok.length? `품목 ${ok.reduce((s,f)=>s+f.items.length,0)}개, 합계 ${won(sum)}원(부가세 포함)${ship?` + 배송비 ${won(ship)}원`:''}. 맞는지 확인해 주세요.` : '아래에서 직접 고르거나 다른 파일을 놓아 주세요.';
+    return `<h1 class="q">${esc(head)}</h1><p class="qs">${sub}</p>
+      <div class="cards">${ST.files.map(fileCard).join('')}</div>
+      <label class="minidrop" id="more"><input type="file" multiple hidden accept=".xlsx,.xls,.xlsm,.csv,.pdf,.html,.htm">+ 파일 더 놓기</label>
+      <div class="row" style="justify-content:center;margin-top:6px"><button class="btn link" id="toPaste">표 붙여넣기</button><span class="muted">·</span><button class="btn link" id="manual">빈 표로 직접 입력</button></div>`;
+  },
+  cta:()=>ST.busy?'':`<button class="btn primary go" data-primary ${ST.files.some(f=>!f.failed&&f.items.length)?'':'disabled'}>맞아요, 다음</button>`,
+  bind:el=>{
+    if(ST.busy) return;
+    const more=$('#more',el); if(more) bindDrop(more, addFiles);
+    $$('[data-del]',el).forEach(b=>b.onclick=()=>{ ST.files.splice(+b.dataset.del,1); draw(); });
+    $$('[data-map]',el).forEach(b=>b.onclick=()=>{ ST.mapFor=+b.dataset.map; ST.mapHr=null; go('map'); });
+    $('#toPaste',el).onclick=()=>go('paste');
+    $('#manual',el).onclick=()=>{ const r=newRec('직접 입력','manual'); r.vendor='직접 입력'; r.items=[{name:'',spec:'',unit:'',qty:1,price:0,amt:0}]; r.checks=[['info','완성 화면의 [품목 고치기]에서 품목을 적어 주세요']]; ST.files.push(r); draw(); };
+    $('#ctaIn [data-primary]').onclick=()=>{ buildItems(); go('kind'); };
+  }
+};
+// 붙여넣기
+STEPS.paste={
+  html:()=>`<h1 class="q">표를 붙여넣어 주세요</h1>
+    <p class="qs">엑셀이나 쇼핑몰 화면에서 머리글(품명·수량·단가)까지 같이 복사해 Ctrl+V 하세요.</p>
+    <div class="fld"><textarea id="pasteBox" rows="10" placeholder="품명&#9;규격&#9;단위&#9;수량&#9;단가&#9;금액&#10;색종이 500매&#9;15x15cm&#9;갑&#9;2&#9;9800&#9;19600" autofocus></textarea></div>`,
+  cta:()=>`<button class="btn primary go" data-primary>읽기</button>`,
+  bind:el=>{ $('#ctaIn [data-primary]').onclick=()=>{ const t=$('#pasteBox',el).value; if(!t.trim()){ toast('붙여넣은 내용이 없어요'); return; } ST.flow='goods'; const r=pasteRecord(t); ST.files.push(r); ST.hist.pop(); ST.step='files'; if(!ST.hist.length||ST.hist[ST.hist.length-1]!=='home') ST.hist=['home']; draw(); }; }
+};
+// 열 직접 고르기
+STEPS.map={
+  wide:true,
+  html:()=>{
+    const f=ST.files[ST.mapFor]; const s=f.sheets.find(x=>x.aoa.some(r=>r&&r.some(v=>v!=null)))||f.sheets[0]; f._ms=f._ms??f.sheets.indexOf(s);
+    const sh=f.sheets[f._ms]; const aoa=sh.aoa;
+    const rowsIdx=[]; for(let r=0;r<aoa.length&&rowsIdx.length<40;r++) if(aoa[r]&&aoa[r].some(v=>v!=null&&String(v).trim()!=='')) rowsIdx.push(r);
+    const usedCols=[]; const w=Math.max(...rowsIdx.map(r=>aoa[r].length),0); for(let c=0;c<w;c++) if(rowsIdx.some(r=>aoa[r][c]!=null&&String(aoa[r][c]).trim()!=='')) usedCols.push(c);
+    const L=c=>XLSX.utils.encode_col(c);
+    const hr=ST.mapHr;
+    const hdr=hr==null? null : hr<0? null : aoa[hr];
+    const guess=hr==null? null : (hr>=0? headerCols(hdr) : headerCols(null));
+    const loose={name:/품|내용|상품|물품|제품/,spec:/규격|사양|옵션|모델/,unit:/단위/,qty:/수량/,price:/단가|가격|판매가/,amt:/금액|합계|계$/};
+    if(guess && hdr) for(const k of Object.keys(loose)) if(guess[k]<0){ const i=hdr.findIndex(v=>loose[k].test(norm(v))); if(i>=0) guess[k]=i; }
+    const colOpt=(k)=>`<select data-col="${k}"><option value="-1">${k==='name'||k==='qty'?'골라 주세요':'없음'}</option>${usedCols.map(c=>`<option value="${c}" ${guess&&guess[k]===c?'selected':''}>${L(c)}열${hdr&&hdr[c]!=null?` · ${esc(String(hdr[c]).slice(0,14))}`:(hr<0&&aoa[rowsIdx[0]][c]!=null?` · 예) ${esc(String(aoa[rowsIdx[0]][c]).slice(0,12))}`:'')}</option>`).join('')}</select>`;
+    return `<h1 class="q">${hr==null?'머리글 줄을 눌러 주세요':'어느 열이 무엇인지 골라 주세요'}</h1>
+      <p class="qs">${hr==null? '품명·수량·단가가 적힌 줄을 누르면 돼요. 머리글이 없는 표라면 아래 [머리글 없음]을 누르세요.' : '고른 내용은 이 브라우저에 기억해서, 같은 모양의 견적서는 다음부터 바로 읽어요.'}</p>
+      ${f.sheets.length>1?`<div class="chips" style="margin-bottom:10px">${f.sheets.map((x,i)=>`<button class="chip" data-sh="${i}" aria-pressed="${i===f._ms}">${esc(x.name||'시트'+(i+1))}</button>`).join('')}</div>`:''}
+      ${hr!=null?`<div class="panel" style="margin-bottom:14px"><div class="grid3">${['name','qty','price','amt','spec','unit'].map(k=>`<div class="fld" style="margin:0"><label>${FIELD_KO[k]}${k==='name'||k==='qty'?' *':''}</label>${colOpt(k)}</div>`).join('')}</div><p class="note" style="margin:0">단가나 금액 중 하나만 있어도 돼요. 단위가 없으면 비워 둬요.</p></div>`:''}
+      <div class="tblwrap"><table class="pick"><thead><tr><th>줄</th>${usedCols.map(c=>`<th>${L(c)}</th>`).join('')}</tr></thead><tbody>${rowsIdx.map(r=>`<tr data-r="${r}" class="${r===hr?'sel':''}"><td class="mono">${r+1}</td>${usedCols.map(c=>`<td title="${esc(aoa[r][c]??'')}">${esc(aoa[r][c]??'')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+      <div class="row" style="margin-top:8px"><button class="btn small" id="noHdr">머리글 없음 (첫 줄부터 품목)</button>${hr!=null?'<button class="btn small" id="reHdr">머리글 줄 다시 고르기</button>':''}</div>`;
+  },
+  cta:()=> ST.mapHr==null? '' : `<button class="btn primary go" data-primary>이렇게 읽기</button>`,
+  bind:el=>{
+    const f=ST.files[ST.mapFor];
+    $$('[data-sh]',el).forEach(b=>b.onclick=()=>{ f._ms=+b.dataset.sh; ST.mapHr=null; draw(); });
+    $$('tr[data-r]',el).forEach(tr=>tr.onclick=()=>{ if(ST.mapHr==null){ ST.mapHr=+tr.dataset.r; draw(); } });
+    $('#noHdr',el).onclick=()=>{ ST.mapHr=-1; draw(); };
+    const re=$('#reHdr',el); if(re) re.onclick=()=>{ ST.mapHr=null; draw(); };
+    const p=$('#ctaIn [data-primary]'); if(p) p.onclick=()=>{
+      const cols=headerCols(null); $$('select[data-col]',el).forEach(s=>cols[s.dataset.col]=+s.value);
+      if(cols.name<0||cols.qty<0){ toast('품명과 수량은 꼭 골라 주세요'); return; }
+      if(cols.price<0&&cols.amt<0){ toast('단가나 금액 중 하나는 골라 주세요'); return; }
+      const sh=f.sheets[f._ms]; const hr=ST.mapHr;
+      if(hr>=0){ const sig=sigOf(sh.aoa[hr]); const maps=mem('maps',[]).filter(m=>m.sig!==sig); const keep={}; ['name','qty','price','amt','spec','unit'].forEach(k=>keep[k]=cols[k]); maps.unshift({sig,cols:keep}); memSet('maps',maps.slice(0,30)); }
+      f.items=[]; f.checks=[]; f.multiSheet=false;
+      tableRecord(f, sh.aoa, {hr:Math.max(hr,-1), start:hr+1, cols}, sh.name);
+      f.failed=!f.items.length; if(f.failed) f.checks=[['err','고른 열에서 품목을 찾지 못했어요']];
+      ST.hist.pop(); ST.step='files'; draw();
+    };
+  }
+};
+
+// ================= 물품: 종류 =================
+function optName(it){ const o=(it.option||'').trim(); return (o && o.length<=40 && !/단일\s*상품/.test(o))? `${it.name} (${o})` : it.name; }
+function buildItems(){
+  ST.items=[];
+  ST.files.filter(f=>!f.failed).forEach(f=>f.items.forEach(it=>{
+    const qty=it.qty||1; let price=it.price!=null? it.price : (it.amt||0)/qty; const ok=Number.isInteger(Math.round(price*1e6)/1e6);
+    price=ok? Math.round(price) : Math.round(price);
+    ST.items.push({name:optName(it), spec:it.spec||'', unit:it.unit||'', qty, price, grade:it.grade??f.grade??null, file:f.id, fix:!ok, amount:it.amt, warn: ok?'':`금액 ${won(it.amt)}원이 수량 ${qty}로 나누어떨어지지 않아요`});
+  }));
+}
+function ungradedFiles(){ return ST.files.filter(f=>!f.failed && f.items.some(i=>i.grade==null) && f.grade==null); }
+function guessKind(){
+  const items=ST.files.flatMap(f=>f.items);
+  if(gradeList(items).length || ST.files.some(f=>f.isApp)) return 'supply';
+  if(items.length && items.filter(i=>/토너|잉크|드럼|카트리지|마우스|키보드|USB|SSD|모니터|프린터|복합기|충전기|케이블|허브|어댑터/i.test(i.name)).length*2>=items.length) return 'it';
+  return mem('kind','goods');
+}
+STEPS.kind={
+  html:()=>{
+    if(!ST.kind) ST.kind=guessKind();
+    const gs=gradeList(ST.files.flatMap(f=>f.items));
+    const head= gs.length? `${gradeRange(gs)} 학습준비물로 보여요` : '어떤 물건을 사는 품의인가요?';
+    const sub= gs.length? '학년별로 나눠서 품의할까요? 다른 종류면 아래에서 바꿔 주세요.' : '고르면 기안문 문구가 그에 맞춰져요.';
+    const ug=ST.kind==='supply'? ungradedFiles() : [];
+    return `<h1 class="q">${head}</h1><p class="qs">${sub}</p>
+      <div class="choices">${Object.entries(KINDS).map(([k,v])=>`<button class="choice" data-kind="${k}" aria-pressed="${ST.kind===k}"><span class="ic">${v.ic}</span><span><b>${k==='supply'&&gs.length?'네, 학년별로 나눌게요':v.name}</b><span class="d">${k==='supply'&&gs.length?'학습준비물 · 품목내역은 학년마다 한 줄':v.desc}</span></span>${chev}</button>`).join('')}</div>
+      ${ug.length?`<h2>몇 학년 견적서인가요?</h2>${ug.map(f=>`<div class="fld"><span class="lab">${esc(fileTitle(f))} · ${esc(f.file)}</span><div class="chips">${[1,2,3,4,5,6].map(g=>`<button class="chip" data-fg="${f.id}" data-g="${g}">${g}학년</button>`).join('')}</div></div>`).join('')}`:''}`;
+  },
+  cta:()=>`<button class="btn primary go" data-primary ${ST.kind==='supply'&&ungradedFiles().length?'disabled':''}>다음</button>`,
+  bind:el=>{
+    const next=()=>{ memSet('kind',ST.kind); ST.files.forEach(f=>{ if(f.grade!=null) f.items.forEach(i=>{ if(i.grade==null) i.grade=f.grade; }); }); buildItems(); prepMeta(); go(shipTotal()>0?'ship':'title'); };
+    $$('[data-kind]',el).forEach(b=>b.onclick=()=>{ ST.kind=b.dataset.kind; if(ST.kind==='supply'&&ungradedFiles().length){ draw(); return; } draw(); setTimeout(next,160); });
+    $$('[data-fg]',el).forEach(b=>b.onclick=()=>{ const f=ST.files.find(x=>x.id===b.dataset.fg); f.grade=+b.dataset.g; if(!ungradedFiles().length){ next(); } else draw(); });
+    $('#ctaIn [data-primary]').onclick=next;
+  }
+};
+// ================= 물품: 배송비 =================
+STEPS.ship={
+  html:()=>{ const s=shipTotal(); const last=mem('ship',null);
+    return `<h1 class="q">배송비 ${won(s)}원이 있어요</h1><p class="qs">품목내역에 넣을까요?${ST.kind==='supply'?' 넣으면 그 견적서 학년 금액에 더해져요.':' 넣으면 \'배송비\' 한 줄이 생겨요.'}</p>
+      <div class="choices">
+        <button class="choice" data-ship="1" aria-pressed="${last===true}"><span class="ic">+</span><span><b>넣을게요</b><span class="d">품의 금액 ${won(goodsSum()+s)}원</span></span>${chev}</button>
+        <button class="choice" data-ship="0" aria-pressed="${last===false}"><span class="ic">−</span><span><b>뺄게요</b><span class="d">품의 금액 ${won(goodsSum())}원</span></span>${chev}</button>
+      </div>`; },
+  bind:el=>{ $$('[data-ship]',el).forEach(b=>b.onclick=()=>{ ST.ship=b.dataset.ship==='1'; memSet('ship',ST.ship); $$('[data-ship]',el).forEach(x=>x.setAttribute('aria-pressed',x===b)); setTimeout(()=>go('title'),160); }); }
+};
+function shipRows(){
+  if(!ST.ship) return [];
+  return ST.files.filter(f=>!f.failed&&f.shipping).map(f=>{ const gs=f.items.map(i=>i.grade).filter(Boolean); const g=gs.length? gs.sort((a,b)=>gs.filter(x=>x===b).length-gs.filter(x=>x===a).length)[0] : f.grade??null;
+    return {name:'배송비', spec:'', unit:'', qty:1, price:f.shipping, grade:g, file:f.id, isShip:true}; });
+}
+// ================= 물품: 기안 내용 =================
+function prepMeta(){
+  const M=ST.meta; const f0=ST.files.find(f=>f.year);
+  M.year=M.year|| (f0&&f0.year) || String(new Date().getFullYear());
+  M.term=M.term|| (f0&&f0.term) || String(termNow());
+  if(M.rel==null) M.rel=mem('rel','');
+  if(M.purpose==null) M.purpose=mem('purpose','원활한 교육활동');
+  if(M.titleGoods==null) M.titleGoods=mem('titleGoods','교육활동 물품 구입');
+  if(M.titleIt==null) M.titleIt=mem('titleIt','정보화기기 관리 소모품 구입');
+  if(M.intro==null) M.intro=mem('intro','원활한 정보화기기 관리를 위하여 아래와 같이 정보화 소모품을 구입하고자 합니다.');
+  M.item=''; M.att=''; M._itemEdited=false; M._attEdited=false;
+}
+const allRows=()=>ST.items.concat(shipRows());
+function topLine(rows){ const real=rows.filter(r=>!r.isShip&&r.name); if(!real.length) return ''; const top=real.reduce((b,r)=>r.qty*r.price>b.qty*b.price?r:b, real[0]); return real.length>1? `${top.name} 외 ${real.length-1}종` : top.name; }
+function quoteCount(){ return ST.files.filter(f=>!f.failed&&!f.isApp&&f.kind!=='manual'&&f.kind!=='paste').length; }
+function autoAtt(){
+  const M=ST.meta, n=quoteCount(), app=ST.files.some(f=>!f.failed&&f.isApp);
+  if(ST.kind==='supply'){ if(app&&n) return `1. ${M.year}학년도 ${M.term}학기 학습준비물 신청내역 및 구매링크 1부.\n      2. 학년별 견적서 ${n}부.`; if(n) return `${M.year}학년도 ${M.term}학기 학습준비물 학년별 견적서 ${n}부.`; return `${M.year}학년도 ${M.term}학기 학습준비물 신청내역 및 구매링크 1부.`; }
+  return n? `견적서 ${n}부.` : '';
+}
+STEPS.title={
+  html:()=>{ const M=ST.meta, k=ST.kind; const rows=allRows();
+    const auto=k==='supply'? supplyLine() : topLine(rows);
+    return `<h1 class="q">기안 내용은 이렇게 할게요</h1><p class="qs">미리 채워 두었어요. 고칠 곳만 고치고 [기안문 만들기]를 누르세요.</p>
+      ${k==='supply'?`<div class="grid2"><div class="fld"><label for="m-year">학년도</label><input type="text" id="m-year" inputmode="numeric" value="${esc(M.year)}"></div><div class="fld"><label for="m-term">학기</label><select id="m-term"><option value="1" ${M.term=='1'?'selected':''}>1학기</option><option value="2" ${M.term=='2'?'selected':''}>2학기</option></select></div></div>
+        <div class="fld"><label for="m-rel">관련 문서번호 <span class="muted">(없으면 비워 두세요)</span></label><input type="text" id="m-rel" value="${esc(M.rel)}" placeholder="○○초등학교-1234(2026. 3. 2.)"></div>`
+      : k==='it'?`<div class="fld"><label for="m-titleIt">제목</label><input type="text" id="m-titleIt" value="${esc(M.titleIt)}"></div><div class="fld"><label for="m-intro">첫 문장</label><input type="text" id="m-intro" value="${esc(M.intro)}"></div>`
+      :`<div class="fld"><label for="m-titleGoods">제목</label><input type="text" id="m-titleGoods" value="${esc(M.titleGoods)}"></div><div class="fld"><label for="m-purpose">무엇을 위하여 사나요?</label><input type="text" id="m-purpose" value="${esc(M.purpose)}"><span class="help">"<span id="purPrev">${esc(M.purpose)}${eulReul(M.purpose)}</span> 위하여 아래와 같이 물품을 구입하고자 합니다."</span></div>`}
+      <div class="fld"><label for="m-item">${k==='supply'?'품목':'물품'} <span class="muted">(금액이 가장 큰 품목으로 정했어요)</span></label><input type="text" id="m-item" value="${esc(M.item||auto)}"></div>
+      <details><summary>붙임 문구 바꾸기</summary><div class="fld"><textarea id="m-att" rows="2">${esc(M.att||autoAtt())}</textarea><span class="help">비우면 '붙임' 줄 없이 '끝.'으로 마쳐요.</span></div></details>`; },
+  cta:()=>`<button class="btn primary go" data-primary>기안문 만들기</button>`,
+  bind:el=>{
+    $$('input,select,textarea',el).forEach(inp=>inp.addEventListener('input',()=>{ const k=inp.id.slice(2); ST.meta[k]=inp.value; if(k==='purpose'){ const p=$('#purPrev',el); if(p) p.textContent=inp.value+eulReul(inp.value||'원활한 교육활동'); } if(k==='year'||k==='term'){ if(!ST.meta._attEdited) $('#m-att',el).value=autoAtt(); } if(k==='att') ST.meta._attEdited=true; if(k==='item') ST.meta._itemEdited=true; }));
+    $('#ctaIn [data-primary]').onclick=()=>{ const M=ST.meta; ['item','att'].forEach(k=>{ const e=$('#m-'+k,el); if(e) M[k]=e.value; });
+      ['rel','purpose','titleGoods','titleIt','intro'].forEach(k=>{ if($('#m-'+k,el)) memSet(k,M[k]); }); go('done'); };
+  }
+};
+function supplyGroups(){
+  const M=new Map(); allRows().forEach(r=>{ const g=r.grade||0; if(!M.has(g)) M.set(g,[]); M.get(g).push(r); });
+  return [...M.entries()].sort((a,b)=>a[0]-b[0]).map(([g,rows])=>({grade:g,rows,total:rows.reduce((s,r)=>s+r.qty*r.price,0)}));
+}
+function supplyLine(){ const all=allRows().filter(r=>!r.isShip&&r.name); if(!all.length) return ''; const top=all.reduce((b,r)=>r.qty*r.price>b.qty*b.price?r:b, all[0]); return all.length>1? `${top.name} 외 ${all.length-1}종` : top.name; }
+function goodsOut(){
+  const M=ST.meta, rows=allRows().filter(r=>r.name||r.price); const total=rows.reduce((s,r)=>s+r.qty*r.price,0);
+  const att=(M.att!==''&&M.att!=null? M.att : (M._attEdited? '' : autoAtt())).trim();
+  const tail= att? `붙임  ${att}  끝.` : '끝.';
+  if(ST.kind==='supply'){
+    const G=supplyGroups(); const gs=G.map(g=>g.grade).filter(Boolean);
+    const item=(M._itemEdited&&M.item)? M.item : supplyLine();
+    const title=`${M.year}학년도 ${M.term}학기 학습준비물 물품 구입`;
+    const lines=[]; let n=1;
+    if((M.rel||'').trim()) lines.push(`${n++}. 관련: ${M.rel.trim()}`);
+    lines.push(`${n++}. 원활한 교육활동을 위하여 아래와 같이 구입하고자 합니다.`, `  가. 대상: ${gradeRange(gs)||'전 학년'}`, `  나. 품목: ${item}`, `  다. 금액: 금${won(total)}원(금${korAmount(total)}원)`, '', tail);
+    const xr=G.map(g=>{ const real=g.rows.filter(r=>!r.isShip); const t=real.length? real.reduce((b,r)=>r.qty*r.price>b.qty*b.price?r:b, real[0]) : g.rows[0];
+      return {name:`${g.grade?g.grade+'학년 ':''}학습준비물(${t.name}${real.length>1?` 외 ${real.length-1}종`:''})`, qty:1, price:g.total}; });
+    return {title, body:lines.join('\n'), rows:xr, total, fname:`품목내역_학습준비물_${today()}.xls`};
+  }
+  const item=(M._itemEdited&&M.item)? M.item : topLine(rows);
+  const xr=rows.map(r=>({name:r.name, spec:r.spec, unit:r.unit, qty:r.qty, price:r.price}));
+  if(ST.kind==='it') return {title:M.titleIt, body:[M.intro, `1. 물품: ${item}`, `2. 금액: 금${won(total)}원(금${korAmount(total)}원정)`, '', tail].join('\n'), rows:xr, total, fname:`품목내역_정보화기자재_${today()}.xls`};
+  const p=(M.purpose||'').trim()||'원활한 교육활동';
+  return {title:M.titleGoods, body:[`${p}${eulReul(p)} 위하여 아래와 같이 물품을 구입하고자 합니다.`, `1. 물품: ${item}`, `2. 금액: 금${won(total)}원(금${korAmount(total)}원정)`, '', tail].join('\n'), rows:xr, total, fname:`품목내역_물품구입_${today()}.xls`};
+}
+
+// ================= 완성 =================
+STEPS.done={
+  wide:true,
+  html:()=>`
+    <div class="done-head"><span class="tick"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><h1 class="q">다 됐어요</h1></div>
+    <p class="qs">기안문을 복사해 붙여 넣고, 품목내역 파일을 에듀파인 품목 등록에서 올리세요.</p>
+    <div id="out"></div>
+    ${ST.flow==='goods'?`<details id="editBox" style="margin-top:18px"><summary>품목 고치기 (${ST.items.length}개)</summary><div id="grid"></div></details>`:(ST.lect.type==='one'? `<div class="row" style="margin-top:14px"><button class="btn" data-jump="l-event">강의 정보 고치기</button><button class="btn" data-jump="l-rate">강사 구분·단가 고치기</button><button class="btn" data-jump="l-pay1">시간·원고료·교통비 고치기</button></div>` : `<div class="row" style="margin-top:14px"><button class="btn" data-jump="l-class">수업 정보 고치기</button><button class="btn" data-jump="l-pay">강사료 고치기</button></div>`)}`,
+  cta:()=>`<button class="btn go" id="toHome" style="flex:0 1 auto">처음으로</button><button class="btn primary go" id="dlBig" data-primary>품목내역 내려받기</button>`,
+  bind:el=>{
+    renderOut();
+    if(ST.flow==='goods') renderGrid();
+    else { saveLect(); $$('[data-jump]',el).forEach(b=>b.onclick=()=>go(b.dataset.jump)); }
+    $('#toHome').onclick=goHome;
+    $('#dlBig').onclick=()=>{ const o=curOut(); downloadItems(o.rows,o.fname); };
+  }
+};
+function curOut(){ return ST.flow==='lect'? lectOut() : goodsOut(); }
+function renderOut(){
+  const o=curOut(); const box=$('#out'); const bad=badRows(o.rows);
+  box.innerHTML=`<div class="outgrid">
+    <div class="panel"><div class="ph"><b>기안문</b><div class="row"><button class="btn small" data-copy="title">제목 복사</button><button class="btn small primary" data-copy="body">본문 복사</button></div></div>
+      <div class="docbox"><textarea class="title" rows="${o.title.length>34?2:1}" aria-label="제목">${esc(o.title)}</textarea><textarea class="body" aria-label="본문" rows="${Math.max(8,o.body.split('\n').length+2)}">${esc(o.body)}</textarea></div>
+      <p class="note" style="margin:0">여기서 바로 고쳐도 돼요. 품목을 고치면 다시 만들어져요.</p></div>
+    <div class="panel"><div class="ph"><b>품목내역</b><span class="muted" style="font-size:12.5px">${esc(o.fname)}</span></div>
+      <div class="tblwrap"><table class="out-items"><thead><tr><th>내용</th><th>규격</th><th>단위</th><th class="num">수량</th><th class="num">예상단가</th><th class="num">금액</th></tr></thead>
+      <tbody>${o.rows.map(r=>`<tr class="${badRows([r]).length?'bad':''}"><td>${esc(r.name)||'<span class="muted">(이름 없음)</span>'}</td><td>${esc(r.spec||'')}</td><td>${esc(r.unit||'')}</td><td class="num">${won(r.qty)}</td><td class="num">${won(r.price)}</td><td class="num">${won(r.qty*r.price)}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="5">합계 <span class="muted" style="font-weight:500">(부가세 포함)</span></td><td class="num">${won(o.total)}</td></tr></tfoot></table></div>
+      ${bad.length?`<p class="note" style="color:var(--err);margin:0">빨간 줄을 고쳐야 내려받을 수 있어요 (이름·수량, 원 단위 단가). 아래 [품목 고치기]에서 고치세요.</p>`:''}
+      <p class="note" style="margin:0">아래 [품목내역 내려받기]를 누르면 에듀파인에 올릴 .xls 파일이 저장돼요.</p></div></div>`;
+  $('[data-copy="title"]',box).onclick=()=>copyText($('textarea.title',box).value.replace(/\s*\n\s*/g,' '),'제목을');
+  $('[data-copy="body"]',box).onclick=()=>copyText($('textarea.body',box).value,'본문을');
+  const big=$('#dlBig'); if(big) big.disabled=!!bad.length;
+}
+function renderGrid(){
+  const box=$('#grid'); if(!box) return; const sup=ST.kind==='supply';
+  box.innerHTML=`<div class="tblwrap"><table><thead><tr>${sup?'<th>학년</th>':''}<th style="min-width:240px">품명</th><th>규격</th><th>단위</th><th class="num">수량</th><th class="num">단가</th><th class="num">금액</th><th></th></tr></thead>
+    <tbody>${ST.items.map((r,i)=>`<tr data-i="${i}" class="${r.warn?'warnrow':''}">
+      ${sup?`<td><select data-k="grade" aria-label="학년"><option value="">—</option>${[1,2,3,4,5,6].map(g=>`<option value="${g}" ${r.grade===g?'selected':''}>${g}학년</option>`).join('')}</select></td>`:''}
+      <td><input type="text" data-k="name" value="${esc(r.name)}" aria-label="품명">${r.warn?`<div class="note" style="color:var(--warn);margin:3px 0 0">${esc(r.warn)}</div>`:''}</td>
+      <td><input type="text" class="w-spec" data-k="spec" value="${esc(r.spec)}" aria-label="규격"></td>
+      <td><input type="text" class="w-unit" data-k="unit" value="${esc(r.unit)}" aria-label="단위"></td>
+      <td class="num"><input type="number" class="w-qty" data-k="qty" min="0" value="${r.qty}" aria-label="수량"></td>
+      <td class="num"><input type="number" class="w-price" data-k="price" min="0" value="${r.price}" aria-label="단가"></td>
+      <td class="num" data-amt>${won(r.qty*r.price)}</td>
+      <td><div class="row" style="flex-wrap:nowrap">${r.fix?'<button class="btn small" data-act="one">수량 1로 묶기</button>':''}${ST.kind==='it'?'<button class="btn small" data-act="simp">이름 간단히</button>':''}<button class="btn small" data-act="del">삭제</button></div></td></tr>`).join('')}</tbody></table></div>
+    <div class="row" style="margin-top:8px"><button class="btn small" id="addRow">+ 품목 추가</button></div>`;
+  box.oninput=e=>{ const tr=e.target.closest('tr[data-i]'); if(!tr) return; const r=ST.items[+tr.dataset.i], k=e.target.dataset.k;
+    r[k]= (k==='qty'||k==='price')? (Number(e.target.value)||0) : k==='grade'? (e.target.value?+e.target.value:null) : e.target.value;
+    $('[data-amt]',tr).textContent=won(r.qty*r.price); ST.meta._itemEdited=false; renderOut(); };
+  box.onclick=e=>{ const b=e.target.closest('button[data-act]'); if(!b) return; const i=+b.closest('tr').dataset.i, r=ST.items[i];
+    if(b.dataset.act==='del') ST.items.splice(i,1);
+    if(b.dataset.act==='simp') r.name=simplifyName(r.name);
+    if(b.dataset.act==='one'){ r.name=`${r.name} ×${r.qty}`; r.price=Math.round(r.amount); r.qty=1; r.fix=false; r.warn=''; }
+    renderGrid(); renderOut(); $('#editBox summary').textContent=`품목 고치기 (${ST.items.length}개)`; };
+  $('#addRow').onclick=()=>{ ST.items.push({name:'',spec:'',unit:'',qty:1,price:0,grade:null}); renderGrid(); renderOut(); };
+}
+
+// ================= 강사료 =================
+// 두 갈래: 정규 프로그램(여러 회, 시간×학급) / 1회 강의(연수·특강·작가와의 만남: 강사 구분 단가 + 원고료·교통비)
+const WEEK=['일','월','화','수','목','금','토'];
+function fmtTime(v){ const s=String(v||'').trim(); if(/^\d{3,4}$/.test(s)){ const t=s.padStart(4,'0'); return `${t.slice(0,2)}:${t.slice(2)}`; } return s; }
+function minsOf(t){ const m=String(t||'').match(/^(\d{1,2}):(\d{2})$/); return m? (+m[1])*60+(+m[2]) : null; }
+// 강사 구분 단가표: 해마다 각 시도교육청 '학교회계 예산편성 기본지침'에 실림. 아래는 2026 예시 단가(학교에서 확인 후 고쳐 씀)
+const RATE_YEAR='2026';
+const RATE_DEFAULT=[
+  {id:'s1', ic:'특Ⅰ', name:'특별강사 Ⅰ', desc:'전·현직 장관(급)·교육감·광역자치단체장·국회의원·대학총장(급), 해당 분야 권위자로 기관장이 인정하는 사람', base:400000, over:200000},
+  {id:'s2', ic:'특Ⅱ', name:'특별강사 Ⅱ', desc:'전·현직 차관(급), 공직유관단체장(국영기업체장, 정부출연 연구기관장 등), 인간문화재, 유명 예술인', base:300000, over:150000},
+  {id:'g1', ic:'일Ⅰ', name:'일반강사 Ⅰ', desc:'대학 전임강사 이상, 기업·공사 임원(이사급 이상), 판·검사·변호사·회계사·기술사 등 전문 자격, 전·현직 4급 이상 공무원·학교장, 교육경력 30년 이상 교원·교육전문직', base:200000, over:100000},
+  {id:'g2', ic:'일Ⅱ', name:'일반강사 Ⅱ', desc:'대학 시간강사, 5급 이하 공무원(장학관·장학사·교감·교사 포함), 특별강사·일반강사 Ⅰ이 아닌 사람 (작가·학부모 연수 강사 대부분)', base:130000, over:60000},
+  {id:'as', ic:'보', name:'보조강사', desc:'실기·실습 보조, 분반·분임활동 지도', base:40000, over:20000}
+];
+const MS_DEFAULT={ko:{name:'국문', unit:15000, word:'매', per:2.5, size:'A4 1매'}, en:{name:'외국어', unit:13000, word:'매', per:2.5, size:'A4 1매'}, ppt:{name:'파워포인트', unit:5000, word:'면', per:9, size:'1면'}};
+const rates=()=>mem('rates'+RATE_YEAR,RATE_DEFAULT);
+const msRates=()=>({...MS_DEFAULT, ...mem('ms'+RATE_YEAR,{})});
+const GUIDE_NOTE=`단가는 해마다 각 시도교육청 <b>'학교회계 예산편성 기본지침'</b>에 나와요. 들어 있는 금액은 ${RATE_YEAR}학년도 예시라서, 올해 우리 교육청 지침과 같은지 꼭 확인하고 다르면 [단가표 보기·고치기]에서 고쳐 주세요.`;
+function startLect(){
+  ST.flow='lect'; ST.hist=['home']; ST.step='l-type';
+  ST.lect={type:null, name:'', year:String(new Date().getFullYear()), grade:'', prog:'', budget:'', rel:'', start:'', end:'', unit:mem('lunit',40000), hours:'', classes:1, extra:0, manual:false, mtext:'', mamt:'',
+    event:'', date:'', t1:'', t2:'', target:'', rateId:null, base:'', over:'', mins1:'', unitMin:60, people:'', msOn:false, msType:'ko', msPages:'', trOn:false, trAmt:'',
+    att:mem('latt','강사카드 및 통장사본 1부.'), checks:[], rateEdit:false};
+  draw();
+}
+function fillLect(src){
+  const L=ST.lect; L.checks=[];
+  ['name','grade','prog','budget','year','event','target','rateId','base','over','mins1','unitMin','people','msOn','msType','msPages','trOn','trAmt'].forEach(k=>{ if(src[k]!=null&&src[k]!=='') L[k]=src[k]; });
+  if(src.rel) L.rel=src.rel; if(src.basis) L.rel=src.basis;
+  if(src.start) L.start=fmtDate(String(src.start).slice(0,10)); if(src.end) L.end=fmtDate(String(src.end).slice(0,10));
+  L.manual=false;
+  if(src.direct){ Object.assign(L,{unit:src.direct.unit||L.unit, hours:src.direct.hours||'', classes:src.direct.classes||1, extra:src.direct.extra||0}); if(!src.direct.unit) L.checks.push(['warn','대장에 시간당 강사료가 비어 있어요']); }
+  else if(src.calc){ const c=parseCalc(src.calc); if(c.std){ Object.assign(L,{unit:c.unit,hours:c.hours,classes:c.classes}); if(c.total!=null && c.unit*c.hours*c.classes!==c.total) L.checks.push(['err',`대장의 산출내역 계산이 맞지 않아요: ${won(c.unit)}×${c.hours}×${c.classes} ≠ ${won(c.total)}`]); }
+    else { L.manual=true; L.mtext=src.calc; L.mamt=c.total||''; } }
+  else if(src.type==='reg' && src.unit!=null){ Object.assign(L,{unit:src.unit, hours:src.hours??'', classes:src.classes??1, extra:src.extra??0}); if(src.manual){ L.manual=true; L.mtext=src.mtext||''; L.mamt=src.mamt||''; } }
+  if(src.sessions && !L.hours) L.hours=src.sessions;
+  if(L.rateId){ const r=rates().find(x=>x.id===L.rateId); if(r){ L.base=r.base; L.over=r.over; } }
+}
+STEPS['l-type']={
+  html:()=>`<h1 class="q">어떤 강사료인가요?</h1><p class="qs">고르면 거기에 맞는 것만 차례로 물어볼게요.</p>
+    <div class="choices">
+      <button class="choice" data-type="reg" aria-pressed="${ST.lect.type==='reg'}"><span class="ic">반</span><span><b>정규 프로그램 (여러 회)</b><span class="d">방과후·교육과정 연계 수업처럼 기간 동안 여러 번 · 시간당 단가 × 시간 × 학급</span></span>${chev}</button>
+      <button class="choice" data-type="one" aria-pressed="${ST.lect.type==='one'}"><span class="ic">1</span><span><b>1회 강의 · 연수 · 특강</b><span class="d">학부모 연수, 작가와의 만남처럼 한 번 · 강사 구분별 단가, 원고료·교통비</span></span>${chev}</button>
+    </div>`,
+  bind:el=>{ $$('[data-type]',el).forEach(b=>b.onclick=()=>{ ST.lect.type=b.dataset.type; $$('[data-type]',el).forEach(x=>x.setAttribute('aria-pressed',x===b)); setTimeout(()=>go('l-who'),160); }); }
+};
+STEPS['l-who']={
+  html:()=>{ const L=ST.lect, saved=mem('lects',[]).filter(s=>(s.type||'reg')===L.type);
+    const list=(L.type==='reg'&&ST.ledger.length)? `<h2>대장에서 고르기 <span class="muted" style="font-weight:500">(${ST.ledger.length}명)</span></h2><div class="choices">${ST.ledger.map((r,i)=>`<button class="choice" data-led="${i}"><span class="ic">${esc(r.grade||'·')}</span><span><b>${esc(r.name)} · ${esc(r.prog)}</b><span class="d">${esc([r.year&&r.year+'학년도',r.budget,r.sessions&&r.sessions+'회',r.classes&&r.classes+'학급'].filter(Boolean).join(' · '))}</span></span>${r.done?'<span class="pill ok">품의함</span>':chev}</button>`).join('')}</div>` : '';
+    const recent=saved.length? `<h2>지난번에 품의한 강사</h2><div class="chips">${saved.slice(0,12).map(s=>`<button class="chip" data-rec="${mem('lects',[]).indexOf(s)}">${esc(s.name)} · ${esc(L.type==='one'?s.event:s.prog)}</button>`).join('')}</div>` : '';
+    return `<h1 class="q">어떤 강사님인가요?</h1><p class="qs">이름을 적어 주세요.${saved.length?' 전에 품의한 강사는 아래에서 누르면 나머지가 채워져요.':''}</p>
+      <div class="fld"><input type="text" class="big" id="l-name" value="${esc(L.name)}" placeholder="강사 이름" autocomplete="off" autofocus></div>
+      ${recent}${list}
+      ${L.type==='reg'?`<details style="margin-top:20px" ${ST.ledger.length?'open':''}><summary>강사 대장 엑셀이 있으면 불러오기</summary>
+        <label class="minidrop" id="ledDrop"><input type="file" hidden accept=".xlsx,.xls,.xlsm,.csv">강사 대장이나 구글 시트 파일을 놓아 주세요</label>
+        <p class="note">강사 관리 도우미에서 저장한 대장, '강사명(또는 성명)' 머리글이 있는 시트면 돼요.</p></details>`:''}`; },
+  cta:()=>`<button class="btn primary go" data-primary ${ST.lect.name.trim()?'':'disabled'}>다음</button>`,
+  bind:el=>{
+    const L=ST.lect, inp=$('#l-name',el), p=$('#ctaIn [data-primary]'); const nextStep=()=>L.type==='one'?'l-event':'l-class';
+    inp.oninput=()=>{ L.name=inp.value; p.disabled=!inp.value.trim(); };
+    $$('[data-rec]',el).forEach(b=>b.onclick=()=>{ fillLect(mem('lects',[])[+b.dataset.rec]); go(nextStep()); });
+    $$('[data-led]',el).forEach(b=>b.onclick=()=>{ fillLect(ST.ledger[+b.dataset.led]); go(nextStep()); });
+    const ld=$('#ledDrop',el); if(ld) bindDrop(ld, async files=>{ if(!libsOk(['XLSX'])) return; const f=files[0];
+      try{ let wb; if(/\.csv$/i.test(f.name)) wb=XLSX.read(new TextDecoder('utf-8').decode(await readBuf(f)),{type:'string'}); else wb=await readWorkbook(await readBuf(f));
+        let rows=[]; for(const sn of wb.SheetNames){ if(/강의별\s*기록|서류|안내/.test(sn)) continue; rows=parseLecturerSheet(XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,defval:null})); if(rows.length) break; }
+        const yy=String(new Date().getFullYear()); const cur=rows.filter(r=>!r.year||r.year===yy); ST.ledger=(cur.length?cur:rows).sort((a,b)=>(a.done-b.done)||String(a.grade).localeCompare(String(b.grade)));
+        if(!rows.length) toast("'강사명'이나 '성명' 머리글이 있는 시트를 찾지 못했어요"); draw();
+      }catch(e){ console.error(e); toast('대장 파일을 읽지 못했어요'); } });
+    p.onclick=()=>{ const nm=L.name.trim(); const s=mem('lects',[]).find(x=>x.name===nm&&(x.type||'reg')===L.type); if(s && !(L.prog||L.event)) fillLect(s); go(nextStep()); };
+  }
+};
+// --- 정규 프로그램 ---
+STEPS['l-class']={
+  html:()=>{ const L=ST.lect;
+    return `<h1 class="q">${esc(L.name)} 강사님의 수업을 알려 주세요</h1><p class="qs">기안 제목과 수업명에 들어가요.</p>
+      <div class="fld"><label for="l-prog">프로그램(수업)명</label><input type="text" id="l-prog" value="${esc(L.prog)}" placeholder="예) 우쿨렐레" autofocus></div>
+      <div class="fld"><span class="lab">학년</span><div class="chips">${['','1','2','3','4','5','6'].map(g=>`<button class="chip" data-gr="${g}" aria-pressed="${String(L.grade)===g}">${g?g+'학년':'정하지 않음'}</button>`).join('')}</div></div>
+      <div class="grid2"><div class="fld"><label for="l-year">학년도</label><input type="text" id="l-year" inputmode="numeric" value="${esc(L.year)}"></div>
+      <div class="fld"><label for="l-budget">사업명·예산 구분 <span class="muted">(선택)</span></label><input type="text" id="l-budget" value="${esc(L.budget)}" placeholder="예) 지역교육협력형"></div></div>
+      <div class="fld"><label for="l-rel">관련 <span class="muted">(선택 · 비우면 '관련' 줄이 빠져요)</span></label><input type="text" id="l-rel" value="${esc(L.rel)}" placeholder="운영계획 결재 문서번호 등"></div>
+      <p class="note">제목 미리보기: <b id="lPrev">${esc(lectCls())} 강사비 지급</b></p>`; },
+  cta:()=>`<button class="btn primary go" data-primary ${ST.lect.prog.trim()?'':'disabled'}>다음</button>`,
+  bind:el=>{ const L=ST.lect, p=$('#ctaIn [data-primary]');
+    const upd=()=>{ $('#lPrev',el).textContent=lectCls()+' 강사비 지급'; p.disabled=!L.prog.trim(); };
+    ['prog','year','budget','rel'].forEach(k=>$('#l-'+k,el).oninput=e=>{ L[k]=e.target.value; upd(); });
+    $$('[data-gr]',el).forEach(b=>b.onclick=()=>{ L.grade=b.dataset.gr; $$('[data-gr]',el).forEach(x=>x.setAttribute('aria-pressed',x===b)); });
+    p.onclick=()=>go('l-pay');
+  }
+};
+function lectCls(){ const L=ST.lect; return `${L.year}학년도 ${L.budget||''} ${L.prog||''} 프로그램`.replace(/\s+/g,' ').trim(); }
+function regAmount(){ const L=ST.lect; if(L.manual) return Number(L.mamt)||0; return (Number(L.unit)||0)*((Number(L.hours)||0)*(Number(L.classes)||0)+(Number(L.extra)||0)); }
+function regCalc(){ const L=ST.lect, a=regAmount(); if(L.manual) return (L.mtext||'').trim(); const u=Number(L.unit)||0,h=Number(L.hours)||0,c=Number(L.classes)||0,x=Number(L.extra)||0;
+  return x? `${won(u)}원*(${h}시간*${c}학급+${x}시간) = ${won(a)}` : `${won(u)}원*${h}시간*${c}학급 = ${won(a)}`; }
+STEPS['l-pay']={
+  html:()=>{ const L=ST.lect;
+    return `<h1 class="q">강사료는 어떻게 계산하나요?</h1><p class="qs">지난번 값이 채워져 있어요. 날짜는 20260901처럼 숫자만 이어 쳐도 돼요.</p>
+      <div class="grid2"><div class="fld"><label for="l-start">수업 시작일</label><input type="text" id="l-start" value="${esc(L.start)}" placeholder="2026-09-01" inputmode="numeric" autofocus></div>
+      <div class="fld"><label for="l-end">수업 종료일</label><input type="text" id="l-end" value="${esc(L.end)}" placeholder="2026-12-15" inputmode="numeric"></div></div>
+      <div id="calcBox" ${L.manual?'hidden':''}><div class="grid3">
+        <div class="fld"><label for="l-unit">시간당 강사료(원)</label><input type="number" id="l-unit" min="0" step="1000" value="${esc(L.unit)}"></div>
+        <div class="fld"><label for="l-hours">시간(회)</label><input type="number" id="l-hours" min="0" value="${esc(L.hours)}"></div>
+        <div class="fld"><label for="l-classes">학급 수</label><input type="number" id="l-classes" min="0" value="${esc(L.classes)}"></div></div>
+        <details ${Number(L.extra)?'open':''}><summary>추가 시간이 있어요 (발표회 등)</summary><div class="fld" style="max-width:200px"><input type="number" id="l-extra" min="0" value="${esc(L.extra)}"></div></details></div>
+      <div id="manBox" ${L.manual?'':'hidden'}><div class="fld"><label for="l-mtext">산출내역 문구</label><input type="text" id="l-mtext" value="${esc(L.mtext)}" placeholder="11,000원*45명 = 495,000"></div><div class="fld"><label for="l-mamt">금액(원)</label><input type="number" id="l-mamt" min="0" value="${esc(L.mamt)}"></div></div>
+      <button class="btn link" id="togMan">${L.manual?'시간 × 학급으로 계산하기':'인원당 재료비처럼 다르게 계산해요 (직접 적기)'}</button>
+      <div class="calcline" style="margin-top:12px"><span class="muted">계산</span> <span id="calcPrev">${esc(regCalc())}</span></div>`; },
+  cta:()=>`<button class="btn primary go" data-primary ${regAmount()>0?'':'disabled'}>다음</button>`,
+  bind:el=>{ const L=ST.lect, p=$('#ctaIn [data-primary]');
+    const upd=()=>{ $('#calcPrev',el).textContent=regCalc(); p.disabled=!(regAmount()>0); };
+    ['unit','hours','classes','extra','mtext','mamt'].forEach(k=>{ const i=$('#l-'+k,el); if(i) i.oninput=()=>{ L[k]=i.value; upd(); }; });
+    ['start','end'].forEach(k=>{ const i=$('#l-'+k,el); i.oninput=()=>{ if(/^\d{8}$/.test(i.value)) i.value=fmtDate(i.value); L[k]=i.value; }; i.onblur=()=>{ i.value=fmtDate(i.value); L[k]=i.value; }; });
+    $('#togMan',el).onclick=()=>{ L.manual=!L.manual; draw(); };
+    p.onclick=()=>{ memSet('lunit',Number(L.unit)||40000); go('l-ok'); };
+  }
+};
+// --- 1회 강의 ---
+function oneWhen(){ const L=ST.lect, d=anyDate(L.date); if(!d) return ''; let s=`${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}.(${WEEK[d.getDay()]})`; if(L.t1) s+=` ${L.t1}${L.t2?'~'+L.t2:''}`; return s; }
+const TARGETS=['학부모','교직원','전교생','1학년','2학년','3학년','4학년','5학년','6학년'];
+STEPS['l-event']={
+  html:()=>{ const L=ST.lect;
+    return `<h1 class="q">어떤 강의인가요?</h1><p class="qs">${esc(L.name)} 강사님 · 날짜는 20261120, 시간은 1400처럼 숫자만 쳐도 돼요.</p>
+      <div class="fld"><label for="l-event">행사(연수)명</label><input type="text" id="l-event" value="${esc(L.event)}" placeholder="예) 학부모 연수, 작가와의 만남" autofocus></div>
+      <div class="grid3"><div class="fld"><label for="l-date">날짜</label><input type="text" id="l-date" inputmode="numeric" value="${esc(L.date)}" placeholder="2026-11-20"></div>
+      <div class="fld"><label for="l-t1">시작 시각</label><input type="text" id="l-t1" inputmode="numeric" value="${esc(L.t1)}" placeholder="14:00"></div>
+      <div class="fld"><label for="l-t2">끝 시각</label><input type="text" id="l-t2" inputmode="numeric" value="${esc(L.t2)}" placeholder="16:00"></div></div>
+      <div class="fld"><span class="lab">대상</span><div class="chips" style="margin-bottom:6px">${TARGETS.map(t=>`<button class="chip" data-tg="${t}" aria-pressed="${L.target===t}">${t}</button>`).join('')}</div><input type="text" id="l-target" value="${esc(L.target)}" placeholder="직접 적기 (예: 3~4학년 학생 120명)"></div>
+      <div class="fld"><label for="l-rel">관련 <span class="muted">(선택 · 비우면 '관련' 줄이 빠져요)</span></label><input type="text" id="l-rel" value="${esc(L.rel)}" placeholder="운영계획 결재 문서번호 등"></div>
+      <p class="note">일시 미리보기: <b id="whenPrev">${esc(oneWhen()||'—')}</b></p>`; },
+  cta:()=>`<button class="btn primary go" data-primary ${ST.lect.event.trim()?'':'disabled'}>다음</button>`,
+  bind:el=>{ const L=ST.lect, p=$('#ctaIn [data-primary]');
+    const upd=()=>{ $('#whenPrev',el).textContent=oneWhen()||'—'; p.disabled=!L.event.trim(); };
+    ['event','rel'].forEach(k=>$('#l-'+k,el).oninput=e=>{ L[k]=e.target.value; upd(); });
+    const di=$('#l-date',el); di.oninput=()=>{ if(/^\d{8}$/.test(di.value)) di.value=fmtDate(di.value); L.date=di.value; upd(); }; di.onblur=()=>{ di.value=fmtDate(di.value); L.date=di.value; upd(); };
+    ['t1','t2'].forEach(k=>{ const i=$('#l-'+k,el); i.oninput=()=>{ if(/^\d{4}$/.test(i.value)) i.value=fmtTime(i.value); L[k]=i.value; upd(); }; i.onblur=()=>{ i.value=fmtTime(i.value); L[k]=i.value; upd(); }; });
+    const ti=$('#l-target',el); ti.oninput=()=>{ L.target=ti.value; $$('[data-tg]',el).forEach(x=>x.setAttribute('aria-pressed',x.dataset.tg===L.target)); };
+    $$('[data-tg]',el).forEach(b=>b.onclick=()=>{ L.target=b.dataset.tg; ti.value=L.target; $$('[data-tg]',el).forEach(x=>x.setAttribute('aria-pressed',x===b)); });
+    p.onclick=()=>{ const a=minsOf(L.t1), b=minsOf(L.t2); if(a!=null&&b!=null&&b>a) L.mins1=b-a; if(L.target) L.unitMin=STUDENT_T.test(L.target)?40:60; go('l-rate'); };
+  }
+};
+function rateLine(r){ const b=Number(r.base)||0, o=Number(r.over)||0; if(!b) return '<span style="color:var(--warn)">단가를 아직 적지 않았어요</span>'; return `기본(1시간) ${won(b)}원${o?` · 초과 1시간마다 ${won(o)}원`:''}`; }
+const STUDENT_T=/학년|전교생|학생/;
+STEPS['l-rate']={
+  html:()=>{ const L=ST.lect, R=rates(); const sel=R.find(r=>r.id===L.rateId);
+    if(L.rateEdit){ const M=msRates();
+      return `<h1 class="q">강사 단가표</h1><p class="qs">${GUIDE_NOTE} 고친 단가는 이 브라우저에만 저장돼요.</p>
+      <div class="cards">${R.map((r,i)=>`<div class="panel" data-ri="${i}"><div class="grid2"><div class="fld" style="margin:0"><label>구분 이름</label><input type="text" data-rk="name" value="${esc(r.name)}"></div><div class="fld" style="margin:0"><label>누가 해당하나요</label><input type="text" data-rk="desc" value="${esc(r.desc)}"></div>
+        <div class="fld" style="margin:0"><label>기본 1시간(원)</label><input type="number" data-rk="base" min="0" step="10000" value="${esc(r.base)}"></div><div class="fld" style="margin:0"><label>초과 1시간마다(원)</label><input type="number" data-rk="over" min="0" step="10000" value="${esc(r.over)}"></div></div>
+        <div class="row" style="justify-content:flex-end"><button class="btn small" data-rdel="${i}">이 구분 삭제</button></div></div>`).join('')}</div>
+      <div class="row" style="margin-top:8px"><button class="btn small" id="rAdd">+ 구분 추가</button><button class="btn small" id="rReset">${RATE_YEAR} 예시 단가로 되돌리기</button></div>
+      <h2>원고료 단가</h2><div class="panel"><div class="grid3">${Object.entries(M).map(([k,m])=>`<div class="fld" style="margin:0"><label>${m.name} (${m.size}당, 원)</label><input type="number" data-mk="${k}" min="0" step="1000" value="${esc(m.unit)}"></div>`).join('')}</div>
+        <p class="note" style="margin:0">강의 원고료는 시간당 국문·외국어 2.5매, 파워포인트 9면까지예요.</p></div>`; }
+    return `<h1 class="q">${esc(L.name)} 강사님은 어느 구분인가요?</h1>
+      <p class="qs">강사료는 강사가 누구인지(직위·경력·자격)에 따라 기준 단가가 달라요. 해당하는 구분을 고르면 단가가 채워져요.</p>
+      <div class="panel" style="margin-bottom:14px;background:var(--accent-soft);border-color:transparent"><p class="note" style="margin:0;color:var(--ink)">${GUIDE_NOTE}</p></div>
+      <div class="choices">${R.map(r=>`<button class="choice" data-rate="${r.id}" aria-pressed="${L.rateId===r.id}"><span class="ic" style="font-size:${(r.ic||'').length>1?13:17}px">${esc(r.ic||r.name.trim().slice(0,1))}</span><span><b>${esc(r.name)}</b><span class="d">${esc(r.desc)}</span><span class="d" style="margin-top:3px;color:var(--ink);font-weight:600">${rateLine(r)}</span></span>${chev}</button>`).join('')}
+        <button class="choice" data-rate="custom" aria-pressed="${L.rateId==='custom'}"><span class="ic">✎</span><span><b>구분 없이 직접 적기</b><span class="d">기준표에 없는 강사, 따로 정해진 금액이 있을 때</span></span>${chev}</button></div>
+      ${(L.rateId==='custom'||(sel&&!Number(sel.base)))?`<div class="panel" style="margin-top:14px"><b>${L.rateId==='custom'?'이번 강사 단가':esc(sel.name)+' 단가를 적어 주세요'}</b>
+        <div class="grid2"><div class="fld" style="margin:0"><label for="r-base">기본 1시간(원)</label><input type="number" id="r-base" min="0" step="10000" value="${esc(L.base)}"></div><div class="fld" style="margin:0"><label for="r-over">초과 1시간마다(원) <span class="muted">(없으면 비움)</span></label><input type="number" id="r-over" min="0" step="10000" value="${esc(L.over)}"></div></div></div>`:''}
+      <details style="margin-top:12px"><summary>지급할 때 알아 둘 것</summary><ul class="note" style="margin:0;padding-left:18px;display:grid;gap:4px">
+        <li>공무원이 자기 업무와 관련해 <b>자기가 속한 기관(병설·통합학교 포함)</b>에서 강의하면 강사료를 주지 않아요.</li>
+        <li>같은 강사가 하루에 두 번 강의하면, 내용이 다르거나 대상이 다르고 사이가 1시간 이상일 때만 기본 1시간 단가를 다시 쳐요.</li>
+        <li>청탁금지법 적용 대상 강사는 시행령 상한액을 넘겨 줄 수 없어요.</li>
+        <li>실시간 비대면 강의도 대면과 같은 기준이에요. 세미나 기조연설·주제 발표도 같은 기준이에요.</li></ul></details>
+      <div class="row" style="justify-content:center;margin-top:10px"><button class="btn link" id="rEdit">단가표 보기·고치기</button></div>`; },
+  cta:()=> ST.lect.rateEdit? `<button class="btn primary go" data-primary>다 됐어요</button>` : `<button class="btn primary go" data-primary ${Number(ST.lect.base)>0?'':'disabled'}>다음</button>`,
+  bind:el=>{ const L=ST.lect, p=$('#ctaIn [data-primary]');
+    if(L.rateEdit){
+      const R=rates();
+      $$('[data-ri] input',el).forEach(i=>i.oninput=()=>{ const r=R[+i.closest('[data-ri]').dataset.ri]; r[i.dataset.rk]=i.value; memSet('rates'+RATE_YEAR,R); });
+      $$('[data-rdel]',el).forEach(b=>b.onclick=()=>{ R.splice(+b.dataset.rdel,1); memSet('rates'+RATE_YEAR,R); draw(); });
+      $('#rAdd',el).onclick=()=>{ R.push({id:'r'+Date.now().toString(36), name:'새 구분', desc:'', base:'', over:''}); memSet('rates'+RATE_YEAR,R); draw(); };
+      $('#rReset',el).onclick=()=>{ memSet('rates'+RATE_YEAR,RATE_DEFAULT); memSet('ms'+RATE_YEAR,{}); draw(); };
+      $$('[data-mk]',el).forEach(i=>i.oninput=()=>{ const s=mem('ms'+RATE_YEAR,{}); s[i.dataset.mk]={...MS_DEFAULT[i.dataset.mk], unit:Number(i.value)||0}; memSet('ms'+RATE_YEAR,s); });
+      p.onclick=()=>{ L.rateEdit=false; const r=rates().find(x=>x.id===L.rateId); if(r){ L.base=r.base; L.over=r.over; } draw(); };
+      return;
+    }
+    const sync=()=>{ p.disabled=!(Number(L.base)>0); };
+    $$('[data-rate]',el).forEach(b=>b.onclick=()=>{ const id=b.dataset.rate; L.rateId=id;
+      if(id==='custom'){ draw(); return; }
+      const r=rates().find(x=>x.id===id); L.base=r.base; L.over=r.over;
+      if(Number(r.base)>0){ draw(); setTimeout(()=>go('l-pay1'),160); } else draw(); });
+    ['base','over'].forEach(k=>{ const i=$('#r-'+k,el); if(i) i.oninput=()=>{ L[k]=i.value; if(L.rateId!=='custom'){ const R=rates(); const r=R.find(x=>x.id===L.rateId); if(r){ r[k]=i.value; memSet('rates'+RATE_YEAR,R); } } sync(); }; });
+    $('#rEdit',el).onclick=()=>{ L.rateEdit=true; draw(); };
+    p.onclick=()=>go('l-pay1');
+  }
+};
+// 강의 시간 → 초과 시간: 기본 1시간(1시간 미만도 기본료), 초과분은 30분 미만 버림 · 30분 이상 1시간
+function overCount(mins, unit){ const ex=Math.max(0,(Number(mins)||0)-unit); return Math.floor(ex/unit) + ((ex%unit)*2>=unit?1:0); }
+function peopleRate(n){ n=Number(n)||0; return n>=200?2 : n>=160?1.6 : n>=120?1.4 : n>=80?1.2 : 1; }
+function minsText(m){ m=Number(m)||0; const h=Math.floor(m/60), r=m%60; return [h?h+'시간':'', r?r+'분':''].filter(Boolean).join(' ')||'0분'; }
+function oneParts(){
+  const L=ST.lect, b=Number(L.base)||0, o=Number(L.over)||0, U=Number(L.unitMin)||60, m=Number(L.mins1)||0;
+  const n=overCount(m,U);
+  let fee, text;
+  if(o>0){ fee=b+o*n; text=`기본 ${won(b)}원${n?` + 초과 ${won(o)}원×${n}시간`:''}`; }
+  else { fee=b*(n+1); text=`${won(b)}원×${n+1}시간`; }
+  const pr=peopleRate(L.people);
+  if(pr>1){ const f2=Math.floor(fee*pr); text+=` = ${won(fee)}원 × ${Math.round(pr*100)}%(수강 ${Number(L.people)}명) = ${won(f2)}원`; fee=f2; }
+  else text+=` = ${won(fee)}원`;
+  const parts=[{k:'강사료', amt:fee, text}];
+  if(L.msOn){ const M=msRates()[L.msType||'ko']; const u=Number(M.unit)||0, k=Number(L.msPages)||0; parts.push({k:'원고료', amt:u*k, text:`${M.name} ${won(u)}원×${k}${M.word} = ${won(u*k)}원`}); }
+  if(L.trOn){ const a=Number(L.trAmt)||0; parts.push({k:'교통비', amt:a, text:`${won(a)}원`}); }
+  return parts;
+}
+const oneTotal=()=>oneParts().reduce((s,p)=>s+p.amt,0);
+function oneWarn(){ const L=ST.lect, w=[]; const U=Number(L.unitMin)||60, m=Number(L.mins1)||0;
+  if(L.msOn){ const M=msRates()[L.msType||'ko']; const lim=Math.floor(M.per*Math.max(1,m/60)*10)/10; if((Number(L.msPages)||0)>lim) w.push(['warn',`원고료는 강의 시간당 ${M.per}${M.word}까지예요. 이번 강의(${minsText(m)})는 ${lim}${M.word}까지 줄 수 있어요`]); }
+  if(m>0){ const n=overCount(m,U), ex=Math.max(0,m-U); const et=U===60?minsText(ex):ex+'분'; w.push(['info',`강의 ${m}분: 기본 1시간(${U}분)${ex?` + 초과 ${et} → 초과 ${n}시간으로 계산 (${U}분을 1시간으로, 남는 ${U/2}분 미만은 빼고 ${U/2}분 이상은 1시간)`:''}`]); }
+  return w; }
+STEPS['l-pay1']={
+  html:()=>{ const L=ST.lect, M=msRates(), st=STUDENT_T.test(L.target||'');
+    return `<h1 class="q">강의 시간과 원고료를 알려 주세요</h1><p class="qs">시작·끝 시각으로 미리 채웠어요. 기본 1시간을 넘는 시간은 30분 이상이면 1시간으로, 30분 미만이면 빼고 계산해요.</p>
+      <div class="grid2"><div class="fld"><label for="l-mins1">강의 시간(분)</label><input type="number" id="l-mins1" min="0" step="10" value="${esc(L.mins1)}" class="big" autofocus></div>
+      <div class="fld"><label for="l-unitMin">1시간 기준</label><select id="l-unitMin"><option value="60" ${String(L.unitMin)!=='40'?'selected':''}>60분 (학부모·교직원 등 성인 대상)</option><option value="40" ${String(L.unitMin)==='40'?'selected':''}>40분 (학생 대상 · 초등 수업 1시간)</option></select>${st?'<span class="help">학생 대상 교육은 학교급별 정규 수업시간을 1시간으로 봐요.</span>':''}</div></div>
+      <div class="fld" style="max-width:260px"><label for="l-people">수강 인원 <span class="muted">(선택 · 80명 이상이면 가산)</span></label><input type="number" id="l-people" min="0" value="${esc(L.people)}" placeholder="예) 120"><span class="help" id="pplHelp"></span></div>
+      <div class="choices">
+        <button class="choice" id="msTog" aria-pressed="${L.msOn}"><span class="ic">원</span><span><b>원고료가 있어요</b><span class="d">강사가 직접 쓴 강의 원고 · 기존 책자나 인쇄물을 그대로 쓰면 줄 수 없어요</span></span>${chev}</button>
+        <div class="panel" id="msBox" ${L.msOn?'':'hidden'}><div class="chips">${Object.entries(M).map(([k,m])=>`<button class="chip" data-ms="${k}" aria-pressed="${(L.msType||'ko')===k}">${m.name} ${won(m.unit)}원/${m.word}</button>`).join('')}</div>
+          <div class="fld" style="margin:0;max-width:200px"><label for="l-msPages">매수(면수)</label><input type="number" id="l-msPages" min="0" step="0.5" value="${esc(L.msPages)}"></div></div>
+        <button class="choice" id="trTog" aria-pressed="${L.trOn}"><span class="ic">교</span><span><b>교통비가 있어요</b><span class="d">공무원이 아닌 강사를 먼 곳에서 모실 때 · 실비 범위</span></span>${chev}</button>
+        <div class="panel" id="trBox" ${L.trOn?'':'hidden'}><div class="fld" style="margin:0;max-width:240px"><label for="l-trAmt">교통비(원)</label><input type="number" id="l-trAmt" min="0" step="1000" value="${esc(L.trAmt)}"></div></div>
+      </div>
+      <div class="calcline" style="margin-top:14px;display:grid;gap:4px" id="parts"></div>
+      <div id="pw" style="margin-top:10px"></div>`; },
+  cta:()=>`<button class="btn primary go" data-primary>다음</button>`,
+  bind:el=>{ const L=ST.lect, p=$('#ctaIn [data-primary]');
+    const upd=()=>{ const P=oneParts(), t=oneTotal(); $('#parts',el).innerHTML=P.map(x=>`<div><span class="muted">${x.k}</span> ${esc(x.text)}</div>`).join('')+(P.length>1?`<div><b>합계 ${won(t)}원</b></div>`:'');
+      const pr=peopleRate(L.people); $('#pplHelp',el).textContent= Number(L.people)? (pr>1?`강사료 ${Math.round(pr*100)}% 적용 (80~119명 120%, 120~159명 140%, 160~199명 160%, 200명 이상 200%)`:'79명 이하는 100%') : '';
+      $('#pw',el).innerHTML=checksHtml(oneWarn()); p.disabled=!(t>0) || !(Number(L.mins1)>0); };
+    ['mins1','people','msPages','trAmt'].forEach(k=>{ const i=$('#l-'+k,el); i.oninput=()=>{ L[k]=i.value; upd(); }; });
+    $('#l-unitMin',el).onchange=e=>{ L.unitMin=e.target.value; upd(); };
+    $$('[data-ms]',el).forEach(b=>b.onclick=()=>{ L.msType=b.dataset.ms; $$('[data-ms]',el).forEach(x=>x.setAttribute('aria-pressed',x===b)); upd(); });
+    $('#msTog',el).onclick=()=>{ L.msOn=!L.msOn; $('#msTog',el).setAttribute('aria-pressed',L.msOn); $('#msBox',el).hidden=!L.msOn; if(L.msOn) $('#l-msPages',el).focus(); upd(); };
+    $('#trTog',el).onclick=()=>{ L.trOn=!L.trOn; $('#trTog',el).setAttribute('aria-pressed',L.trOn); $('#trBox',el).hidden=!L.trOn; if(L.trOn) $('#l-trAmt',el).focus(); upd(); };
+    upd();
+    p.onclick=()=>go('l-ok');
+  }
+};
+// --- 공통: 확인 · 출력 ---
+const lectAmount=()=>ST.lect.type==='one'? oneTotal() : regAmount();
+function lectPeriod(){ const L=ST.lect; return L.start? periodStr(L.start,L.end, L.manual? '' : L.hours) : ''; }
+STEPS['l-ok']={
+  html:()=>{ const L=ST.lect, a=lectAmount(); const one=L.type==='one';
+    const calc= one? oneParts().map(p=>`<div>${p.k}: ${esc(p.text)}</div>`).join('') : esc(regCalc());
+    return `<h1 class="q">${one?'지급 금액':'강사료'} ${won(a)}원, 맞나요?</h1><p class="qs">${esc(L.name)} 강사님 · ${esc(one?L.event:L.prog)}</p>
+      <div class="panel" style="justify-items:start"><div class="bigsum">${won(a)}원</div><div class="kor">금${korAmount(a)}원정</div><div class="calcline" style="justify-self:stretch;display:grid;gap:4px">${calc}</div>
+      <div class="muted" style="font-size:14px">${one? `일시: ${esc(oneWhen()||'(적지 않음)')}` : `수업기간: ${esc(lectPeriod()||'(적지 않음)')}`}</div></div>
+      ${L.checks.length?`<div style="margin-top:12px">${checksHtml(L.checks)}</div>`:''}
+      <details style="margin-top:16px"><summary>붙임 문구 바꾸기</summary><div class="fld"><input type="text" id="l-att" value="${esc(L.att)}"></div></details>`; },
+  cta:()=>`<button class="btn go" id="fix" style="flex:0 1 auto">고칠래요</button><button class="btn primary go" data-primary>맞아요</button>`,
+  bind:el=>{ const L=ST.lect; $('#l-att',el).oninput=e=>{ L.att=e.target.value; };
+    $('#fix').onclick=back; $('#ctaIn [data-primary]').onclick=()=>{ memSet('latt',L.att); go('done'); }; }
+};
+function lectOut(){
+  const L=ST.lect, amount=lectAmount();
+  const tail=`붙임  ${(L.att||'').trim()||'강사카드 및 통장사본 1부.'}  끝.`;
+  const lines=[]; let n=1;
+  if((L.rel||'').trim()) lines.push(`${n++}. 관련: ${L.rel.trim()}`);
+  if(L.type==='one'){
+    const P=oneParts(); const ev=L.event.trim();
+    const items=[['행 사 명',ev],['일    시',oneWhen()],['대    상',(L.target||'').trim()],['강 사 명',L.name],['지급금액',`${won(amount)}원(금${korAmount(amount)}원정)`]].filter(x=>x[1]);
+    const ga='가나다라마바사아자차';
+    lines.push(`${n++}. ${ev} 강사비를 아래와 같이 지급하고자 합니다.`);
+    items.forEach((x,i)=>lines.push(`  ${ga[i]}. ${x[0]}: ${x[1]}`));
+    if(P.length>1){ lines.push(`  ${ga[items.length]}. 산출내역`); P.forEach((p,i)=>lines.push(`    ${i+1}) ${p.k}: ${p.text}`)); }
+    else lines.push(`  ${ga[items.length]}. 산출내역: ${P[0].text}`);
+    lines.push('', tail);
+    return {title:`${ev} 강사비 지급`, body:lines.join('\n'), rows:P.filter(p=>p.amt>0).map(p=>({name:`${ev} ${p.k}`,qty:1,price:p.amt})), total:amount, fname:`품목내역_강사료_${L.name}_${today()}.xls`};
+  }
+  const cls=lectCls();
+  const ga='가나다라마바사';
+  const items=[['수 업 명',`${L.grade?L.grade+'학년 ':''}${L.prog}`],['수업기간',lectPeriod()],['강 사 명',L.name],['강 사 료',`${won(amount)}원(금${korAmount(amount)}원정)`],['산출내역',regCalc()]].filter(x=>x[1]);
+  lines.push(`${n++}. ${cls} 강사비를 아래와 같이 지급하고자 합니다.`, ...items.map((x,i)=>`  ${ga[i]}. ${x[0]}: ${x[1]}`), '', tail);
+  return {title:`${cls} 강사비 지급`, body:lines.join('\n'), rows:[{name:`${cls} 강사료`,qty:1,price:amount}], total:amount, fname:`품목내역_강사료_${L.name}_${today()}.xls`};
+}
+function saveLect(){ const L=ST.lect; if(!L.name) return;
+  const rec= L.type==='one'
+    ? {type:'one', name:L.name, event:L.event, target:L.target, rel:L.rel, rateId:L.rateId, base:L.base, over:L.over, mins1:L.mins1, unitMin:L.unitMin, people:L.people, msOn:L.msOn, msType:L.msType, msPages:L.msPages, trOn:L.trOn, trAmt:L.trAmt}
+    : {type:'reg', name:L.name, prog:L.prog, grade:L.grade, budget:L.budget, year:L.year, rel:L.rel, unit:Number(L.unit)||0, hours:Number(L.hours)||'', classes:Number(L.classes)||1, extra:Number(L.extra)||0, manual:L.manual, mtext:L.mtext, mamt:L.mamt};
+  const key=r=>(r.type||'reg')+'|'+r.name+'|'+(r.type==='one'?r.event:r.prog);
+  const list=mem('lects',[]).filter(x=>key(x)!==key(rec)); list.unshift(rec); memSet('lects',list.slice(0,40)); }
+
+// ================= 학년별 신청서 양식 =================
 const FORM_COLS=[['번호',6],['품 목',28],['소모성',7],['교과',9],['영역',18],['사용학기',9],['규 격',28],['수량',7],['단위',7],['단 가',11],['금 액',13],['인터넷 구입처',42]];
 function formGradeSheet(wb, g, y, t, n){
   const ws=wb.addWorksheet(`${g}학년`,{views:[{state:'frozen',ySplit:3}],pageSetup:{paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:'3:3'}});
@@ -943,9 +1438,7 @@ function formGradeSheet(wb, g, y, t, n){
   const hr=ws.getRow(3); FORM_COLS.forEach((c,i)=>{ const cell=hr.getCell(i+1); cell.value=c[0]; cell.font={bold:true}; cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE7ECEB'}}; cell.alignment={horizontal:'center',vertical:'middle',wrapText:true}; cell.border=box; }); hr.height=24;
   const first=4, last=3+n;
   for(let r=first;r<=last;r++){
-    const row=ws.getRow(r);
-    row.getCell(1).value=r-3;
-    row.getCell(11).value={formula:`IF(OR(H${r}="",J${r}=""),"",H${r}*J${r})`};
+    const row=ws.getRow(r); row.getCell(1).value=r-3; row.getCell(11).value={formula:`IF(OR(H${r}="",J${r}=""),"",H${r}*J${r})`};
     for(let c=1;c<=12;c++){ const cell=row.getCell(c); cell.border=box; cell.alignment={vertical:'middle',wrapText:c===2||c===7, horizontal:[1,3,6,8,9].includes(c)?'center':undefined}; if([8,10,11].includes(c)) cell.numFmt='#,##0'; }
     row.getCell(11).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF4F6F5'}};
   }
@@ -956,10 +1449,10 @@ function formGradeSheet(wb, g, y, t, n){
   const nr=ws.getCell(`A${sr+2}`); nr.value='※ 금액과 소계는 자동 계산됩니다. 줄이 모자라면 소계 줄 위에서 행을 삽입하세요. 품목명·수량·단가는 꼭 적어 주세요.'; nr.font={size:10,color:{argb:'FF666666'}};
   return {first,last,sr};
 }
-async function t1MakeForm(grades){
-  if(!window.ExcelJS){ toast('양식 구성요소를 불러오지 못했습니다. 인터넷 연결을 확인하세요'); return; }
-  const y=$('#t1year').value.trim()||String(new Date().getFullYear()), t=$('#t1term').value;
-  const n=Math.min(200,Math.max(5,Number($('#t1lines').value)||30));
+async function makeForm(grades){
+  if(!window.ExcelJS){ toast('양식 구성요소를 불러오지 못했어요. 인터넷 연결을 확인해 주세요'); return; }
+  const y=$('#fy').value.trim()||String(new Date().getFullYear()), t=$('#ft').value;
+  const n=Math.min(200,Math.max(5,Number($('#fl').value)||30));
   const wb=new ExcelJS.Workbook(); wb.calcProperties.fullCalcOnLoad=true;
   const info=grades.map(g=>[g,formGradeSheet(wb,g,y,t,n)]);
   if(grades.length>1){
@@ -973,467 +1466,11 @@ async function t1MakeForm(grades){
   const buf=await wb.xlsx.writeBuffer();
   const name= grades.length>1? `${y}학년도_${t}학기_학습준비물_신청서_전체.xlsx` : `${y}학년도_${t}학기_학습준비물_신청서_${grades[0]}학년.xlsx`;
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},500);
-  toast('수합 양식을 내려받았습니다');
-}
-$('#t1form').onclick=()=>t1MakeForm([1,2,3,4,5,6]);
-$$('[data-formg]').forEach(b=>b.onclick=()=>t1MakeForm([+b.dataset.formg]));
-['t1year','t1term','t1rel','t1att'].forEach(id=>$('#'+id).addEventListener('input',t1Output));
-
-// ================= PDF 공통 =================
-async function pdfPages(file){
-  if(!window.pdfjsLib) throw new Error('pdf.js 없음');
-  try{ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; }catch(e){}
-  const doc=await pdfjsLib.getDocument({data:new Uint8Array(await readBuf(file))}).promise;
-  const pages=[];
-  for(let p=1;p<=doc.numPages;p++){
-    const pg=await doc.getPage(p); const vp=pg.getViewport({scale:1}); const tc=await pg.getTextContent();
-    pages.push({items:tc.items.filter(it=>'str' in it).map(it=>{ const h=it.height||Math.abs(it.transform[3])||8; return {str:it.str,x:it.transform[4],y:vp.height-it.transform[5]-h,w:it.width,h}; })});
-  }
-  return pages;
-}
-function vendorOf(pages){
-  const t=pages.map(p=>p.items.map(i=>i.str).join('')).join(' ');
-  if(/지마켓|G\s*마켓|Gmarket/i.test(t)) return 'G마켓';
-  if(/에스에스지닷컴|SSG\.COM/i.test(t)) return 'SSG';
-  if(/쿠팡/.test(t)) return '쿠팡';
-  return '';
-}
-function simplifyName(s){ // "토너(재생C) [CLT-504S/SL-C1454/...]" -> "토너(재생C) CLT-504S"
-  return String(s).replace(/\[\s*([^\]\/,]+)[^\]]*\]/g,(m,a)=>a.trim()).replace(/\s+/g,' ').trim();
-}
-function topItemLine(rows){
-  const real=rows.filter(r=>!r.isShip && r.name);
-  if(!real.length) return '';
-  const top=real.reduce((b,r)=>r.qty*r.price>b.qty*b.price?r:b, real[0]);
-  const nm=(top.base&&!top.userEdited)? top.base.name : top.name;
-  return real.length>1? `${nm} 외 ${real.length-1}종` : nm;
-}
-// 편집 가능한 품목 표
-function renderRows(boxId, S, onChange, opts={}){
-  const box=$('#'+boxId);
-  if(!S.rows.length){ box.innerHTML='<div class="empty">아직 품목이 없습니다. 견적서를 올리거나 [+ 품목 직접 추가]를 누르세요.</div>'; onChange(); return; }
-  box.innerHTML=`<div class="tblwrap"><table><thead><tr><th class="num">#</th><th style="min-width:280px">내용 (품목명)</th><th class="num">수량</th><th class="num">단가</th><th class="num">금액</th><th>견적서</th><th></th></tr></thead><tbody>${S.rows.map((r,i)=>`
-    <tr data-i="${i}" class="${r.warn?'warnrow':''}"><td class="num">${i+1}</td>
-    <td><input type="text" data-k="name" value="${esc(r.name)}" aria-label="품목명">${r.warn?`<div class="hint" style="color:var(--warn);margin-top:3px">${esc(r.warn)}</div>`:''}</td>
-    <td class="num"><input type="number" class="qty" data-k="qty" min="0" value="${r.qty}" aria-label="수량"></td>
-    <td class="num"><input type="number" class="price" data-k="price" min="0" value="${r.price}" aria-label="단가"></td>
-    <td class="num" data-amt>${won(r.qty*r.price)}</td>
-    <td class="muted" style="font-size:12.5px">${esc(r.src||'직접 입력')}</td>
-    <td><div class="row" style="flex-wrap:nowrap">${opts.simplify?'<button class="btn small" data-act="simp">간단히</button>':''}${r.fix?'<button class="btn small" data-act="one">수량 1로</button>':''}<button class="btn small" data-act="del" aria-label="삭제">삭제</button></div></td></tr>`).join('')}</tbody>
-    <tfoot><tr><td></td><td>합계</td><td></td><td></td><td class="num" data-sum>${won(S.rows.reduce((s,r)=>s+r.qty*r.price,0))}</td><td></td><td></td></tr></tfoot></table></div>`;
-  box.oninput=e=>{ const tr=e.target.closest('tr[data-i]'); if(!tr) return; const r=S.rows[+tr.dataset.i]; const k=e.target.dataset.k;
-    r[k]= k==='name'? e.target.value : Number(e.target.value)||0; r.userEdited=true;
-    $('[data-amt]',tr).textContent=won(r.qty*r.price); $('[data-sum]',box).textContent=won(S.rows.reduce((s,x)=>s+x.qty*x.price,0)); onChange(); };
-  box.onclick=e=>{ const b=e.target.closest('button[data-act]'); if(!b) return; const i=+b.closest('tr').dataset.i; const r=S.rows[i];
-    if(b.dataset.act==='del') S.rows.splice(i,1);
-    if(b.dataset.act==='simp') r.name=simplifyName(r.name);
-    if(b.dataset.act==='one'){ r.name=r.name+` ×${r.qty}`; r.price=r.amount; r.qty=1; r.fix=false; r.warn=''; }
-    renderRows(boxId,S,onChange,opts); };
-  onChange();
+  toast('신청서 양식을 내려받았어요');
 }
 
-// ================= 2. 정보화 기자재 =================
-const S2={files:[],rows:[]};
-async function t2Load(files){
-  for(const f of files){
-    const rec={name:f.name, res:null, err:''};
-    if(!/\.pdf$/i.test(f.name)){
-      try{ if(!libsOk(['XLSX'])) continue; const xq=excelQuote(await readWorkbook(await readBuf(f)));
-        if(!xq){ rec.err='견적서 표(상품명·수량·금액)를 찾지 못했습니다'; }
-        else { rec.vendor=xq.vendor; rec.xchecks=xq.checks;
-          xq.items.forEach(it=>{ const ok=Number.isInteger(it.price); S2.rows.push({name:it.option?`${it.name} (${it.option})`:it.name, qty:it.qty||1, price:ok?it.price:Math.round(it.amt/(it.qty||1)), amount:it.amt, src:f.name, warn:ok?'':'단가가 원 단위로 나누어떨어지지 않습니다', fix:!ok}); });
-          if(xq.shipping) S2.rows.push({name:'배송비', qty:1, price:xq.shipping, amount:xq.shipping, src:f.name, isShip:true}); }
-      }catch(e){ console.error(e); rec.err='엑셀 견적서를 읽지 못했습니다'; }
-      S2.files.push(rec); continue;
-    }
-    if(!libsOk(['pdfjsLib'])) continue;
-    try{ const pages=await pdfPages(f); rec.vendor=vendorOf(pages); rec.res=qpParse(pages);
-      if(!rec.res.hasText) rec.err='글자가 없는 PDF입니다 (그림으로 저장됨)';
-      else if(!rec.res.items.length) rec.err='품목 표를 찾지 못했습니다';
-      rec.res.items.forEach(it=>{ const amount=it.amount; const qty=it.qty||1; const price=it.unit!=null? it.unit : amount/qty;
-        S2.rows.push({name:it.name, qty, price:Number.isInteger(price)?price:Math.round(price), amount, src:f.name, warn:Number.isInteger(price)?'':'단가가 원 단위로 나누어떨어지지 않습니다', fix:!Number.isInteger(price)}); });
-    }catch(e){ console.error(e); rec.err='PDF를 읽지 못했습니다'; }
-    S2.files.push(rec);
-  }
-  $('#t2fname').textContent='불러온 파일: '+S2.files.map(f=>f.name).join(', ');
-  $('#t2att').value=S2.files.length;
-  t2Checks(); renderRows('t2rows',S2,t2Output,{simplify:true});
-}
-function t2Checks(){
-  if(!S2.files.length){ return; }
-  const html=S2.files.map(f=>{
-    const c=[]; const r=f.res;
-    if(f.xchecks) c.push(...f.xchecks);
-    if(f.err) c.push(['err',f.err+'. 아래 표에 직접 입력하세요.']);
-    if(r && r.items.length){
-      const sum=r.items.reduce((s,i)=>s+i.amount,0);
-      const bad=r.items.filter(i=>i.checks.length);
-      bad.forEach(i=>c.push(['err',`${esc(i.name)}: ${i.checks.join(', ')}`]));
-      if(!bad.length) c.push(['ok',`품목 ${r.items.length}개 모두 수량×단가 = 공급가액+부가세`]);
-      const T=r.totals; const ref=T.bottom??T.won??(T.sumLine&&T.sumLine[T.sumLine.length-1]);
-      if(ref!=null) c.push([ref===sum?'ok':'err',`품목 합계 ${won(sum)}원 ${ref===sum?'=':'≠'} 견적 합계 ${won(ref)}원`]);
-      if(T.korean!=null) c.push([T.korean===sum?'ok':'err',`한글 금액 '${esc(T.koreanText)}원' = ${won(T.korean)}원 ${T.korean===sum?'(일치)':'(품목 합계와 다름)'}`]);
-      if(T.won!=null && T.korean!=null && T.won!==T.korean) c.push(['err',`한글 금액과 숫자 금액(￦${won(T.won)})이 다릅니다`]);
-    }
-    return `<div class="filecard"><div class="fname">${esc(f.name)} ${f.vendor?`<span class="pill info">${esc(f.vendor)}</span>`:''}</div>${checksHtml(c)}</div>`;
-  }).join('');
-  $('#t2check').innerHTML=`<div style="display:grid;gap:8px">${html}</div><div class="row" style="margin-top:8px"><button class="btn small" id="t2reset">견적서 모두 지우기</button></div>`;
-  $('#t2reset').onclick=()=>{ S2.files=[]; S2.rows=[]; $('#t2fname').textContent=''; $('#t2check').innerHTML='<div class="empty">견적서를 올리면 수량×단가, 공급가액+부가세, 한글 금액과 숫자 금액, 총합계를 비교합니다.</div>'; renderRows('t2rows',S2,t2Output,{simplify:true}); };
-}
-function t2Output(){
-  const rows=S2.rows.filter(r=>r.name||r.price);
-  if(!rows.length){ renderOutput('t2out',null); return; }
-  const total=rows.reduce((s,r)=>s+r.qty*r.price,0);
-  const item=$('#t2item').value.trim()||topItemLine(rows);
-  const att=Number($('#t2att').value)||0;
-  const body=[
-    $('#t2intro').value.trim(),
-    `1. 물품: ${item}`,
-    `2. 금액: 금${won(total)}원(금${korAmount(total)}원정)`,
-    ``,
-    att? `붙임  견적서 ${att}부.  끝.` : `끝.`
-  ].join('\n');
-  renderOutput('t2out',{title:$('#t2title').value.trim(), body, rows:rows.map(r=>({name:r.name,qty:r.qty,price:r.price})), fname:`품목내역_정보화기자재_${today()}.xls`});
-}
-bindDrop('t2drop','t2file',t2Load);
-['t2title','t2item','t2intro','t2att'].forEach(id=>$('#'+id).addEventListener('input',t2Output));
-$('#t2add').onclick=()=>{ S2.rows.push({name:'',qty:1,price:0,src:''}); renderRows('t2rows',S2,t2Output,{simplify:true}); };
-
-// ================= 3. G마켓·SSG =================
-const S3={files:[],rows:[]};
-function t3Name(it){ return ($('#t3opt').checked && it.option)? `${it.name} (${it.option})` : it.name; }
-async function t3Load(files){
-  for(const f of files){
-    const rec={name:f.name,res:null,err:''};
-    if(!/\.pdf$/i.test(f.name)){
-      try{ if(!libsOk(['XLSX'])) continue; const xq=excelQuote(await readWorkbook(await readBuf(f)));
-        if(!xq){ rec.err='견적서 표(상품명·수량·금액)를 찾지 못했습니다. 아래 표에 직접 입력하세요'; }
-        else { rec.vendor=xq.vendor; rec.xchecks=xq.checks;
-          xq.items.forEach(it=>{ const qty=it.qty||1, price=it.amt/qty, ok=Number.isInteger(price); const base={name:it.name, option:it.option};
-            S3.rows.push({base, name:t3Name(base), qty, price:ok?price:Math.round(price), amount:it.amt, src:f.name, warn: ok?'':`할인 후 금액 ${won(it.amt)}원이 수량 ${qty}로 나누어떨어지지 않습니다`, fix:!ok}); });
-          if(xq.shipping) S3.rows.push({name:'배송비', qty:1, price:xq.shipping, amount:xq.shipping, src:f.name, isShip:true}); }
-      }catch(e){ console.error(e); rec.err='엑셀 견적서를 읽지 못했습니다'; }
-      S3.files.push(rec); continue;
-    }
-    if(!libsOk(['pdfjsLib'])) continue;
-    try{ const pages=await pdfPages(f); rec.vendor=vendorOf(pages); rec.res=qpParse(pages);
-      if(!rec.res.hasText) rec.err='글자가 없는 PDF입니다 (한컴 PDF 등으로 그림처럼 저장됨). 크롬·엣지에서 [인쇄 → PDF로 저장]으로 다시 저장해 올리거나 아래 표에 직접 입력하세요';
-      else if(!rec.res.items.length) rec.err='품목 표를 찾지 못했습니다. 아래 표에 직접 입력하세요';
-      rec.res.items.forEach(it=>{ const qty=it.qty||1; const amount=it.amount; const price=amount/qty; const ok=Number.isInteger(price);
-        S3.rows.push({base:it, name:t3Name(it), qty, price: ok?price:Math.round(price), amount, src:f.name, warn: ok?'':`할인 후 금액 ${won(amount)}원이 수량 ${qty}로 나누어떨어지지 않습니다`, fix:!ok}); });
-      const ship=rec.res.totals.shipping;
-      if(ship) S3.rows.push({name:'배송비', qty:1, price:ship, amount:ship, src:f.name, isShip:true});
-    }catch(e){ console.error(e); rec.err='PDF를 읽지 못했습니다'; }
-    S3.files.push(rec);
-  }
-  $('#t3fname').textContent='불러온 파일: '+S3.files.map(f=>f.name).join(', ');
-  $('#t3att').value=S3.files.length;
-  t3Checks(); renderRows('t3rows',S3,t3Output);
-}
-function t3Checks(){
-  if(!S3.files.length) return;
-  const html=S3.files.map(f=>{
-    const c=[]; const r=f.res;
-    if(f.xchecks) c.push(...f.xchecks);
-    if(f.err) c.push(['err',f.err]);
-    if(r && r.items.length){
-      const bad=r.items.filter(i=>i.checks.length);
-      bad.forEach(i=>c.push(['err',`${esc(i.name)}: ${i.checks.join(', ')}`]));
-      if(!bad.length) c.push(['ok',`품목 ${r.items.length}개 모두 공급가액 − 할인금액 = 공급합계`]);
-      const sum=r.items.reduce((s,i)=>s+i.amount,0); const T=r.totals;
-      const sl=T.sumLine? T.sumLine[T.sumLine.length-1] : null;
-      if(sl!=null) c.push([sl===sum?'ok':'err',`품목 합계 ${won(sum)}원 ${sl===sum?'=':'≠'} 견적서 합계 ${won(sl)}원`]);
-      const ship=T.shipping||0;
-      if(T.grand!=null) c.push([sum+ship===T.grand?'ok':'err',`품목 합계 ${won(sum)} + 배송비 ${won(ship)} = ${won(sum+ship)}원 ${sum+ship===T.grand?'=':'≠'} 총 구매금액 ${won(T.grand)}원`]);
-      else c.push(['warn','총 구매금액을 찾지 못했습니다. 견적서와 직접 비교하세요']);
-      if(ship) c.push(['info',`배송비 ${won(ship)}원을 품목에 한 줄로 넣었습니다`]);
-      const nd=r.items.filter(i=>!Number.isInteger(i.amount/(i.qty||1)));
-      if(nd.length) c.push(['warn',`단가가 나누어떨어지지 않는 품목 ${nd.length}개: 표에서 [수량 1로]를 누르세요`]);
-    }
-    return `<div class="filecard"><div class="fname">${esc(f.name)} ${f.vendor?`<span class="pill info">${esc(f.vendor)}</span>`:''}</div>${checksHtml(c)}</div>`;
-  }).join('');
-  $('#t3check').innerHTML=`<div style="display:grid;gap:8px">${html}</div><div class="row" style="margin-top:8px"><button class="btn small" id="t3reset">견적서 모두 지우기</button></div>`;
-  $('#t3reset').onclick=()=>{ S3.files=[]; S3.rows=[]; $('#t3fname').textContent=''; $('#t3check').innerHTML='<div class="empty">견적서를 올리면 공급가액−할인금액=공급합계, 품목 합계, 배송비, 총 구매금액을 비교합니다.</div>'; renderRows('t3rows',S3,t3Output); };
-}
-function t3Output(){
-  const rows=S3.rows.filter(r=>r.name||r.price);
-  if(!rows.length){ renderOutput('t3out',null); return; }
-  const total=rows.reduce((s,r)=>s+r.qty*r.price,0);
-  const item=$('#t3item').value.trim()||topItemLine(rows);
-  const p=$('#t3purpose').value.trim()||'원활한 교육활동';
-  const att=Number($('#t3att').value)||0;
-  const body=[
-    `${p}${eulReul(p)} 위하여 아래와 같이 물품을 구입하고자 합니다.`,
-    `1. 물품: ${item}`,
-    `2. 금액: 금${won(total)}원(금${korAmount(total)}원정)`,
-    ``,
-    att? `붙임  견적서 ${att}부.  끝.` : `끝.`
-  ].join('\n');
-  renderOutput('t3out',{title:$('#t3title').value.trim(), body, rows:rows.map(r=>({name:r.name,qty:r.qty,price:r.price})), fname:`품목내역_온라인구입_${today()}.xls`});
-}
-bindDrop('t3drop','t3file',t3Load);
-['t3title','t3purpose','t3item','t3att'].forEach(id=>$('#'+id).addEventListener('input',t3Output));
-$('#t3opt').addEventListener('change',()=>{ S3.rows.forEach(r=>{ if(r.base && !r.userEdited) r.name=t3Name(r.base); }); renderRows('t3rows',S3,t3Output); });
-$('#t3add').onclick=()=>{ S3.rows.push({name:'',qty:1,price:0,src:''}); renderRows('t3rows',S3,t3Output); };
-
-// ================= 4. 강사료 =================
-const S4={rows:[],sel:null};
-function parseLecturerSheet(aoa){
-  const hr=aoa.slice(0,6).findIndex(r=>r&&r.some(c=>/^(강사명|성명)$/.test(String(c??'').replace(/\s/g,''))));
-  if(hr<0) return [];
-  const H=aoa[hr].map(c=>String(c??'').replace(/\s/g,''));
-  const ci=re=>H.findIndex(h=>re.test(h));
-  const ledger = ci(/^성명$/)>=0 && ci(/강의명/)>=0; // 강사 대장 형식
-  const col={name:ci(/^(강사명|성명)$/),grade:ci(/^학년$/),prog:ci(/프로그램명|강의명/),budget:ci(/^(사업명|예산\/?구분|구분)$/),year:ci(/^학년도$/),start:ci(/^시작/),end:ci(/종료일/),calc:ci(/산출/),
-    sess:ci(/^(횟수|강의횟수)$/),cls:ci(/^(학급|강의학급)$/),extra:ci(/추가시간/),rate:ci(/^(시간당강사료|회당강사료)$/),basis:ci(/^(근거공문|근거|관련공문)$/),pumui:ci(/^(강사비품의|강사료품의일)$/)};
-  if(col.grade<0 && ledger){ // 기존 대장: 학년 열 머리글이 비어 있음
-    H.forEach((h,i)=>{ if(h||col.grade>=0) return; let n=0,t=0; for(let r=hr+1;r<aoa.length;r++){ const v=aoa[r]&&aoa[r][i]; if(v==null||v==='') continue; t++; if(/^[1-6]$/.test(String(v).trim())) n++; } if(t&&n/t>=0.6) col.grade=i; }); }
-  const out=[];
-  for(let r=hr+1;r<aoa.length;r++){
-    const row=aoa[r]; if(!row) continue; const g=i=>i>=0?row[i]:null;
-    const name=String(g(col.name)??'').trim(); if(!name) continue;
-    const cells=row.map(c=>String(c??'').trim());
-    const clean=s=>String(s??'').replace(/\s*\n\s*/g,'').trim();
-    let sessions=numK(g(col.sess)), classes=numK(g(col.cls));
-    if(sessions==null){ const s=cells.find(c=>/^\d+\s*회$/.test(c)); if(s) sessions=parseInt(s); }
-    if(classes==null){ const s=cells.find(c=>/^\d+\s*학급$/.test(c)); if(s) classes=parseInt(s); }
-    const cm=String(g(col.sess)??'').match(/(\d+)\s*학급/); if(cm&&!classes) classes=+cm[1];
-    const dfix=v=>{ const t=String(v??'').replace(/\n/g,' ').trim(); return /^\d{5}(\.\d+)?$/.test(t)&&+t>20000&&+t<80000? XLSX.SSF.format('yyyy-mm-dd',+t) : t; };
-    const start=dfix(g(col.start));
-    const year=String(g(col.year)??'').trim() || (start.match(/(20\d\d)/)||[])[1] || '';
-    const pv=String(g(col.pumui)??'').trim();
-    const rec={ idx:out.length, name, year, grade:String(g(col.grade)??'').replace(/학년/,'').trim(), prog:clean(g(col.prog)).replace(/\s+/g,' '), budget:clean(g(col.budget)),
-      start, end:dfix(g(col.end)), sessions, classes, calc:String(g(col.calc)??'').replace(/\s*\n\s*/g,' ').trim(),
-      basis: col.basis>=0? String(g(col.basis)??'').trim() : '',
-      pumui: col.pumui<0? '' : (/^x$/i.test(pv)||!pv? '' : 'O') };
-    if(ledger && col.rate>=0){ rec.direct={unit:numK(g(col.rate))||0, hours:sessions||0, classes:classes||1, extra:numK(g(col.extra))||0}; }
-    out.push(rec);
-  }
-  return out;
-}
-function parseCalc(s){ // "40.000원*12시간*2학급 = 960,000"
-  const t=String(s).replace(/[×xX]/g,'*');
-  const m=t.match(/([\d.,]+)\s*원?\s*\*\s*(\d+)\s*시간\s*\*\s*(\d+)\s*학급\s*=?\s*([\d.,]+)?/);
-  if(m) return {unit:numK(m[1]),hours:+m[2],classes:+m[3],total:m[4]!=null?numK(m[4]):null, std:true};
-  const tot=t.match(/=\s*([\d.,]+)\s*원?\s*$/);
-  return {std:false,total:tot?numK(tot[1]):null};
-}
-async function t4Load(files){
-  if(!libsOk(['XLSX'])) return;
-  const f=files[0]; $('#t4fname').textContent='불러온 파일: '+f.name;
-  try{
-    let wb; if(/\.csv$/i.test(f.name)){ wb=XLSX.read(new TextDecoder('utf-8').decode(await readBuf(f)),{type:'string'}); } else wb=await readWorkbook(await readBuf(f));
-    let rows=[]; for(const sn of wb.SheetNames){ if(/강의별\s*기록|서류|안내/.test(sn)) continue; const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,defval:null}); rows=parseLecturerSheet(aoa); if(rows.length) break; }
-    // 강사 관리 도우미 대장: '강의별 기록' 시트의 강사료 품의일로 품의 여부 표시
-    const rs=wb.SheetNames.find(n=>/강의별\s*기록/.test(n));
-    if(rs){ const aoa=XLSX.utils.sheet_to_json(wb.Sheets[rs],{header:1,raw:false,defval:null}); const H=(aoa[0]||[]).map(c=>String(c??'').replace(/\s/g,''));
-      const ci=re=>H.findIndex(h=>re.test(h)); const iy=ci(/^학년도$/), inm=ci(/^성명$/), ig=ci(/^학년$/), it=ci(/강의명/), ip=ci(/강사료품의일/);
-      const done=new Set(); aoa.slice(1).forEach(r=>{ if(r&&ip>=0&&String(r[ip]??'').trim()) done.add([r[iy],r[inm],String(r[ig]??'').replace(/학년/,''),r[it]].map(v=>String(v??'').trim()).join('|')); });
-      rows.forEach(r=>{ if(done.has([r.year,r.name,r.grade,r.prog].join('|'))) r.pumui='O'; }); }
-    S4.rows=rows; S4.sel=null; if(!rows.length) toast("'강사명'(또는 '성명') 머리글이 있는 시트를 찾지 못했습니다");
-    const ys=[...new Set(rows.map(r=>r.year).filter(Boolean))].sort().reverse(); const cur=String(new Date().getFullYear());
-    $('#t4year').innerHTML='<option value="">전체</option>'+ys.map(y=>`<option>${y}</option>`).join(''); $('#t4year').value= ys.includes(cur)? cur : (ys[0]||'');
-  }catch(e){ console.error(e); toast('시트 파일을 읽지 못했습니다'); S4.rows=[]; }
-  t4List();
-}
-function t4List(){
-  const g=$('#t4grade').value, todo=$('#t4todo').checked, yy=$('#t4year').value;
-  if(!S4.rows.length){ $('#t4list').innerHTML='<div class="empty">시트를 올리면 학년별 강사·프로그램 목록이 나옵니다.</div>'; return; }
-  const list=S4.rows.filter(r=>(!yy||r.year===yy)&&(!g||r.grade===g)&&(!todo||r.pumui!=='O'));
-  if(!list.length){ $('#t4list').innerHTML='<div class="empty">조건에 맞는 강사가 없습니다.</div>'; return; }
-  $('#t4list').innerHTML='<div class="lecturers">'+list.map(r=>`<div class="lect ${S4.sel===r.idx?'sel':''}" data-idx="${r.idx}" tabindex="0" role="button">
-     <span class="pill info">${esc(r.grade)}학년</span>
-     <div><div class="t">${esc(r.name)} · ${esc(r.prog)}</div><div class="d">${esc(r.budget)} · ${esc(r.start)}${r.end?' ~ '+esc(r.end):''}${r.sessions?` · ${r.sessions}회`:''}${r.classes?` · ${r.classes}학급`:''}</div></div>
-     <span class="pill ${r.pumui==='O'?'ok':'warn'}">${r.pumui==='O'?'품의함':'미품의'}</span></div>`).join('')+'</div>';
-}
-function anyDate(t){ const m=String(t||'').match(/(20\d\d)\s*[.\-\/년]\s*(\d{1,2})\s*[.\-\/월]\s*(\d{1,2})/); return m? new Date(+m[1],+m[2]-1,+m[3]) : null; }
-function periodStr(start,end,n){ const a=anyDate(start), b=anyDate(end); if(!a) return String(start||'').trim(); const f=(d,y)=>`${y?d.getFullYear()+'. ':''}${d.getMonth()+1}. ${d.getDate()}.`; return `${f(a,true)}${b?` ~ ${f(b,b.getFullYear()!==a.getFullYear())}`:''}${n?`(${n}회)`:''}`; }
-function t4Select(idx){
-  const r=S4.rows[idx]; S4.sel=idx; t4List(); $('#t4edit').hidden=false;
-  const yr=r.year||(r.start.match(/(20\d\d)/)||[])[1]||String(new Date().getFullYear());
-  if(r.basis) $('#t4rel').value=r.basis;
-  $('#t4y').value=yr; $('#t4b').value=r.budget; $('#t4g').value=r.grade||''; $('#t4p').value=r.prog; $('#t4n').value=r.name;
-  const c=parseCalc(r.calc); S4.parsed=c;
-  $('#t4x').value=0;
-  if(r.direct){ $('#t4u').value=r.direct.unit; $('#t4h').value=r.direct.hours; $('#t4c').value=r.direct.classes; $('#t4x').value=r.direct.extra; $('#t4manual').checked=false; S4.parsed={}; }
-  else if(c.std){ $('#t4u').value=c.unit; $('#t4h').value=c.hours; $('#t4c').value=c.classes; $('#t4manual').checked=false; }
-  else if(!r.calc){ $('#t4u').value=40000; $('#t4h').value=r.sessions||''; $('#t4c').value=r.classes||''; $('#t4manual').checked=false; }
-  else { $('#t4manual').checked=true; $('#t4mt').value=r.calc.replace(/(\d)\.(\d{3})(?!\d)/g,'$1,$2'); $('#t4ma').value=c.total||''; $('#t4u').value=''; $('#t4h').value=r.sessions||''; $('#t4c').value=r.classes||''; }
-  $('#t4per').value=periodStr(r.start,r.end, r.direct? r.direct.hours : (c.std? c.hours : r.sessions));
-  $('#t4manualbox').hidden=!$('#t4manual').checked;
-  t4Output();
-  $('#t4edit').scrollIntoView({behavior:'smooth',block:'start'});
-}
-function t4Output(){
-  if(S4.sel==null){ renderOutput('t4out',null); return; }
-  const r=S4.rows[S4.sel], c=S4.parsed||{};
-  const y=$('#t4y').value.trim(), b=$('#t4b').value.trim(), p=$('#t4p').value.trim(), n=$('#t4n').value.trim();
-  const manual=$('#t4manual').checked; $('#t4manualbox').hidden=!manual;
-  let calcText, amount; const checks=[];
-  if(manual){ calcText=$('#t4mt').value.trim(); amount=Number($('#t4ma').value)||0; if(!amount) checks.push(['err','금액을 입력하세요']); }
-  else{
-    const u=Number($('#t4u').value)||0, h=Number($('#t4h').value)||0, cl=Number($('#t4c').value)||0, x=Number($('#t4x').value)||0;
-    amount=u*(h*cl+x); calcText= x? `${won(u)}원*(${h}시간*${cl}학급+${x}시간) = ${won(amount)}` : `${won(u)}원*${h}시간*${cl}학급 = ${won(amount)}`;
-    if(r.direct && !r.direct.unit) checks.push(['warn','대장에 시간당 강사료가 비어 있습니다. 단가를 입력하세요']);
-    else if(r.direct) checks.push(['ok',`강사 대장 값: 시간당 ${won(r.direct.unit)}원 × (${r.direct.hours}회 × ${r.direct.classes}학급${r.direct.extra?` + ${r.direct.extra}시간`:''})`]);
-    else if(!r.calc) checks.push(['warn','시트에 산출내역이 비어 있어 단가 40,000원과 횟수·학급으로 계산했습니다. 맞는지 확인하세요']);
-    if(c.std && c.total!=null){ const sheetCalc=c.unit*c.hours*c.classes; if(sheetCalc!==c.total) checks.push(['err',`시트 산출내역 계산이 맞지 않습니다: ${won(c.unit)}×${c.hours}×${c.classes} = ${won(sheetCalc)} ≠ ${won(c.total)}`]); else checks.push(['ok',`시트 산출내역 ${won(c.unit)}원×${c.hours}시간×${c.classes}학급 = ${won(c.total)}원 (계산 맞음)`]); }
-    if(r.sessions!=null && h && r.sessions!==h) checks.push(['warn',`시트의 횟수(${r.sessions}회)와 시간(${h})이 다릅니다`]);
-    if(r.classes!=null && cl && r.classes!==cl) checks.push(['warn',`시트의 학급수(${r.classes}학급)와 입력 학급(${cl})이 다릅니다`]);
-  }
-  $('#t4check').innerHTML=checksHtml(checks);
-  const cls=`${y}학년도 ${b} ${p} 프로그램`.replace(/\s+/g,' ');
-  const body=[
-    `1. 관련: ${$('#t4rel').value.trim()}`,
-    `2. ${cls} 강사비를 아래와 같이 지급하고자 합니다.`,
-    `  가. 수 업 명: ${$('#t4g').value.trim()?$('#t4g').value.trim().replace(/학년$/,'')+'학년 ':''}${p}`,
-    `  나. 수업기간: ${$('#t4per').value.trim()}`,
-    `  다. 강 사 명: ${n}`,
-    `  라. 강 사 료: ${won(amount)}원(금${korAmount(amount)}원정)`,
-    `  마. 산출내역: ${calcText}`,
-    ``,
-    `붙임  ${$('#t4att').value.trim()||'강사카드 및 통장사본 1부.'}  끝.`
-  ].join('\n');
-  renderOutput('t4out',{title:`${cls} 강사비 지급`, body, rows:[{name:`${cls} 강사료`,qty:1,price:amount}], fname:`품목내역_강사료_${n}_${today()}.xls`});
-}
-bindDrop('t4drop','t4file',t4Load);
-$('#t4grade').addEventListener('change',t4List); $('#t4year').addEventListener('change',t4List); $('#t4todo').addEventListener('change',t4List);
-$('#t4list').addEventListener('click',e=>{ const el=e.target.closest('.lect'); if(el) t4Select(+el.dataset.idx); });
-$('#t4list').addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('lect')){ e.preventDefault(); t4Select(+e.target.dataset.idx);} });
-['t4y','t4b','t4g','t4p','t4n','t4per','t4att','t4u','t4h','t4c','t4x','t4mt','t4ma','t4rel'].forEach(id=>$('#'+id).addEventListener('input',t4Output));
-$('#t4manual').addEventListener('change',t4Output);
-
-// ================= 4-2. 일회성 강사 (강사수당 기준표) =================
-const FEE_DEFAULT={
-  source:'2025 경기도교육비특별회계 예산편성 기본지침 35~36쪽 (학교회계 지침·학교 기준이 다르면 고쳐 쓰세요)',
-  grades:[
-    {name:'특별강사Ⅰ',who:'장관급 이상, 교육감·광역단체장·국회의원, 대학총장급, 해당 분야 권위자',base:400000,over:200000},
-    {name:'특별강사Ⅱ',who:'차관급, 공직유관단체장·정부출연 연구기관장, 인간문화재·유명 예술인',base:300000,over:150000},
-    {name:'일반강사Ⅰ',who:'대학 전임강사 이상, 기업 임원, 자격·면허 전문가, 4급 이상 공무원, 전·현직 학교장, 교육경력 30년 이상 교원 등',base:200000,over:100000},
-    {name:'일반강사Ⅱ',who:'대학 시간강사, 5급 이하 공무원, 교감·장학사·교사 등 (특별·일반Ⅰ이 아닌 사람)',base:130000,over:60000},
-    {name:'보조강사',who:'실기·실습 보조, 분반·분임활동 지도',base:40000,over:20000},
-  ],
-  ms:15000, msMax:2.5, ppt:5000, pptMax:9, rec:50000,
-  boost:[[80,1.2],[120,1.4],[160,1.6],[200,2.0]], // 인원 이상 → 배율
-};
-let FEE=JSON.parse(JSON.stringify(FEE_DEFAULT));
-try{ const v=JSON.parse(localStorage.getItem('pumui.feeTable')); if(v&&Array.isArray(v.grades)&&v.grades.length) FEE=Object.assign(JSON.parse(JSON.stringify(FEE_DEFAULT)),v); }catch(e){}
-const S4o={finalEdited:false,msEdited:false,textEdited:false,last:null};
-function feeGradeOptions(){ const cur=$('#oGrade').value; $('#oGrade').innerHTML=FEE.grades.map((g,i)=>`<option value="${i}">${esc(g.name)} · 기본 ${won(g.base)} / 초과 ${won(g.over)}</option>`).join('')+'<option value="direct">직접 입력 (정액·회당)</option>'; if(cur&&$(`#oGrade option[value="${cur}"]`)) $('#oGrade').value=cur; else $('#oGrade').value=String(Math.min(3,FEE.grades.length-1)); }
-function feeTableRender(){
-  $('#feeSrc').textContent='기준: '+FEE.source;
-  $('#feeRows').innerHTML=FEE.grades.map(g=>`<tr><td><input type="text" class="g-n" value="${esc(g.name)}" style="width:110px"></td><td><input type="text" class="g-w" value="${esc(g.who)}"></td><td class="num"><input type="number" class="g-b" value="${g.base}" style="width:100px"></td><td class="num"><input type="number" class="g-o" value="${g.over}" style="width:100px"></td><td><button class="btn small g-x" type="button">✕</button></td></tr>`).join('');
-  $('#fMs').value=FEE.ms; $('#fMsMax').value=FEE.msMax; $('#fPpt').value=FEE.ppt; $('#fPptMax').value=FEE.pptMax; $('#fRec').value=FEE.rec;
-}
-function countHours(h,m){ return Math.max(0,Math.floor(h)) + (m>=30?1:0); }
-function boostOf(n){ let r=1; FEE.boost.forEach(([min,x])=>{ if(n>=min) r=x; }); return r; }
-function onceDateStr(){ const v=$('#oDate').value.trim(); const m=v.match(/(20\d\d)\D*(\d{1,2})\D*(\d{1,2})/); if(!m) return v; const d=new Date(+m[1],+m[2]-1,+m[3]); return `${m[1]}. ${+m[2]}. ${+m[3]}.(${'일월화수목금토'[d.getDay()]})`; }
-function t4Once(){
-  const gi=$('#oGrade').value, direct=gi==='direct', g=direct?null:FEE.grades[+gi];
-  $('#oGradeWho').textContent= direct? '기준표에 없는 경우(작가 섭외비·회당 정액 등): 아래 최종 금액에 직접 넣으세요' : g.who;
-  const hh=Number($('#oH').value)||0, mm=Number($('#oM').value)||0, H=countHours(hh,mm), times=Math.max(1,Number($('#oTimes').value)||1);
-  const cnt=Number($('#oCnt').value)||0, bx=boostOf(cnt), rec=$('#oRec').checked;
-  $('#oCntHint').textContent= cnt? (bx>1?`${cnt}명 → ${Math.round(bx*100)}% 가산`:`${cnt}명 → 가산 없음 (80명 이상부터)`) : '79명 이하는 가산 없음 · 80명 120% · 120명 140% · 160명 160% · 200명 200%';
-  const lines=[], checks=[]; let fee=0, txt='';
-  if(!direct){
-    if(H<1){ checks.push(['warn','강의 시간이 30분 미만이면 강사수당 기준 시간에 들어가지 않습니다']); }
-    const one = H>=1? g.base + g.over*(H-1) : 0;
-    let per = Math.round(one*bx) + (rec? FEE.rec*H : 0);
-    fee = per*times;
-    const timeLabel = mm? `${hh}시간 ${mm}분 → ${H}시간` : `${H}시간`;
-    lines.push(`기본 ${won(g.base)}원${H>1?` + 초과 ${won(g.over)}원 × ${H-1}시간`:''} = ${won(one)}원   (${timeLabel})`);
-    if(bx>1) lines.push(`수강 인원 ${cnt}명 가산 × ${Math.round(bx*100)}% = ${won(Math.round(one*bx))}원`);
-    if(rec) lines.push(`녹화 가산 ${won(FEE.rec)}원 × ${H}시간 = ${won(FEE.rec*H)}원`);
-    if(times>1) lines.push(`${won(per)}원 × ${times}회 = ${won(fee)}원`);
-    lines.push(`강사료 계산 금액: ${won(fee)}원`);
-    txt = `${g.name} 기본 ${won(g.base)}원${H>1?`+초과 ${won(g.over)}원*${H-1}시간`:''}${bx>1?` (인원 가산 ${Math.round(bx*100)}%)`:''}${rec?` + 녹화 ${won(FEE.rec)}원*${H}시간`:''}${times>1?` *${times}회`:''} = ${won(fee)}원`;
-  } else { lines.push('직접 입력: 아래 최종 금액과 산출내역을 적어 주세요'); }
-  // 원고료
-  const ms=Number($('#oMs').value)||0, ppt=Number($('#oPpt').value)||0;
-  const msFee=Math.round(ms*FEE.ms + ppt*FEE.ppt);
-  if(ms||ppt){ lines.push(`원고료: ${ms?`국문 ${won(FEE.ms)}원 × ${ms}매`:''}${ms&&ppt?' + ':''}${ppt?`PPT ${won(FEE.ppt)}원 × ${ppt}면`:''} = ${won(msFee)}원`);
-    const hTot=Math.max(1,H)*times;
-    if(ms>FEE.msMax*hTot) checks.push(['warn',`원고 매수가 한도(시간당 ${FEE.msMax}매 × ${hTot}시간 = ${FEE.msMax*hTot}매)를 넘습니다`]);
-    if(ppt>FEE.pptMax*hTot) checks.push(['warn',`PPT 면수가 한도(시간당 ${FEE.pptMax}면 × ${hTot}시간 = ${FEE.pptMax*hTot}면)를 넘습니다`]); }
-  const travel=Number($('#oTravel').value)||0; if(travel) lines.push(`여비(실비): ${won(travel)}원`);
-  // 최종 금액 (직접 고친 값 유지)
-  if(!S4o.finalEdited) $('#oFinal').value = direct? '' : fee;
-  if(!S4o.msEdited) $('#oMsFinal').value = msFee||'';
-  const msTxt = (ms||ppt)? ` / 원고료 ${ms?`${won(FEE.ms)}원*${ms}매`:''}${ms&&ppt?'+':''}${ppt?`${won(FEE.ppt)}원*${ppt}면`:''} = ${won(Number($('#oMsFinal').value)||0)}원` : '';
-  const trTxt = travel? ` / 여비(실비) ${won(travel)}원` : '';
-  if(!S4o.textEdited) $('#oCalcText').value = direct? `${won(Number($('#oFinal').value)||0)}원${(hh||mm)?` (${hh?hh+'시간':''}${mm?' '+mm+'분':''}${times>1?`*${times}회`:''})`:''}`+msTxt+trTxt : (S4o.finalEdited && Number($('#oFinal').value)!==fee ? `${won(Number($('#oFinal').value)||0)}원 (기준 ${won(fee)}원에서 조정)` : txt) + msTxt + trTxt;
-  const finalFee=Number($('#oFinal').value)||0, finalMs=Number($('#oMsFinal').value)||0;
-  $('#oFinalHint').textContent= direct? '' : (finalFee!==fee? `기준표 계산 ${won(fee)}원과 ${won(Math.abs(finalFee-fee))}원 ${finalFee>fee?'많음':'적음'}` : '기준표 계산 금액 그대로');
-  if(!direct && finalFee>fee) checks.push(['warn','최종 금액이 기준표 계산보다 큽니다. 학교 기준·사유를 확인하세요']);
-  // 청탁금지법 (공직자 강사)
-  if($('#oPub').checked){ const per=(finalFee+finalMs)/times;
-    if(H<=1 && per>400000) checks.push(['err',`공직자 외부강의 사례금 상한(1시간 40만 원)을 넘습니다: 1회 ${won(per)}원`]);
-    else if(H>1 && per>600000) checks.push(['err',`공직자 외부강의 사례금 상한(1시간 초과 시 총 60만 원)을 넘습니다: 1회 ${won(per)}원`]);
-    else checks.push(['ok','공직자 외부강의 사례금 상한(1시간 40만 원, 초과해도 총 60만 원) 안입니다 · 여비 제외']); }
-  $('#oCalc').textContent=lines.join('\n');
-  $('#oCheck').innerHTML=checks.length?checksHtml(checks):'';
-  // 출력
-  const name=$('#oName').value.trim(), y=$('#oYear').value.trim(), b=$('#oBiz').value.trim(), lect=$('#oLect').value.trim();
-  const total=finalFee+finalMs+travel;
-  if(!name&&!lect){ renderOutput('t4onceOut',null); return; }
-  const cls=`${y?y+'학년도 ':''}${b?b+' ':''}${name}`.replace(/\s+/g,' ').trim();
-  const when=[onceDateStr(),$('#oTime').value.trim()].filter(Boolean).join(' ')+((hh||mm)?` (${hh?hh+'시간':''}${mm?(hh?' ':'')+mm+'분':''}${times>1?`, ${times}회`:''})`:'');
-  const body=[
-    `1. 관련: ${$('#oRel').value.trim()}`,
-    `2. ${cls} 강사비를 아래와 같이 지급하고자 합니다.`,
-    `  가. 행 사 명: ${name}`,
-    `  나. 일    시: ${when}`,
-    `  다. 대    상: ${$('#oWho').value.trim()}`,
-    `  라. 강 사 명: ${lect}${direct?'':` (${g.name})`}`,
-    `  마. 지급금액: ${won(total)}원(금${korAmount(total)}원정)${(finalMs||travel)?` - 강사료 ${won(finalFee)}원${finalMs?`, 원고료 ${won(finalMs)}원`:''}${travel?`, 여비 ${won(travel)}원`:''}`:''}`,
-    `  바. 산출내역: ${$('#oCalcText').value.trim()}`,
-    ``,
-    `붙임  ${$('#oAtt').value.trim()||'강사카드 및 통장사본 1부.'}  끝.`
-  ].join('\n');
-  const rows=[{name:`${cls} 강사료`,qty:1,price:finalFee}];
-  if(finalMs) rows.push({name:`${cls} 원고료`,qty:1,price:finalMs});
-  if(travel) rows.push({name:`${cls} 강사 여비`,qty:1,price:travel});
-  renderOutput('t4onceOut',{title:`${cls} 강사비 지급`, body, rows:rows.filter(r=>r.price>0).length?rows.filter(r=>r.price>0):rows, fname:`품목내역_강사료_${lect||name}_${today()}.xls`});
-}
-// 강사 종류 전환
-$$('#t4 .seg button').forEach(b=>b.addEventListener('click',()=>{
-  const once=b.dataset.kind==='once';
-  $$('#t4 .seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));
-  $('#t4ledger').hidden=once; $('#t4once').hidden=!once;
-  $('#t4kindHint').textContent= once? '작가와의 만남, 학부모 교육, 교원 연수처럼 한 번(또는 몇 번) 오는 강사입니다. 강사수당 기준표(등급별 기본 1시간 + 초과 시간)로 계산하고, 최종 금액은 고칠 수 있습니다.' : '교육과정·방과후처럼 여러 차시 수업하고 출근부를 쓰는 강사입니다. 강사 대장의 시간당 강사료로 계산합니다.';
-  try{ localStorage.setItem('pumui.t4kind',b.dataset.kind); }catch(e){}
-  if(once) t4Once();
-}));
-// 날짜 숫자 이어 치기
-$('#oDate').addEventListener('input',()=>{ const d=$('#oDate').value.replace(/\D/g,''); if(/^\d{8}$/.test($('#oDate').value)) $('#oDate').value=`${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6)}`; });
-['oRel','oYear','oBiz','oName','oWho','oLect','oDate','oTime','oAtt','oGrade','oH','oM','oCnt','oTimes','oMs','oPpt','oTravel','oRec','oPub'].forEach(id=>$('#'+id).addEventListener('input',t4Once));
-['oGrade','oRec','oPub'].forEach(id=>$('#'+id).addEventListener('change',t4Once));
-$('#oFinal').addEventListener('input',()=>{ S4o.finalEdited=true; t4Once(); });
-$('#oMsFinal').addEventListener('input',()=>{ S4o.msEdited=true; t4Once(); });
-$('#oCalcText').addEventListener('input',()=>{ S4o.textEdited=true; t4Once(); });
-$('#oRecalc').addEventListener('click',()=>{ S4o.finalEdited=S4o.msEdited=S4o.textEdited=false; t4Once(); toast('기준표 금액으로 되돌렸습니다'); });
-// 기준표 고치기
-$('#feeRows').addEventListener('click',e=>{ if(e.target.classList.contains('g-x')) e.target.closest('tr').remove(); });
-$('#feeAdd').addEventListener('click',()=>{ $('#feeRows').insertAdjacentHTML('beforeend','<tr><td><input type="text" class="g-n" style="width:110px" placeholder="예: 작가(학교 기준)"></td><td><input type="text" class="g-w"></td><td class="num"><input type="number" class="g-b" style="width:100px"></td><td class="num"><input type="number" class="g-o" style="width:100px" value="0"></td><td><button class="btn small g-x" type="button">✕</button></td></tr>'); });
-$('#feeSave').addEventListener('click',()=>{
-  const grades=$$('#feeRows tr').map(tr=>({name:$('.g-n',tr).value.trim(),who:$('.g-w',tr).value.trim(),base:Number($('.g-b',tr).value)||0,over:Number($('.g-o',tr).value)||0})).filter(g=>g.name&&g.base>0);
-  if(!grades.length) return toast('등급을 하나 이상 넣어 주세요');
-  FEE=Object.assign({},FEE,{grades,ms:Number($('#fMs').value)||0,msMax:Number($('#fMsMax').value)||0,ppt:Number($('#fPpt').value)||0,pptMax:Number($('#fPptMax').value)||0,rec:Number($('#fRec').value)||0,source:'직접 고친 기준표 (기본: '+FEE_DEFAULT.source+')'});
-  try{ localStorage.setItem('pumui.feeTable',JSON.stringify(FEE)); }catch(e){}
-  feeGradeOptions(); feeTableRender(); t4Once(); toast('강사수당 기준표를 저장했습니다');
-});
-$('#feeReset').addEventListener('click',()=>{ FEE=JSON.parse(JSON.stringify(FEE_DEFAULT)); try{ localStorage.removeItem('pumui.feeTable'); }catch(e){} feeGradeOptions(); feeTableRender(); t4Once(); toast('기본 기준표로 되돌렸습니다'); });
-// 시작
-$('#oYear').value=String(new Date().getMonth()+1>=3?new Date().getFullYear():new Date().getFullYear()-1);
-feeGradeOptions(); feeTableRender();
-(function(){ ['oRel','oAtt'].forEach(id=>{ const el=$('#'+id); try{ const v=localStorage.getItem('pumui.'+id); if(v!=null) el.value=v; }catch(e){} el.addEventListener('input',()=>{ try{ localStorage.setItem('pumui.'+id, el.value); }catch(e){} }); });
-  try{ if(localStorage.getItem('pumui.t4kind')==='once') $('#t4 .seg button[data-kind="once"]').click(); }catch(e){} })();
-
-// 학교마다 다른 값(관련 문서번호, 기본 문구)은 이 브라우저에만 기억
-(function(){ const keep=['t1rel','t4rel','t4att','t2title','t2intro','t3title','t3purpose'];
-  keep.forEach(id=>{ const el=$('#'+id); try{ const v=localStorage.getItem('pumui.'+id); if(v!=null) el.value=v; }catch(e){}
-    el.addEventListener('input',()=>{ try{ localStorage.setItem('pumui.'+id, el.value); }catch(e){} }); }); })();
-if(!window.XLSX||!window.pdfjsLib) setTimeout(()=>toast('일부 구성요소를 불러오지 못했습니다. 인터넷에 연결된 상태에서 열어 주세요'),400);
+draw();
+if(!window.XLSX||!window.pdfjsLib) setTimeout(()=>toast('일부 구성요소를 불러오지 못했어요. 인터넷에 연결된 상태에서 열어 주세요'),400);
 </script>
 </body>
 </html>
