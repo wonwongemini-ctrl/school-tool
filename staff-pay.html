@@ -261,7 +261,7 @@ const DEFAULT_JOBS = [
 ].map(([name,type,duty])=>({name,type,duty}));
 
 /* ========================================================== */
-const VERSION='공무직 급여 도우미 v2.4 · 2026-11-03';
+const VERSION='공무직 급여 도우미 v2.6 · 2026-11-10';
 const MEM='staffpay.';
 const clone=o=>JSON.parse(JSON.stringify(o));
 const $=(s,el=document)=>el.querySelector(s), $$=(s,el=document)=>[...el.querySelectorAll(s)];
@@ -295,7 +295,7 @@ function normDate(v){
   if(dg.length===6) return `${dg.slice(0,4)}-${dg.slice(4,6)}`;
   return s;
 }
-function bindDate(el,cb){ // 숫자 이어 치기 20120301 → 2012-03-01
+function bindDate(el,cb){ // 숫자 이어 치기 20210301 → 2021-03-01
   el.addEventListener('input',()=>{if(/^\d{8}$/.test(el.value))el.value=normDate(el.value);cb&&cb()});
   el.addEventListener('blur',()=>{el.value=normDate(el.value);cb&&cb()});
 }
@@ -315,7 +315,7 @@ const saved=mem.get('profile',null);
 const ST={step:'home',hist:[],flow:null,ret:null,
   p:Object.assign({},P0,saved||{},{fromFile:false,fileName:''}),hasProfile:!!saved,
   basis:mem.get('basis','school'),year:null,leaveDays:null,dayH:null,
-  rows:null,csvName:'',manualH:null,plan:{asked:false,has:false,d:0,h:0},payRate:null,promo:false,meEdit:false,hireAsk:true,
+  rows:null,csvName:'',manualH:null,plan:{asked:false,has:false,d:0,h:0,m:0},payRate:null,promo:false,meEdit:false,hireAsk:true,
   faq:{q:'',cat:'전체'},cut:mem.get('cut','day'),round:mem.get('round','round'),sick:{a:'',b:''}};
 function saveProfile(){const p=ST.p;mem.set('profile',{jobName:p.jobName,ptype:p.ptype,hours:p.hours,wtype:p.wtype,hire:p.hire,cend:p.cend,years:p.years,neisRate:p.neisRate,duty:p.duty,shortProp:p.shortProp,payMonth:p.payMonth});ST.hasProfile=true}
 function job(){return JOBS.find(j=>j.name===ST.p.jobName)||JOBS[JOBS.length-1]}
@@ -374,7 +374,7 @@ function judge(r){const {s,e}=period();const date=(/(\d{4}-\d{2}-\d{2})/.exec(r.
   return {on:true,why:'넣음',date};}
 function rowOn(r){const j=judge(r);return r.on===null?j.on:r.on}
 function usedMin(){if(ST.rows)return ST.rows.reduce((a,r)=>a+(rowOn(r)?durMin(r.dur):0),0);return (+ST.manualH||0)*60}
-function planMin(){return ST.plan.has?(+ST.plan.d||0)*dayH()*60+(+ST.plan.h||0)*60:0}
+function planMin(){return ST.plan.has?Math.round((+ST.plan.d||0)*dayH()*60+(+ST.plan.h||0)*60+(+ST.plan.m||0)):0}
 function dur(min){min=Math.max(0,Math.round(min));const per=dayH()*60,d=Math.floor(min/per),rest=min-d*per,h=Math.floor(rest/60),m=rest%60;const p=[];if(d)p.push(d+'일');if(h)p.push(h+'시간');if(m)p.push(m+'분');return p.join(' ')||'0'}
 const ROUNDS={round:'10원 미만 반올림',ceil:'10원 미만 올림',floor:'원단위 절사 (10원 미만 버림)'};
 function roundLabel(){return ROUNDS[ST.round]||ROUNDS.round}
@@ -504,10 +504,10 @@ STEPS.home={
   bind:el=>{
     $$('[data-go]',el).forEach(b=>b.onclick=()=>{ST.flow=b.dataset.go;go(b.dataset.go==='lp'?'pay':b.dataset.go)});
     $('#toSet',el).onclick=()=>{ST.flow='set';go('set')};
-    $('#demo',el).onclick=()=>{
-      Object.assign(ST.p,{jobName:'행정실무사',ptype:2,hours:40,wtype:'상시',hire:'2012-03-01',cend:'2036-02-29',years:14,neisRate:15027,duty:[],payMonth:'2026-10',fromFile:true,fileName:'예시 급여명세서 (가짜 데이터)'});
+    $('#demo',el).onclick=()=>{ // 가짜 예시 (실제 사람 정보 아님): 조리실무사 5년차
+      Object.assign(ST.p,{jobName:'조리실무사',ptype:2,hours:40,wtype:'상시',hire:'2021-03-01',cend:'',years:5,neisRate:13596,duty:['위험수당'],payMonth:'2026-10',fromFile:true,fileName:'예시 급여명세서 (가짜 데이터)'});
       ST.basis='school';ST.year=null;ST.leaveDays=null;ST.dayH=null;ST.payRate=null;ST.hireAsk=true;ST.demo=true;
-      ST.rows=[['연차','2026-03-20 08:30 ~ 2026-03-20 17:30','1일0시간0분','완결',''],['연차(조퇴)','2026-04-02 14:30 ~ 2026-04-02 16:30','0일2시간0분','완결',''],['연차(조퇴)','2026-04-02 14:40 ~ 2026-04-02 16:40','0일2시간0분','완결(기결취소)','삭제'],['병조퇴','2026-04-06 15:30 ~ 2026-04-06 16:30','0일1시간0분','완결',''],['연차','2026-08-03 08:30 ~ 2026-08-03 17:30','1일0시간0분','완결',''],['연차(조퇴)','2026-10-27 16:00 ~ 2026-10-27 16:30','0일0시간30분','완결','']].map(([kind,per,dur,st,del])=>({kind,per,dur,st,del,on:null}));
+      ST.rows=[['연차','2026-04-17 08:30 ~ 2026-04-17 16:30','1일0시간0분','완결',''],['연차(조퇴)','2026-05-08 14:30 ~ 2026-05-08 16:30','0일2시간0분','완결',''],['병가','2026-06-03 08:30 ~ 2026-06-03 16:30','1일0시간0분','완결',''],['연차','2026-07-24 08:30 ~ 2026-07-24 16:30','1일0시간0분','완결',''],['연차(외출)','2026-09-11 10:00 ~ 2026-09-11 11:30','0일1시간30분','완결',''],['연차(조퇴)','2026-10-15 13:30 ~ 2026-10-15 16:30','0일3시간0분','완결(기결취소)','삭제'],['연차','2026-10-30 08:30 ~ 2026-10-30 16:30','1일0시간0분','완결','']].map(([kind,per,dur,st,del])=>({kind,per,dur,st,del,on:null}));
       ST.csvName='예시 복무 CSV (가짜 데이터)';ST.flow='lp';ST.hist=['home','pay'];ST.step='me';draw();toast('가짜 예시 데이터로 채웠어요');
     };
   }
@@ -590,7 +590,7 @@ STEPS.hire={
     return `
       <h1 class="q">처음 채용된 날은 언제예요?</h1>
       <p class="qs">지금 학교(교육청)에서 끊김 없이 근무를 시작한 날이에요. 연차 일수를 계산할 때 써요.</p>
-      <div class="fld"><label for="hHire">처음 채용된 날</label><input type="text" class="big" id="hHire" inputmode="numeric" placeholder="20120301" value="${esc(p.hire)}" autofocus><span class="help">숫자만 이어 쳐도 돼요 (20120301 → 2012-03-01)</span></div>
+      <div class="fld"><label for="hHire">처음 채용된 날</label><input type="text" class="big" id="hHire" inputmode="numeric" placeholder="20210301" value="${esc(p.hire)}" autofocus><span class="help">숫자만 이어 쳐도 돼요 (20210301 → 2021-03-01)</span></div>
       <details ${p.cend?'':''}><summary>계약이 이번 기간 안에 끝나요 (1년 미만 근무)</summary>
         <div class="fld"><label for="hEnd">계약 종료일</label><input type="text" id="hEnd" inputmode="numeric" placeholder="20270228" value="${esc(p.cend)}"></div></details>`},
   cta:()=>ST.hireAsk&&pd(ST.p.hire)?'':btnGo('다음',!pd(ST.p.hire)),
@@ -686,14 +686,19 @@ STEPS.plan={
     <p class="qs">아직 쓸 수 있는 기간이 남았어요. 쓸 계획이 있으면 빼고 계산해요.</p>
     <div class="choices"><button class="choice" id="pNo" aria-pressed="${ST.plan.asked&&!ST.plan.has}"><span class="ic">0</span><span><b>없어요</b><span class="d">지금 남은 연차를 모두 보상받는 걸로 계산해요</span></span>${chev}</button>
     <button class="choice" id="pYes" aria-pressed="${ST.plan.has}"><span class="ic">+</span><span><b>있어요</b><span class="d">쓸 날과 시간을 적을게요</span></span>${chev}</button></div>
-    <div id="pBox" ${ST.plan.has?'':'hidden'} style="margin-top:16px"><div class="grid2">
-      <div class="fld"><label for="pD">더 쓸 날 (일)</label><input type="number" id="pD" min="0" step="1" value="${ST.plan.d||''}"></div>
-      <div class="fld"><label for="pH">더 쓸 시간</label><input type="number" id="pH" min="0" step="0.5" value="${ST.plan.h||''}"></div></div></div>`},
+    <div id="pBox" ${ST.plan.has?'':'hidden'} style="margin-top:16px"><div class="grid3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+      <div class="fld"><label for="pD">일</label><input type="number" id="pD" min="0" step="1" inputmode="numeric" placeholder="0" value="${ST.plan.d||''}"></div>
+      <div class="fld"><label for="pH">시간</label><input type="number" id="pH" min="0" step="1" inputmode="numeric" placeholder="0" value="${ST.plan.h||''}"></div>
+      <div class="fld"><label for="pM">분</label><input type="number" id="pM" min="0" step="1" inputmode="numeric" placeholder="0" value="${ST.plan.m||''}"></div></div>
+      <p id="pSum" style="margin:10px 0 0;font-size:15px"></p>
+      <p style="margin:6px 0 0;font-size:13px;opacity:.75">나이스 복무에 적힌 대로 넣으세요. 예) 2일 3시간 30분 → 2 · 3 · 30 (1일 = ${dayH()}시간)</p></div>`},
   cta:()=>ST.plan.has?btnGo('다음'):'',
   bind:el=>{
-    $('#pNo',el).onclick=()=>{ST.plan={asked:true,has:false,d:0,h:0};$('#pNo',el).setAttribute('aria-pressed','true');setTimeout(next,160)};
+    $('#pNo',el).onclick=()=>{ST.plan={asked:true,has:false,d:0,h:0,m:0};$('#pNo',el).setAttribute('aria-pressed','true');setTimeout(next,160)};
     $('#pYes',el).onclick=()=>{ST.plan.asked=true;ST.plan.has=true;draw();setTimeout(()=>{const x=$('#pD');if(x)x.focus()},80)};
-    const d=$('#pD',el),h=$('#pH',el);if(d){d.oninput=()=>ST.plan.d=+d.value||0;h.oninput=()=>ST.plan.h=+h.value||0}
+    const d=$('#pD',el),h=$('#pH',el),m=$('#pM',el),sum=$('#pSum',el);
+    const show=()=>{if(!sum)return;const t=planMin();sum.innerHTML=t?'→ 모두 <b>'+dur(t)+'</b> ('+(t>=60?Math.floor(t/60)+'시간'+(t%60?' '+t%60+'분':''):t+'분')+')':'';};
+    if(d){const nn=v=>Math.max(0,Math.floor(+v||0));d.oninput=()=>{ST.plan.d=nn(d.value);show()};h.oninput=()=>{ST.plan.h=nn(h.value);show()};m.oninput=()=>{ST.plan.m=nn(m.value);show()};show();}
   }
 };
 
