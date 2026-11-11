@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>라벨·견출지 인쇄</title>
+<meta name="author" content="https://blog.naver.com/oderobong">
+<style>
+/*__SHARED:tool_ui.css__*/
+.tabs{display:flex;gap:6px;margin:0 0 4px}
+.tabs button{font:inherit;font-size:15px;font-weight:700;border:1px solid var(--line);background:#fff;border-radius:9px 9px 0 0;padding:8px 18px;cursor:pointer;color:var(--sub)}
+.tabs button.on{background:var(--blue);border-color:var(--blue);color:#fff}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar"></div>
+  <div class="wrap head">
+    <p class="school">업무 도구 · <span id="ver"></span></p>
+    <h1>라벨·견출지 인쇄<span>봉투 라벨, 서류철 견출지</span></h1>
+    <p class="lead">엑셀에서 복사한 명단으로 <b>라벨지</b>에 맞춰 찍거나, 접어 붙이는 <b>견출지(인덱스)</b>를 만듭니다. 브라우저에서 바로 인쇄합니다.</p>
+    <div id="schoolHost"></div>
+  </div>
+</header>
+<main class="wrap">
+  <div class="tabs" role="tablist"><button type="button" class="on" data-tab="lb" role="tab">라벨</button><button type="button" data-tab="ix" role="tab">견출지(인덱스)</button></div>
+
+  <section class="card" data-pane="lb" style="margin-top:0">
+    <h2>1. 라벨 내용</h2>
+    <div class="grid">
+      <label class="f wide"><span>한 줄에 라벨 하나. 엑셀에서 칸째 복사하면 칸(탭)으로 나뉩니다: <b>이름</b> / <b>직위·이름</b> / <b>직위·이름·괄호</b>(예: 자녀 반). 칸 없이 쓴 줄은 가운데 큰 글자로 찍습니다.</span>
+        <textarea id="lbLines" rows="8">학부모위원	홍길동	1-1 홍아름
+교원위원	이영희
+지역위원	김민수
+행정실</textarea></label>
+      <label class="f wide"><span>모든 라벨 윗줄에 넣을 글 (비우면 없음)</span><input id="lbTop" placeholder="예: 한빛초등학교 운영위원회"></label>
+    </div>
+    <div class="opts"><label><input type="checkbox" id="lbSpace" checked> 3글자 이름은 한 칸씩 띄우기 (홍 길 동)</label><label><input type="checkbox" id="lbFrame"> 테두리 상자</label></div>
+    <h2 style="margin-top:14px">2. 라벨지 규격</h2>
+    <div class="grid">
+      <label class="f"><span>규격 고르기</span><select id="lbPreset"><option value="2x7">2칸 × 7줄 (99.1 × 38.1mm)</option><option value="2x8">2칸 × 8줄 (99.1 × 33.9mm)</option><option value="3x7">3칸 × 7줄 (63.5 × 38.1mm)</option><option value="2x5">2칸 × 5줄 (99.1 × 57mm)</option><option value="">직접 입력</option></select></label>
+      <label class="f"><span>칸 수</span><input id="cols" type="number" min="1"></label>
+      <label class="f"><span>줄 수</span><input id="rows" type="number" min="1"></label>
+      <label class="f"><span>라벨 가로 (mm)</span><input id="w" type="number" step="0.1"></label>
+      <label class="f"><span>라벨 세로 (mm)</span><input id="h" type="number" step="0.1"></label>
+      <label class="f"><span>위 여백 (mm)</span><input id="mt" type="number" step="0.1"></label>
+      <label class="f"><span>왼쪽 여백 (mm)</span><input id="ml" type="number" step="0.1"></label>
+      <label class="f"><span>칸 사이 (mm)</span><input id="gx" type="number" step="0.1"></label>
+      <label class="f"><span>줄 사이 (mm)</span><input id="gy" type="number" step="0.1"></label>
+      <label class="f"><span>시작 칸 (쓰다 남은 라벨지)</span><input id="start" type="number" min="1" value="1"></label>
+    </div>
+    <p class="hint">라벨지 상자에 적힌 규격과 다르면 숫자를 고치세요. 처음엔 빈 A4에 시험으로 찍어 라벨지에 겹쳐 보는 게 안전합니다.</p>
+  </section>
+
+  <section class="card" data-pane="ix" style="margin-top:0" hidden>
+    <h2>1. 견출지 글자</h2>
+    <div class="grid">
+      <label class="f"><span>앞 글자</span><input id="ixPre" value="안건"></label>
+      <label class="f"><span>개수</span><input id="ixN" type="number" min="0" value="5"></label>
+      <label class="f"><span>시작 번호</span><input id="ixStart" type="number" min="1" value="1"></label>
+      <label class="f"><span>부수 (한 부 = 한 줄부터)</span><input id="ixCopies" type="number" min="1" value="1"></label>
+      <label class="f"><span>둘째 묶음 앞 글자</span><input id="ixPre2" value="붙임"></label>
+      <label class="f"><span>둘째 묶음 개수</span><input id="ixN2" type="number" min="0" value="0"></label>
+      <label class="f wide"><span>따로 찍을 글자 (한 줄에 하나, 예: 사람 이름)</span><textarea id="ixExtra" rows="3"></textarea></label>
+      <label class="f"><span>칸 가로 (mm)</span><input id="ixW" type="number" value="13"></label>
+      <label class="f"><span>한 면 세로 (mm)</span><input id="ixH" type="number" value="9"></label>
+    </div>
+    <p class="hint">한 칸은 위아래 두 면입니다. 가운데 점선을 접어 서류 가장자리에 붙이면 앞뒤 모두 글자가 보입니다.</p>
+  </section>
+
+  <div class="acts"><button class="btn primary" type="button" id="print">인쇄하기</button><button class="btn" type="button" id="dl">HTML로 받기</button><span class="hint">인쇄 창에서 <b>배율 100%(실제 크기)</b>, 여백 '없음'을 고르세요.</span></div>
+  <div id="pv"></div>
+  <section class="info" aria-label="안내"><details><summary>만든 사람</summary><p><a class="link" href="https://blog.naver.com/oderobong" target="_blank" rel="noopener">blog.naver.com/oderobong</a> · 학교운영위원회 운영업무 도우미의 봉투 라벨·안건 인덱스와 같은 코드를 씁니다.</p></details></section>
+</main>
+<script>
+const TOOL = {name:"라벨·견출지 인쇄", version:"1.0", date:"2026-11-11"};
+/*__SHARED:school_info.js__*/
+/*__SHARED:hwpx_engine.js__*/
+/*__SHARED:hwpx_parts.js__*/
+/*__SHARED:print_labels.js__*/
+/*__SHARED:tool_ui.js__*/
+$("ver").textContent = `v${TOOL.version} (${TOOL.date})`;
+const PRESET = {"2x7":{cols:2,rows:7,w:99.1,h:38.1,mt:15.1,ml:4.65,gx:2.5,gy:0}, "2x8":{cols:2,rows:8,w:99.1,h:33.9,mt:13,ml:4.65,gx:2.5,gy:0},
+  "3x7":{cols:3,rows:7,w:63.5,h:38.1,mt:15.15,ml:7.2,gx:2.5,gy:0}, "2x5":{cols:2,rows:5,w:99.1,h:57,mt:6,ml:4.65,gx:2.5,gy:0}};
+const NUM = ["cols","rows","w","h","mt","ml","gx","gy"], KEEP = ["lbLines","lbTop","lbPreset",...NUM,"start","ixPre","ixN","ixStart","ixCopies","ixPre2","ixN2","ixExtra","ixW","ixH"], KEY = "schooltools_labels";
+let TAB = "lb";
+function applyPreset(){ const p = PRESET[$("lbPreset").value]; if(p) NUM.forEach(k => $(k).value = p[k]); }
+applyPreset();
+try{ const o = JSON.parse(localStorage.getItem(KEY) || "{}"); KEEP.forEach(k => { if(o[k] != null) $(k).value = o[k]; }); ["lbSpace","lbFrame"].forEach(k => { if(o[k] != null) $(k).checked = o[k]; }); if(o.tab) TAB = o.tab; }catch(e){}
+function keep(){ const o = {tab:TAB}; KEEP.forEach(k => o[k] = $(k).value); ["lbSpace","lbFrame"].forEach(k => o[k] = $(k).checked); try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(e){} }
+schoolChip("schoolHost", () => { const s = SCHOOL_INFO.get(); if(!$("lbTop").value && s.name){ $("lbTop").value = s.name; redraw(); } });
+if(!$("lbTop").value && !localStorage.getItem(KEY)) $("lbTop").value = SCHOOL_INFO.get().name || "";
+function labelItems(){
+  const top = $("lbTop").value.trim(), sp = $("lbSpace").checked;
+  return $("lbLines").value.split("\n").map(l => l.replace(/\r/g, "")).filter(l => l.trim()).map(l => {
+    const c = l.split("\t").map(x => x.trim());
+    while(c.length && !c[c.length-1]) c.pop();
+    if(c.length === 1 && !/\t/.test(l)) return {free:c[0]};
+    const name0 = c.length === 1 ? c[0] : c[1], nm = sp && [...name0].length === 3 ? [...name0].join(" ") : name0;
+    return {top, role: c.length >= 2 ? c[0] : "", name: nm, child: c[2] || ""};
+  });
+}
+function ixSets(){
+  const pre = $("ixPre").value.trim(), n = Math.max(0, +$("ixN").value||0), st = Math.max(1, +$("ixStart").value||1), pre2 = $("ixPre2").value.trim(), n2 = Math.max(0, +$("ixN2").value||0), cp = Math.max(1, +$("ixCopies").value||1);
+  const one = [...Array(n)].map((_, i) => `${pre}${st+i}`).concat([...Array(n2)].map((_, i) => `${pre2}${i+1}`));
+  const sets = one.length ? Array.from({length:cp}, () => one) : [];
+  const extra = $("ixExtra").value.split("\n").map(s => s.trim()).filter(Boolean); if(extra.length) sets.push(extra);
+  return sets;
+}
+function html(){
+  if(TAB === "ix") return indexTabsHtml(ixSets(), {w:$("ixW").value, h:$("ixH").value, title:"견출지"});
+  const o = {start:$("start").value, frame:$("lbFrame").checked, title:"라벨"}; NUM.forEach(k => o[k] = $(k).value);
+  return labelSheetHtml(labelItems(), o);
+}
+let t = null;
+function redraw(){ clearTimeout(t); t = setTimeout(() => { document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === TAB)); document.querySelectorAll("[data-pane]").forEach(p => p.hidden = p.dataset.pane !== TAB); showHtmlPreview($("pv"), html()); keep(); }, 200); }
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => { TAB = b.dataset.tab; redraw(); });
+$("lbPreset").addEventListener("change", applyPreset);
+NUM.forEach(k => $(k).addEventListener("input", () => { $("lbPreset").value = ""; }));
+document.querySelectorAll("main input, main textarea, main select").forEach(e => e.addEventListener("input", redraw));
+$("lbLines").addEventListener("keydown", e => { if(e.key === "Tab"){ e.preventDefault(); const ta = e.target, a = ta.selectionStart; ta.setRangeText("\t", a, ta.selectionEnd, "end"); redraw(); } });
+$("print").onclick = () => { const w = window.open("", "_blank"); if(!w){ toast("팝업이 막혔어요. HTML로 받아 열어 인쇄하세요"); return; } w.document.write(html()); w.document.close(); setTimeout(() => w.print(), 400); };
+$("dl").onclick = () => save(new Blob([html()], {type:"text/html"}), TAB === "ix" ? "견출지.html" : "라벨.html");
+redraw();
+</script>
+</body>
+</html>

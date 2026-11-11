@@ -1,0 +1,119 @@
+
+:root{
+  --ink:#1c2430; --sub:#5b6573; --line:#dfe3e8; --paper:#f7f8f6; --card:#ffffff;
+  --blue:#1565c0; --blue-soft:#e8f0fb; --red:#9b1c1c; --green:#1e5b33; --green-soft:#e6f4ea;
+  --amber:#6b4e00; --amber-soft:#fff6e0; --err-soft:#fde8e8;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:Pretendard,"Apple SD Gothic Neo","Malgun Gothic","맑은 고딕",sans-serif;background:var(--paper);color:var(--ink);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:880px;margin:0 auto;padding:0 20px}
+header{background:#fff;border-bottom:1px solid var(--line)}
+.bar{height:6px;background:linear-gradient(90deg,var(--red) 0 18%,var(--blue) 18% 100%)}
+.head{padding-top:26px;padding-bottom:20px}
+.school{font-size:14px;color:var(--sub);margin:0 0 4px}
+h1{font-size:30px;line-height:1.2;margin:0;font-weight:800;letter-spacing:-.02em}
+h1 span{color:var(--sub);font-weight:500;font-size:18px;margin-left:8px;letter-spacing:0}
+.lead{margin:10px 0 0;font-size:15px;color:var(--sub)}
+.lead b{color:var(--ink)}
+
+.engine{display:inline-flex;align-items:center;gap:8px;margin-top:14px;font-size:14px;border:1px solid var(--line);border-radius:999px;padding:4px 12px 4px 10px;background:#fff}
+.engine .dot{width:9px;height:9px;border-radius:50%;background:#c3c8cf;flex:none}
+.engine.loading .dot{background:var(--blue);animation:pulse 1.1s ease-in-out infinite}
+.engine.ready .dot{background:#2e9d57}
+.engine.fail .dot{background:var(--red)}
+.engine.fail{border-color:#f0b9b9;background:var(--err-soft)}
+@keyframes pulse{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.engine.loading .dot{animation:none}}
+
+main.wrap{padding-top:20px;padding-bottom:44px}
+.drop{background:#fff;border:2px dashed #b9c6d8;border-radius:14px;padding:30px 20px;text-align:center;transition:border-color .15s,background .15s}
+.drop.over{border-color:var(--blue);background:var(--blue-soft)}
+.drop h2{margin:0 0 4px;font-size:20px;font-weight:800}
+.drop p{margin:0 0 16px;color:var(--sub);font-size:14.5px}
+.btns{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.btn{font:inherit;font-size:15px;font-weight:700;border:1px solid var(--ink);background:#fff;color:var(--ink);border-radius:9px;padding:8px 16px;cursor:pointer}
+.btn:hover{filter:brightness(.96)}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.sm{font-size:13.5px;padding:4px 11px;border-radius:7px}
+.btn:disabled{opacity:.45;cursor:default;filter:none}
+.btn:focus-visible,.link:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.fsa{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line);font-size:14px;color:var(--sub)}
+.fsa .btn{margin-bottom:6px}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--sub);margin-top:6px}
+
+.summary{display:none;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:20px 0 10px}
+.summary.on{display:flex}
+.summary .cnt{font-size:14.5px;margin-right:auto}
+.summary .cnt b{font-variant-numeric:tabular-nums}
+.list{display:flex;flex-direction:column;gap:6px}
+.row{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center}
+.st{font-size:12.5px;font-weight:700;border-radius:6px;padding:2px 8px;white-space:nowrap;min-width:64px;text-align:center}
+.st.wait{background:#eef0f3;color:var(--sub)}
+.st.run{background:var(--blue-soft);color:var(--blue)}
+.st.ok{background:var(--green-soft);color:var(--green)}
+.st.skip{background:#eef0f3;color:var(--sub)}
+.st.fail{background:var(--err-soft);color:var(--red)}
+.nm{min-width:0}
+.nm .f{font-weight:700;word-break:break-all;line-height:1.35}
+.nm .d{font-size:12.5px;color:var(--sub);word-break:break-all}
+.nm .why{font-size:13px;margin-top:3px;color:var(--red)}
+.act{white-space:nowrap}
+@media (max-width:560px){
+  h1{font-size:24px} h1 span{display:block;margin:4px 0 0}
+  .row{grid-template-columns:1fr auto}
+  .row .st{grid-column:1/-1;justify-self:start}
+}
+
+.info{margin-top:28px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px 18px}
+.info details{border-bottom:1px solid var(--line);padding:10px 0}
+.info details:last-child{border-bottom:0}
+.info summary{cursor:pointer;font-weight:700;font-size:15px}
+.info summary:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
+.info ul{margin:8px 0 4px;padding-left:20px;font-size:14.5px;color:#333c48}
+.info li{margin:3px 0}
+.info p{margin:8px 0 4px;font-size:14.5px;color:#333c48}
+.info a,.link{color:var(--blue)}
+footer{border-top:1px solid var(--line);background:#fff;padding:18px 0 26px;font-size:13px;color:var(--sub)}
+footer p{margin:0 0 4px}
+kbd{font:inherit;font-size:12px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:#fafbfc}
+
+/* ===== 한글 도구 모음 공통 덧붙임 (v2026-11) ===== */
+.schoolchip{display:inline-flex;align-items:center;gap:8px;margin-top:12px;font-size:13.5px;color:var(--sub);background:#f1f6f1;border:1px solid #dbe8db;border-radius:10px;padding:5px 12px}
+.schoolchip b{color:var(--ink)}
+.schoolchip button{font:inherit;font-size:13px;color:var(--blue);background:none;border:0;text-decoration:underline;cursor:pointer;padding:0}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-top:16px}
+.card h2{font-size:17px;margin:0 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px 14px}
+.f{display:flex;flex-direction:column;gap:4px;font-size:13.5px;color:var(--sub)}
+.f input,.f select,.f textarea,.inp{font:inherit;font-size:15px;color:var(--ink);border:1px solid #cbd3dd;border-radius:8px;padding:7px 10px;background:#fff}
+textarea.inp,.f textarea{min-height:120px;resize:vertical;line-height:1.5}
+.f.wide{grid-column:1/-1}
+.opts{display:flex;flex-wrap:wrap;gap:8px 18px;margin:12px 0}
+.opts label{display:inline-flex;align-items:center;gap:6px;font-size:14.5px}
+.acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:14px}
+.hint{font-size:13.5px;color:var(--sub);margin:6px 0 0}
+.warn{font-size:13.5px;color:var(--amber);background:var(--amber-soft);border-radius:8px;padding:8px 12px;margin-top:10px}
+table.t{width:100%;border-collapse:collapse;font-size:14.5px}
+table.t th{font-size:13px;color:var(--sub);font-weight:600;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+table.t td{padding:6px 8px;border-bottom:1px solid #eef0f3;vertical-align:middle}
+table.t td input{width:100%;font:inherit;font-size:14.5px;border:1px solid #d5dbe3;border-radius:6px;padding:4px 8px}
+.mvb{font:inherit;font-size:11px;border:1px solid var(--line);background:#fff;border-radius:5px;padding:1px 6px;cursor:pointer;color:var(--sub)}
+.x{font:inherit;border:0;background:none;color:#9aa3ae;font-size:18px;cursor:pointer;line-height:1}
+.x:hover{color:var(--red)}
+.pv{margin-top:16px;background:#e9ecef;border-radius:12px;padding:12px;overflow:auto;max-height:80vh}
+.pv iframe{width:100%;height:75vh;border:0;background:#fff;border-radius:6px}
+.pv .rp{background:transparent}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1c2430;color:#fff;border-radius:10px;padding:10px 18px;font-size:14.5px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50}
+.toast.show{opacity:.95}
+dialog.sd{border:0;border-radius:14px;padding:22px 24px;max-width:520px;width:92vw;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+dialog.sd h2{margin:0 0 12px;font-size:18px}
+dialog.sd::backdrop{background:rgba(20,28,40,.35)}
+.paste{min-height:140px;border:1px solid #cbd3dd;border-radius:10px;padding:10px 12px;background:#fff;font-size:14.5px;overflow:auto;max-height:340px;outline:none}
+.paste:empty::before{content:attr(data-ph);color:#9aa3ae}
+.paste:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+/* HWPX 미리보기(ENG.previewHwpx) */
+.rp{display:flex;flex-direction:column;align-items:center;gap:18px}
+.rp-page{background:#fff;color:#111;box-shadow:0 2px 10px rgba(20,30,50,.2);position:relative;font-family:"함초롬돋움","HCR Dotum","Malgun Gothic",sans-serif;font-size:10pt;flex:none}
+.rp-page .pgno{position:absolute;top:6pt;right:8pt;font:11px sans-serif;color:#99a}
+.rp-page p{margin:0}

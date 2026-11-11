@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>한글 파일 합치기</title>
+<meta name="author" content="https://blog.naver.com/oderobong">
+<style>
+/*__SHARED:tool_ui.css__*/
+.mv{white-space:nowrap}
+td.no{color:var(--sub);font-variant-numeric:tabular-nums;width:28px}
+td.fn{word-break:break-all;font-size:13.5px}
+td.fn small{display:block;color:var(--sub)}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar"></div>
+  <div class="wrap head">
+    <p class="school">업무 도구 · <span id="ver"></span></p>
+    <h1>한글 파일 합치기<span>안건집·자료집을 한 파일로</span></h1>
+    <p class="lead">여러 한글 파일(.hwpx, .hwp)을 순서대로 하나의 .hwpx로 묶습니다. <b>파일은 인터넷으로 올라가지 않고 이 PC 안에서만 합쳐집니다.</b></p>
+    <div id="schoolHost"></div>
+  </div>
+</header>
+<main class="wrap">
+  <section class="drop" id="drop" aria-label="파일 놓는 곳">
+    <h2>합칠 한글 파일을 여기에 끌어다 놓으세요</h2>
+    <p>.hwp도 됩니다(처음 한 번 인터넷 필요). 넣은 순서대로 놓이고, 아래에서 순서를 바꿀 수 있습니다.</p>
+    <div class="btns"><button class="btn primary" type="button" id="pick">파일 고르기</button></div>
+    <input type="file" id="fileIn" accept=".hwpx,.hwp" multiple hidden>
+    <p class="hint" id="conv" hidden></p>
+  </section>
+
+  <section class="card" id="listCard" hidden>
+    <h2>합칠 순서</h2>
+    <table class="t"><thead><tr><th></th><th>#</th><th>파일</th><th>목차에 쓸 제목</th><th></th></tr></thead><tbody id="rows"></tbody></table>
+    <div class="opts">
+      <label><input type="checkbox" id="oPage" checked> 쪽 번호 새로 매기기 (아래 가운데 "- 1 -")</label>
+      <label><input type="checkbox" id="oToc"> 맨 앞에 목차 쪽 넣기</label>
+      <label><input type="checkbox" id="oCover"> 맨 앞에 표지 넣기</label>
+    </div>
+    <div class="grid" id="coverBox" hidden>
+      <label class="f wide"><span>표지 제목</span><input id="cTitle" placeholder="예: 2027학년도 학교교육계획 자료집"></label>
+      <label class="f"><span>날짜</span><input id="cDate"></label>
+      <label class="f"><span>학교·기관명</span><input id="cOrg"></label>
+    </div>
+    <div class="acts">
+      <button class="btn primary" type="button" id="go">하나로 합쳐 받기 (.hwpx)</button>
+      <button class="btn" type="button" id="pvBtn">미리보기</button>
+      <label class="f" style="flex-direction:row;align-items:center;gap:6px">파일 이름 <input class="inp" id="outName" value="합친_문서" style="width:200px">.hwpx</label>
+    </div>
+    <div class="warn" id="warns" hidden></div>
+    <div id="pv"></div>
+  </section>
+
+  <section class="info" aria-label="안내">
+    <details open><summary>꼭 알아 두세요</summary><ul>
+      <li>파일마다 <b>새 쪽에서 시작</b>하고, 용지 방향·여백은 각 파일의 한글 설정을 그대로 둡니다(가로 문서도 가로 그대로).</li>
+      <li>원래 문서의 쪽 번호는 지우고, '쪽 번호 새로 매기기'를 고르면 첫 파일부터 "- 1 -"로 이어서 매깁니다. 표지·목차에는 쪽 번호를 넣지 않습니다.</li>
+      <li>파일 끝의 빈 줄은 지워 중간에 빈 쪽이 생기지 않게 합니다.</li>
+      <li>목차는 제목과 순서만 넣습니다(쪽 번호는 한글에서 열어 보고 채워 주세요).</li>
+      <li>바탕쪽이 있는 문서는 바탕쪽이 빠질 수 있습니다. 결재·제출용은 합친 파일을 한글에서 한 번 열어 확인해 주세요.</li>
+    </ul></details>
+    <details><summary>.hwp를 넣으면 왜 기다리나요?</summary><p>옛 형식(.hwp)은 먼저 .hwpx로 바꿔야 합칠 수 있습니다. 변환 엔진(브라우저 안 파이썬)을 처음 한 번 내려받느라 10초 안팎 걸립니다. 학교망에서 막히면 <a class="link" href="hwp2hwpx.html">HWP·HTML → HWPX 변환기</a>로 먼저 바꿔 오세요.</p></details>
+    <details><summary>만든 사람 · 사용한 공개 소프트웨어</summary><ul>
+      <li>만든 사람: <a class="link" href="https://blog.naver.com/oderobong" target="_blank" rel="noopener">blog.naver.com/oderobong</a></li>
+      <li>JSZip (MIT), .hwp 변환: pyhwpxlib 0.18.3(PolyForm Noncommercial 1.0.0 · Apache-2.0), hwp2hwpx·hwplib(Apache-2.0), olefile(BSD), Pyodide(MPL-2.0)</li>
+    </ul></details>
+  </section>
+</main>
+<script>
+/*__VENDOR:jszip.min.js__*/
+</script>
+<script>
+const TOOL = {name:"한글 파일 합치기", version:"1.0", date:"2026-11-11"};
+/*__SHARED:school_info.js__*/
+/*__SHARED:hwpx_engine.js__*/
+/*__SHARED:hwpx_parts.js__*/
+/*__SHARED:hwpx_merge.js__*/
+/*__SHARED:hwp_engine.js__*/
+/*__SHARED:tool_ui.js__*/
+
+$("ver").textContent = `v${TOOL.version} (${TOOL.date})`;
+const FILES = [];   // {id, name, from, data, title}
+let seq = 0;
+const baseOf = n => n.replace(/\.[^.]+$/, "");
+const cleanTitle = n => baseOf(n).replace(/^\d+[\s._\-)]+/, "").replace(/_/g, " ").trim();
+function fillCover(){ const s = SCHOOL_INFO.get(); if(!$("cOrg").value) $("cOrg").value = s.name || ""; if(!$("cDate").value) $("cDate").value = ymdDot(); }
+schoolChip("schoolHost", () => { $("cOrg").value = ""; fillCover(); });
+
+async function addFiles(list){
+  const ok = list.filter(f => /\.(hwpx|hwp)$/i.test(f.name) && !/^~\$/.test(f.name));
+  if(!ok.length){ toast("한글 파일(.hwpx, .hwp)만 합칠 수 있어요"); return; }
+  let bad = false;
+  for(const f of ok){
+    let data = await f.arrayBuffer(), name = f.name, from = "";
+    const head = new Uint8Array(data.slice(0, 2));
+    if(/\.hwp$/i.test(f.name) && !(head[0] === 0x50 && head[1] === 0x4B)){
+      $("conv").hidden = false; $("conv").textContent = `.hwp를 .hwpx로 바꾸는 중: ${f.name}`;
+      HC.onStage = t => { $("conv").textContent = `.hwp를 .hwpx로 바꾸는 중: ${f.name} · ${t}`; };
+      try{ const u = await hwpToHwpx(data); data = u.buffer.slice(u.byteOffset, u.byteOffset + u.byteLength); from = f.name; name = baseOf(f.name) + ".hwpx"; }
+      catch(e){ bad = true; toast(`${f.name}: 바꾸지 못했어요`); $("conv").textContent = `${f.name}: ${hcWhy(e.message)}`; continue; }
+    }
+    try{ await JSZip.loadAsync(data); }catch(e){ toast(`${f.name}: 한글 파일(.hwpx)을 읽지 못했어요`); continue; }
+    FILES.push({id:++seq, name, from, data, title:cleanTitle(name)});
+  }
+  if(!bad) $("conv").hidden = true;
+  draw();
+}
+function draw(){
+  $("listCard").hidden = !FILES.length;
+  $("rows").innerHTML = FILES.map((f, i) => `<tr data-id="${f.id}"><td class="mv"><button class="mvb" data-a="up" aria-label="위로">▲</button><button class="mvb" data-a="dn" aria-label="아래로">▼</button></td>
+<td class="no">${i+1}</td><td class="fn">${esc(f.name)}${f.from ? `<small>${esc(f.from)} → .hwpx로 바꿈</small>` : ""}</td>
+<td><input data-a="title" value="${esc(f.title)}" aria-label="목차 제목"></td><td><button class="x" data-a="del" aria-label="빼기" title="빼기">×</button></td></tr>`).join("");
+  $("pv").innerHTML = ""; $("warns").hidden = true;
+}
+$("rows").addEventListener("click", e => {
+  const b = e.target.closest("[data-a]"); if(!b || b.tagName === "INPUT") return;
+  const i = FILES.findIndex(f => f.id === +b.closest("tr").dataset.id), a = b.dataset.a;
+  if(a === "del") FILES.splice(i, 1);
+  if(a === "up" && i > 0) [FILES[i-1], FILES[i]] = [FILES[i], FILES[i-1]];
+  if(a === "dn" && i < FILES.length-1) [FILES[i+1], FILES[i]] = [FILES[i], FILES[i+1]];
+  draw();
+});
+$("rows").addEventListener("input", e => { if(e.target.dataset.a === "title"){ FILES.find(f => f.id === +e.target.closest("tr").dataset.id).title = e.target.value; } });
+$("oCover").onchange = () => { $("coverBox").hidden = !$("oCover").checked; fillCover(); };
+$("pick").onclick = () => $("fileIn").click();
+wireDrop($("drop"), $("fileIn"), addFiles);
+
+async function build(){
+  const parts = [];
+  if($("oCover").checked){
+    const t = $("cTitle").value.trim() || "자료집";
+    const B = [GAP(120), P(t, {sz:26, b:1, al:"c", ls:150}), GAP(150), P($("cDate").value.trim(), {sz:15, al:"c"}), GAP(10), P($("cOrg").value.trim(), {sz:18, b:1, al:"c"})];
+    parts.push({data: await ENG.hwpx(B, t, {noFill:true}), cover:true, label:"표지"});
+  }
+  if($("oToc").checked){
+    const B = [P("목　　차", {sz:20, b:1, al:"c"}), GAP(18), ...FILES.map((f, i) => P(`${i+1}. ${f.title || baseOf(f.name)}`, {sz:14, ls:200, l:20}))];
+    parts.push({data: await ENG.hwpx(B, "목차", {noFill:true}), cover:true, label:"목차"});
+  }
+  FILES.forEach((f, i) => parts.push({data:f.data, label:f.name, pageStart: i === 0 && parts.length ? 1 : null}));
+  const r = await mergeHwpx(parts, {title: $("cTitle").value.trim() || $("outName").value.trim() || "합친 문서", pageNum: $("oPage").checked});
+  $("warns").hidden = !r.warns.length; $("warns").textContent = r.warns.join(" / ");
+  return r.blob;
+}
+$("go").onclick = async () => {
+  if(!FILES.length) return;
+  const b = $("go"), t = b.textContent; b.disabled = true; b.textContent = "합치는 중…";
+  try{ const blob = await build(); save(blob, ($("outName").value.trim() || "합친_문서").replace(/\.hwpx$/i, "") + ".hwpx"); toast(`${FILES.length}개 파일을 하나로 합쳤습니다`); }
+  catch(e){ console.error(e); alert("합치지 못했어요: " + (e.message || e)); }
+  finally{ b.disabled = false; b.textContent = t; }
+};
+$("pvBtn").onclick = async () => {
+  if(!FILES.length) return;
+  $("pv").innerHTML = `<p class="hint">미리보기를 만드는 중…</p>`;
+  try{ await showHwpxPreview($("pv"), await build()); }catch(e){ console.error(e); $("pv").innerHTML = `<p class="warn">미리보기를 만들지 못했어요: ${esc(e.message || e)}</p>`; }
+};
+</script>
+</body>
+</html>

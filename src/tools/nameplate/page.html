@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>명패 만들기</title>
+<meta name="author" content="https://blog.naver.com/oderobong">
+<style>
+/*__SHARED:tool_ui.css__*/
+</style>
+</head>
+<body>
+<header>
+  <div class="bar"></div>
+  <div class="wrap head">
+    <p class="school">업무 도구 · <span id="ver"></span></p>
+    <h1>명패 만들기<span>회의·연수·행사 이름표</span></h1>
+    <p class="lead">이름을 붙여 넣으면 A4 한 장에 앞·뒤 한 벌씩 나오는 접는 명패를 만듭니다. <b>설치 없이 브라우저에서 인쇄합니다.</b></p>
+    <div id="schoolHost"></div>
+  </div>
+</header>
+<main class="wrap">
+  <section class="card">
+    <h2>1. 이름 넣기</h2>
+    <label class="f wide"><span>한 줄에 한 장. "직위 이름"(예: 학부모위원 홍길동) · 기관을 따로 쓰려면 "기관|직위|이름" · 이름 없이 큰 글자만: "위 원 장"처럼 한 글자씩 띄어 쓰기</span>
+      <textarea id="lines" rows="8">학교장 김교장
+학부모위원 홍길동
+교원위원 이영희
+위 원 장
+제 안 자</textarea></label>
+    <p class="hint">엑셀에서 '직위'·'이름' 두 칸을 복사해 붙여 넣어도 됩니다.</p>
+  </section>
+  <section class="card">
+    <h2>2. 모양</h2>
+    <div class="grid">
+      <label class="f"><span>디자인</span><select id="style"><option value="garland">삼각 깃발</option><option value="flower">꽃</option><option value="line">금색 테두리</option><option value="plain">테두리 없음</option><option value="image">내 배경 그림</option></select></label>
+      <label class="f"><span>이름 글꼴</span><select id="font"><option value="serif">바탕(명조)</option><option value="sans">돋움(고딕)</option></select></label>
+      <label class="f"><span>가로 (mm)</span><input id="w" type="number" value="250"></label>
+      <label class="f"><span>세로 (mm)</span><input id="h" type="number" value="85"></label>
+      <label class="f wide"><span>윗줄 기관명 (비우면 넣지 않음)</span><input id="org" placeholder="예: 한빛초등학교 학교운영위원회"></label>
+    </div>
+    <div class="opts">
+      <label><input type="checkbox" id="flip" checked> 접는 명패(윗장을 거꾸로 인쇄)</label>
+      <span id="bgBox" hidden><button class="btn sm" type="button" id="bgPick">배경 그림 고르기</button> <span class="hint" id="bgInfo"></span><input type="file" id="bgIn" accept="image/*" hidden></span>
+    </div>
+    <div class="acts">
+      <button class="btn primary" type="button" id="print">인쇄하기</button>
+      <button class="btn" type="button" id="dl">HTML로 받기</button>
+      <span class="hint">인쇄 창에서 <b>배율 100%(실제 크기)</b>, 여백 '없음', '배경 그래픽' 켜기를 고르세요.</span>
+    </div>
+  </section>
+  <div id="pv"></div>
+  <section class="info" aria-label="안내">
+    <details><summary>만든 사람</summary><p><a class="link" href="https://blog.naver.com/oderobong" target="_blank" rel="noopener">blog.naver.com/oderobong</a> · 학교운영위원회 운영업무 도우미의 명패 기능과 같은 코드를 씁니다.</p></details>
+  </section>
+</main>
+<script>
+const TOOL = {name:"명패 만들기", version:"1.0", date:"2026-11-11"};
+/*__SHARED:school_info.js__*/
+/*__SHARED:hwpx_engine.js__*/
+/*__SHARED:hwpx_parts.js__*/
+/*__SHARED:plates.js__*/
+/*__SHARED:tool_ui.js__*/
+$("ver").textContent = `v${TOOL.version} (${TOOL.date})`;
+const KEY = "schooltools_nameplate";
+let BG = null;
+try{ const o = JSON.parse(localStorage.getItem(KEY) || "{}"); ["lines","style","font","w","h","org"].forEach(k => { if(o[k] != null) $(k).value = o[k]; }); if(o.flip != null) $("flip").checked = o.flip; BG = o.bg || null; }catch(e){}
+function keep(){ const o = {}; ["lines","style","font","w","h","org"].forEach(k => o[k] = $(k).value); o.flip = $("flip").checked; o.bg = BG; try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(e){ o.bg = null; try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(_){} } }
+const fillOrg = () => { const s = SCHOOL_INFO.get(); if(!$("org").value && s.name && !localStorage.getItem(KEY)) $("org").value = s.name; };
+fillOrg();
+schoolChip("schoolHost", () => { fillOrg(); redraw(); });
+function html(){
+  const lines = $("lines").value.split("\n").map(l => l.includes("\t") ? l.split("\t").map(x => x.trim()).filter(Boolean).join(" ") : l).join("\n");
+  const org = $("org").value.trim();
+  return plateSheetHtml(parsePlates(lines, org), {w:$("w").value, h:$("h").value, style:$("style").value, flip:$("flip").checked, font:$("font").value, org, bgSrc: BG && BG.src});
+}
+let t = null;
+function redraw(){ clearTimeout(t); t = setTimeout(() => { $("bgBox").hidden = $("style").value !== "image"; $("bgInfo").textContent = BG ? "배경 그림 있음" : "그림을 고르세요(없으면 꽃 무늬)"; showHtmlPreview($("pv"), html()); keep(); }, 200); }
+["lines","style","font","w","h","org","flip"].forEach(k => $(k).addEventListener("input", redraw));
+$("bgPick").onclick = () => $("bgIn").click();
+$("bgIn").onchange = () => {
+  const f = $("bgIn").files[0]; $("bgIn").value = ""; if(!f) return;
+  const fr = new FileReader();
+  fr.onload = () => { const im = new Image(); im.onload = () => {
+    const sc = Math.min(1, 2000 / im.naturalWidth), c = document.createElement("canvas"); c.width = Math.round(im.naturalWidth*sc); c.height = Math.round(im.naturalHeight*sc);
+    c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); let src = c.toDataURL("image/png"); if(src.length > 2500000) src = c.toDataURL("image/jpeg", 0.88);
+    BG = {src}; redraw(); toast("배경 그림을 넣었습니다"); }; im.src = fr.result; };
+  fr.readAsDataURL(f);
+};
+$("print").onclick = () => { const w = window.open("", "_blank"); if(!w){ toast("팝업이 막혔어요. HTML로 받아 열어 인쇄하세요"); return; } w.document.write(html()); w.document.close(); setTimeout(() => w.print(), 400); };
+$("dl").onclick = () => save(new Blob([html()], {type:"text/html"}), "명패.html");
+redraw();
+</script>
+</body>
+</html>

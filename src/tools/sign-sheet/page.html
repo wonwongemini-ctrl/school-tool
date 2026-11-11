@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>참석자 서명부</title>
+<meta name="author" content="https://blog.naver.com/oderobong">
+<style>
+/*__SHARED:tool_ui.css__*/
+</style>
+</head>
+<body>
+<header>
+  <div class="bar"></div>
+  <div class="wrap head">
+    <p class="school">업무 도구 · <span id="ver"></span></p>
+    <h1>참석자 서명부<span>연수·협의회·회의</span></h1>
+    <p class="lead">명단을 붙여 넣으면 서명 칸이 있는 <b>한글 파일(.hwpx)</b>을 만듭니다. 명단이 길면 다음 쪽으로 이어집니다.</p>
+    <div id="schoolHost"></div>
+  </div>
+</header>
+<main class="wrap">
+  <section class="card">
+    <h2>1. 행사 정보</h2>
+    <div class="grid">
+      <label class="f wide"><span>제목</span><input id="title" value="교직원 연수 참석자 서명부"></label>
+      <label class="f wide"><span>부제목 (비우면 없음)</span><input id="sub" placeholder="예: 2026학년도 개인정보보호 연수"></label>
+      <label class="f"><span>일시</span><input id="when" placeholder="2026. 11. 26.(목) 15:00"></label>
+      <label class="f"><span>장소</span><input id="place" placeholder="시청각실"></label>
+      <label class="f"><span>확인자 (맨 아래, 비우면 없음)</span><input id="sign" placeholder="담당자 홍길동"></label>
+    </div>
+  </section>
+  <section class="card">
+    <h2>2. 명단</h2>
+    <div class="grid">
+      <label class="f wide"><span>한 줄에 한 명. 엑셀에서 칸째 복사: <b>성명</b> / <b>직위·성명</b> / <b>소속·직위·성명</b></span>
+        <textarea id="people" rows="8">교무부	교사	김민수
+교무부	교사	이영희
+행정실	주무관	홍길동</textarea></label>
+      <label class="f"><span>빈 줄 더 넣기</span><input id="blank" type="number" min="0" value="5"></label>
+      <label class="f"><span>칸</span><select id="cols"><option value="full">연번·소속·직위·성명·서명·비고</option><option value="mid">연번·직위·성명·서명·비고</option><option value="min">연번·성명·서명</option></select></label>
+    </div>
+    <div class="acts">
+      <button class="btn primary" type="button" id="dl">한글 파일 받기 (.hwpx)</button>
+      <button class="btn" type="button" id="pvBtn">미리보기</button>
+    </div>
+  </section>
+  <div id="pv"></div>
+  <section class="info" aria-label="안내"><details><summary>만든 사람</summary><p><a class="link" href="https://blog.naver.com/oderobong" target="_blank" rel="noopener">blog.naver.com/oderobong</a> · 학교운영위원회 운영업무 도우미의 위원 출석 등록부와 같은 코드를 씁니다.</p></details></section>
+</main>
+<script>
+/*__VENDOR:jszip.min.js__*/
+</script>
+<script>
+const TOOL = {name:"참석자 서명부", version:"1.0", date:"2026-11-11"};
+/*__SHARED:school_info.js__*/
+/*__SHARED:hwpx_engine.js__*/
+/*__SHARED:hwpx_parts.js__*/
+/*__SHARED:sign_sheet.js__*/
+/*__SHARED:tool_ui.js__*/
+$("ver").textContent = `v${TOOL.version} (${TOOL.date})`;
+const KEEP = ["title","sub","when","place","sign","people","blank","cols"], KEY = "schooltools_signsheet";
+try{ const o = JSON.parse(localStorage.getItem(KEY) || "{}"); KEEP.forEach(k => { if(o[k] != null) $(k).value = o[k]; }); }catch(e){}
+document.querySelectorAll("main input, main textarea, main select").forEach(e => e.addEventListener("input", () => { const o = {}; KEEP.forEach(k => o[k] = $(k).value); try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(_){} }));
+$("people").addEventListener("keydown", e => { if(e.key === "Tab"){ e.preventDefault(); e.target.setRangeText("\t", e.target.selectionStart, e.target.selectionEnd, "end"); } });
+schoolChip("schoolHost");
+const COLS = {full:{head:["연번","소속","직위","성명","서명","비고"], w:[8,16,14,15,24,14]}, mid:{head:["연번","직위","성명","서명","비고"], w:[8,18,18,28,18]}, min:{head:["연번","성명","서명"], w:[10,30,50]}};
+function blocks(){
+  const c = COLS[$("cols").value];
+  const ppl = $("people").value.split("\n").map(l => l.split("\t").map(x => x.trim())).filter(r => r.some(Boolean)).map(r => {
+    while(r.length && !r[r.length-1]) r.pop();
+    if(r.length === 1 && /\s/.test(r[0])){ const t = r[0].split(/\s+/); return t.length >= 3 ? {org:t[0], pos:t.slice(1,-1).join(" "), name:t[t.length-1]} : {org:"", pos:t[0], name:t[1]}; }
+    return r.length >= 3 ? {org:r[0], pos:r[1], name:r.slice(2).join(" ")} : r.length === 2 ? {org:"", pos:r[0], name:r[1]} : {org:"", pos:"", name:r[0]};
+  });
+  const n = Math.max(0, +$("blank").value||0);
+  const all = [...ppl, ...Array.from({length:n}, () => ({org:"", pos:"", name:""}))];
+  const row = (p, i) => { const no = String(i+1); return $("cols").value === "full" ? [no, p.org, p.pos, p.name, "", ""] : $("cols").value === "mid" ? [no, p.pos, p.name, "", ""] : [no, p.name, ""]; };
+  const info = [$("when").value.trim() && `○ 일시: ${$("when").value.trim()}`, $("place").value.trim() && `○ 장소: ${$("place").value.trim()}`];
+  const s = SCHOOL_INFO.get();
+  return signSheetBlocks({title:$("title").value.trim() || "참석자 서명부", sub:$("sub").value.trim(), info, head:c.head, widths:c.w, rows:all.map(row), rowH:2600, split:true,
+    foot:[`○ 인원: ${ppl.length}명`], sign: $("sign").value.trim() ? `${$("sign").value.trim()}　　　(서명)` : (s.name ? "" : "")});
+}
+const make = () => ENG.hwpx(blocks(), $("title").value.trim() || "참석자 서명부", {noFill:true, pageNum:true});
+$("dl").onclick = async () => { try{ save(await make(), `${($("title").value.trim() || "참석자 서명부").replace(/[\\/:*?"<>|]/g, "")}.hwpx`); }catch(e){ console.error(e); alert("만들지 못했어요: " + (e.message || e)); } };
+$("pvBtn").onclick = async () => { try{ await showHwpxPreview($("pv"), await make()); }catch(e){ console.error(e); $("pv").innerHTML = `<p class="warn">${esc(e.message || e)}</p>`; } };
+</script>
+</body>
+</html>
