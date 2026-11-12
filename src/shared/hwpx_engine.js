@@ -120,11 +120,12 @@ const ENG = (() => {
   }
   const MMW = [0.1, 0.12, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 1.0, 1.5, 2.0];
   const mmW = pt => { const mm = pt * 0.3528; let best = MMW[0]; MMW.forEach(v => { if (Math.abs(v - mm) < Math.abs(best - mm)) best = v; }); return (best % 1 ? String(best) : best.toFixed(1)) + ' mm'; };
+  /* fill: 색 글자('#RRGGBB') 또는 {img:'image1'}(칸 배경 그림, 크기에 맞추어 — opt.bins로 함께 넣어야 함) */
   function bfId(sd, fill, diag, split) {
     const k = JSON.stringify([sd, fill, diag, !!split]); if (DYN.bf.has(k)) return DYN.bf.get(k);
     const id = DYN.bfN++;
     const bd = (nm, v) => v ? `<hh:${nm}Border type="${v[1] || 'SOLID'}" width="${v[1] && v[1].startsWith('DOUBLE') ? '0.5 mm' : mmW(v[0])}" color="#000000"/>` : `<hh:${nm}Border type="NONE" width="0.1 mm" color="#000000"/>`;
-    DYN.bfX.push(`<hh:borderFill id="${id}" threeD="0" shadow="0" centerLine="NONE" breakCellSeparateLine="${split ? 1 : 0}"><hh:slash type="${diag ? 'CENTER' : 'NONE'}" Crooked="0" isCounter="0"/><hh:backSlash type="NONE" Crooked="0" isCounter="0"/>${bd('left', sd.l)}${bd('right', sd.r)}${bd('top', sd.t)}${bd('bottom', sd.b)}<hh:diagonal type="SOLID" width="0.12 mm" color="#000000"/>${fill ? `<hc:fillBrush><hc:winBrush faceColor="${fill}" hatchColor="#999999" alpha="0"/></hc:fillBrush>` : ''}</hh:borderFill>`);
+    DYN.bfX.push(`<hh:borderFill id="${id}" threeD="0" shadow="0" centerLine="NONE" breakCellSeparateLine="${split ? 1 : 0}"><hh:slash type="${diag ? 'CENTER' : 'NONE'}" Crooked="0" isCounter="0"/><hh:backSlash type="NONE" Crooked="0" isCounter="0"/>${bd('left', sd.l)}${bd('right', sd.r)}${bd('top', sd.t)}${bd('bottom', sd.b)}<hh:diagonal type="SOLID" width="0.12 mm" color="#000000"/>${fill && typeof fill === 'object' && fill.img ? `<hc:fillBrush><hc:imgBrush mode="TOTAL"><hc:img binaryItemIDRef="${fill.img}" bright="0" contrast="0" effect="REAL_PIC" alpha="0"/></hc:imgBrush></hc:fillBrush>` : fill ? `<hc:fillBrush><hc:winBrush faceColor="${fill}" hatchColor="#999999" alpha="0"/></hc:fillBrush>` : ''}</hh:borderFill>`);
     DYN.bf.set(k, id); return id;
   }
   function headerXml() {
@@ -220,7 +221,7 @@ const ENG = (() => {
       h += `<tr style="height:${fm.rows[ri].h}pt">` + r.map(c => {
         const m = c.m || [0, 2, 0, 2];
         const diag = c.diag ? `background:linear-gradient(to top right,transparent calc(50% - .5px),#000 50%,transparent calc(50% + .5px));` : '';
-        return `<td${c.cs > 1 ? ` colspan="${c.cs}"` : ''}${c.rs > 1 ? ` rowspan="${c.rs}"` : ''} style="height:${c.hpt}pt;border-top:${bcss(c.sd.t)};border-bottom:${bcss(c.sd.b)};border-left:${bcss(c.sd.l)};border-right:${bcss(c.sd.r)};vertical-align:${{ t: 'top', c: 'middle', b: 'bottom' }[c.va || 'c']};padding:${m[0]}pt ${m[1]}pt ${m[2]}pt ${m[3]}pt;${c.fill ? `background:${c.fill};` : ''}${diag}">${c.ps.map(p => paraHtml(p, 10)).join('')}</td>`;
+        return `<td${c.cs > 1 ? ` colspan="${c.cs}"` : ''}${c.rs > 1 ? ` rowspan="${c.rs}"` : ''} style="height:${c.hpt}pt;border-top:${bcss(c.sd.t)};border-bottom:${bcss(c.sd.b)};border-left:${bcss(c.sd.l)};border-right:${bcss(c.sd.r)};vertical-align:${{ t: 'top', c: 'middle', b: 'bottom' }[c.va || 'c']};padding:${m[0]}pt ${m[1]}pt ${m[2]}pt ${m[3]}pt;${c.fill && typeof c.fill === 'string' ? `background:${c.fill};` : ''}${diag}">${c.ps.map(p => paraHtml(p, 10)).join('')}</td>`;
       }).join('') + '</tr>';
     });
     return `<div class="fmw" style="text-align:${{ r: 'right', l: 'left' }[fm.al] || 'center'}">${h}</table></div>`;
@@ -309,7 +310,7 @@ const ENG = (() => {
     }
     return body;
   }
-  async function packHwpx(files, sec, hdr, prv, title) {
+  async function packHwpx(files, sec, hdr, prv, title, bins = []) {
     const zip = new JSZip();
     zip.file('mimetype', 'application/hwp+zip', { compression: 'STORE' });
     for (const [n, v] of files) {
@@ -317,10 +318,11 @@ const ENG = (() => {
       if (/Contents\/section0\.xml$/i.test(n)) zip.file(n, sec, { createFolders: false });
       else if (n === 'Contents/header.xml') zip.file(n, hdr, { createFolders: false });
       else if (n === 'Preview/PrvText.txt') zip.file(n, prv, { createFolders: false });
-      else if (n === 'Contents/content.hpf') zip.file(n, String(v).replace(/<opf:title\/>|<opf:title>[^<]*<\/opf:title>/, `<opf:title>${esc(title || '')}</opf:title>`).replace(/synthetic-fixture-author/g, (typeof APP!=="undefined" ? APP.name : "학교 업무 도구")).replace(/<opf:item id="section[1-9]\d*"[^>]*\/>/g, '').replace(/<opf:itemref idref="section[1-9]\d*"[^>]*\/>/g, ''), { createFolders: false });
+      else if (n === 'Contents/content.hpf') zip.file(n, String(v).replace('</opf:manifest>', bins.map(b => `<opf:item id="${b.id}" href="BinData/${b.id}.${b.ext}" media-type="${b.mime}" isEmbeded="1"/>`).join('') + '</opf:manifest>').replace(/<opf:title\/>|<opf:title>[^<]*<\/opf:title>/, `<opf:title>${esc(title || '')}</opf:title>`).replace(/synthetic-fixture-author/g, (typeof APP!=="undefined" ? APP.name : "학교 업무 도구")).replace(/<opf:item id="section[1-9]\d*"[^>]*\/>/g, '').replace(/<opf:itemref idref="section[1-9]\d*"[^>]*\/>/g, ''), { createFolders: false });
       else if (/Contents\/section[1-9]\d*\.xml$/i.test(n)) continue;
       else zip.file(n, v, { createFolders: false });
     }
+    bins.forEach(b => zip.file(`BinData/${b.id}.${b.ext}`, b.data, { createFolders: false }));
     return zip.generateAsync({ type: 'blob', mimeType: 'application/hwp+zip', compression: 'DEFLATE' });
   }
   const prvText = blocks => blocks.filter(b => b.k === 'p').map(b => b.t).join('\r\n').slice(0, 1000);
@@ -336,7 +338,7 @@ const ENG = (() => {
     const bl = opt.noFill ? fixAll(blocks) : autoFill(fixAll(blocks));
     const sec = HWPX_TPL.secHead + renderBody(bl, secRunPN) + '</hs:sec>';
     const files = Object.entries(HWPX_TPL.files); files.splice(2, 0, ['Contents/section0.xml', '']); files.push(['Preview/PrvText.txt', '']);
-    return packHwpx(files, sec, headerXml(), prvText(blocks), title);
+    return packHwpx(files, sec, headerXml(), prvText(blocks), title, opt.bins || []);   // opt.bins: [{id, ext, mime, data}] 그림 파일
   }
   async function previewHwpx(blob) {
     const zip = await JSZip.loadAsync(blob), P = new DOMParser();

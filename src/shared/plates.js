@@ -25,13 +25,8 @@ function parsePlates(text, org){
     return {org, pos:"", name:"", title:l.replace(/\s+/g," ")};
   });
 }
-/* 명패 인쇄물(HTML): plates = parsePlates(글, 기관명) 결과, o = {w, h(mm), style: garland|flower|line|plain|image, flip, font: serif|sans, org, bgSrc} */
-function plateSheetHtml(plates, o = {}){
-  const w = Math.max(50, +o.w||250), h = Math.max(30, +o.h||85);
-  const style = o.style || "garland", flip = !!o.flip;
-  const org = o.org || "";
-  const lay = plateLayout(w,h) || {orient: w>h*2 ? "landscape":"portrait", pw: w>200?297:210, ph: w>200?210:297};
-  const nameFont = o.font==="sans" ? `"함초롬돋움","HCR Dotum","맑은 고딕","Malgun Gothic","Noto Sans CJK KR",sans-serif` : `"함초롬바탕","HCR Batang","바탕",Batang,"Noto Serif CJK KR","Noto Serif KR",serif`;
+/* 명패 꾸밈 그림(SVG 글). style: garland|flower|line|plain(빈 글). 한글 파일용 그림을 그릴 때도 씀 */
+function plateDecoSvg(w, h, style){
   const tri = ["#A3C9C0","#6FA79C","#7B93BD","#A096C0"];
   const garland = (()=>{ const n = Math.max(8, Math.round((w-30)/9)); const step=(w-30)/n; let p="";
     for(let i=0;i<n;i++){ const x=15+i*step; p+=`<polygon points="${x.toFixed(2)},3.6 ${(x+step*0.92).toFixed(2)},3.6 ${(x+step*0.46).toFixed(2)},${(3.6+step*0.62).toFixed(2)}" fill="${tri[i%4]}"/>`; }
@@ -55,9 +50,19 @@ function plateSheetHtml(plates, o = {}){
       + `<g transform="translate(0,${h}) scale(1,-1)">${c}</g>`
       + `<g transform="translate(${w},${h}) scale(-1,-1)">${c}</g></svg>`;
   })();
+  return style==="garland" ? garland : style==="flower" ? flower : style==="line" ? line : "";
+}
+/* 명패 인쇄물(HTML): plates = parsePlates(글, 기관명) 결과 또는 [{org, pos, posSub, name, note, title}](parseRoster),
+   posSub·note는 직위·이름 바로 뒤에 작은 글씨(괄호째), o = {w, h(mm), style: garland|flower|line|plain|image, flip, font: serif|sans, org, bgSrc} */
+function plateSheetHtml(plates, o = {}){
+  const w = Math.max(50, +o.w||250), h = Math.max(30, +o.h||85);
+  const style = o.style || "garland", flip = !!o.flip;
+  const org = o.org || "";
+  const lay = plateLayout(w,h) || {orient: w>h*2 ? "landscape":"portrait", pw: w>200?297:210, ph: w>200?210:297};
+  const nameFont = o.font==="sans" ? `"함초롬돋움","HCR Dotum","맑은 고딕","Malgun Gothic","Noto Sans CJK KR",sans-serif` : `"함초롬바탕","HCR Batang","바탕",Batang,"Noto Serif CJK KR","Noto Serif KR",serif`;
   const bg = style==="image" && o.bgSrc ? {src:o.bgSrc} : null;
-  const deco = style==="image" ? (bg ? `<img class="deco" alt="" src="${bg.src}" style="width:100%;height:100%;object-fit:fill">` : flower)
-             : style==="garland" ? garland : style==="flower" ? flower : style==="line" ? line : "";
+  const deco = style==="image" ? (bg ? `<img class="deco" alt="" src="${bg.src}" style="width:100%;height:100%;object-fit:fill">` : plateDecoSvg(w, h, "flower"))
+             : plateDecoSvg(w, h, style);
   const card = (p, back) => {
     const orgH = (style==="garland" ? Math.min(h*0.105, (w*0.84)/Math.max(8, [...p.org].length)) : Math.min(h*0.085, (w*((style==="flower"||style==="image")?0.55:0.8))/Math.max(8, [...p.org].length))).toFixed(2), posH = (h*0.17).toFixed(2), nmH = (h*0.44).toFixed(2), ttH = (h*0.46).toFixed(2);
     const hasOrg = !!p.org;
@@ -68,7 +73,7 @@ function plateSheetHtml(plates, o = {}){
                  : `left:0;right:0;text-align:center;top:${(h*0.12).toFixed(1)}mm;font-family:${nameFont}`;
     const body = p.title
       ? `<div class="row" style="top:${(h*rowTop).toFixed(1)}mm;bottom:${(h*rowBot).toFixed(1)}mm"><span class="ln"><span class="nm title${[...p.title.replace(/\s/g,"")].length>4?" long":""}" style="font-size:${ttH}mm">${esc(p.title)}</span></span></div>`
-      : `<div class="row" style="top:${(h*rowTop).toFixed(1)}mm;bottom:${(h*rowBot).toFixed(1)}mm"><span class="ln">${p.pos?`<span class="pos" style="font-size:${posH}mm">${esc(p.pos)}</span>`:""}<span class="nm" style="font-size:${nmH}mm">${esc(p.name)}</span></span></div>`;
+      : `<div class="row" style="top:${(h*rowTop).toFixed(1)}mm;bottom:${(h*rowBot).toFixed(1)}mm"><span class="ln">${p.pos?`<span class="pos" style="font-size:${posH}mm">${esc(p.pos)}${p.posSub?`<small class="sub">(${esc(p.posSub)})</small>`:""}</span>`:""}<span class="nm" style="font-size:${nmH}mm">${esc(p.name)}${p.note?`<small class="sub">(${esc(p.note)})</small>`:""}</span></span></div>`;
     return `<div class="card${!back&&flip?" flip":""}${flip?(back?" fold-top":" fold-bottom"):""}">${deco}${hasOrg?`<div class="org" style="font-size:${orgH}mm;${orgCss}">${esc(p.org)}</div>`:""}${body}</div>`;
   };
   const pages = plates.map(p=>`<div class="sheet"><div class="pair">${card(p,false)}${card(p,true)}</div></div>`).join("") || `<div class="sheet"><p style="font-size:14pt">명패 목록이 비어 있습니다.</p></div>`;
@@ -90,6 +95,8 @@ html,body{background:#E9ECEF}
 .pos{font-family:${nameFont};flex:none}
 .nm{font-family:${nameFont};font-weight:700;letter-spacing:.32em;margin-right:-.32em;flex:none}
 .nm.title{letter-spacing:.45em;margin-right:-.45em}
+.sub{font-size:.45em;font-weight:400;letter-spacing:0;margin-left:.2em}
+.nm .sub{margin-left:-.1em}
 .nm.title.long{letter-spacing:.06em;margin-right:-.06em}
 @media print{html,body{background:#fff}.sheet{margin:0}}`;
   const fitJs = `<script>(function(){document.querySelectorAll(".row").forEach(function(r){var k=0,l=r.querySelector(".ln");while((l.scrollWidth>r.clientWidth+1||l.scrollHeight>r.clientHeight+1)&&k<40){r.querySelectorAll(".pos,.nm").forEach(function(e){e.style.fontSize=(parseFloat(getComputedStyle(e).fontSize)*0.95)+"px";});k++;}});})();<\/script>`;

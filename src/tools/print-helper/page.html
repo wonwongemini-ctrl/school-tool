@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>출력 도우미 — 명패·라벨·견출지·등록부</title>
+<meta name="author" content="https://blog.naver.com/oderobong">
+<style>
+/*__SHARED:tool_ui.css__*/
+</style>
+<style>
+/* ===== 출력 도우미: 왼쪽 질문 · 오른쪽 미리보기 ===== */
+:root{--accent:#1f5e74;--accent-soft:#e3eef1;--muted:#5b6970;--line2:#dde3e0;--line-strong:#b9c3bf;--ok:#1d7a4c;--ok-soft:#e2f2e9;--warn:#9a6200;--warn-soft:#fbf0d9;--err:#b3261e;--paper:#f4f6f5}
+body{background:var(--paper);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.top{display:flex;align-items:center;gap:14px;padding:10px 18px;background:#fff;border-bottom:1px solid var(--line2);flex:none}
+.top h1{font-size:19px;margin:0;font-weight:800;letter-spacing:-.02em}
+.top h1 span{font-size:13.5px;font-weight:500;margin-left:8px}
+.top .sp{flex:1}
+.top .schoolchip{margin:0}
+.app{flex:1;display:grid;grid-template-columns:minmax(380px,440px) 1fr;min-height:0}
+.left{display:flex;flex-direction:column;min-height:0;background:var(--paper);border-right:1px solid var(--line2)}
+.steps{display:flex;gap:4px;padding:12px 18px 0;flex-wrap:wrap}
+.steps button{font:inherit;font-size:12.5px;font-weight:700;border:1.5px solid var(--line2);background:#fff;color:var(--muted);border-radius:999px;padding:3px 10px;cursor:pointer}
+.steps button[aria-current="step"]{border-color:var(--accent);background:var(--accent);color:#fff}
+.steps button.done{color:var(--accent);border-color:#bcd3da}
+.steps button:disabled{opacity:.45;cursor:default}
+.prog{height:3px;background:var(--line2);margin:10px 18px 0;border-radius:3px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--accent);transition:width .25s}
+.pane{flex:1;overflow:auto;padding:4px 18px 18px}
+.q{font-size:24px;line-height:1.35;letter-spacing:-.025em;margin:18px 0 6px;font-weight:700}
+.qs{margin:0 0 16px;color:var(--muted);font-size:14.5px}
+.choices{display:grid;gap:8px}
+.choice{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;text-align:left;width:100%;border:1.5px solid var(--line2);background:#fff;border-radius:14px;padding:12px 14px;cursor:pointer;font:inherit;color:var(--ink)}
+.choice:hover{border-color:var(--line-strong)}
+.choice[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.choice:disabled{cursor:default;opacity:.55}
+.choice .ic{width:38px;height:38px;border-radius:11px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:18px}
+.choice[aria-pressed="true"] .ic{background:var(--accent);color:#fff}
+.choice b{display:block;font-size:15.5px}
+.choice .d{display:block;color:var(--muted);font-size:13px;margin-top:1px}
+.choice .tag{font-size:11.5px;font-weight:700;color:var(--muted);background:#eef0f2;border-radius:6px;padding:1px 7px}
+.designs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.design{border:1.5px solid var(--line2);background:#fff;border-radius:12px;padding:8px;cursor:pointer;font:inherit;text-align:center;color:var(--ink)}
+.design[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.design .th{height:66px;overflow:hidden;position:relative;border-radius:6px;background:#fff;pointer-events:none}
+.design .th iframe{position:absolute;left:0;top:0;border:0;transform-origin:0 0}
+.design b{display:block;font-size:13.5px;margin-top:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:inherit;border:1.5px solid var(--line2);background:#fff;border-radius:999px;padding:5px 12px;cursor:pointer;font-weight:600;font-size:13.5px}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:#fff}
+textarea.names{width:100%;min-height:150px;font:inherit;font-size:15.5px;line-height:1.6;border:1.5px solid var(--line-strong);border-radius:12px;padding:10px 12px;resize:vertical}
+textarea.names:focus,.inp:focus{outline:2px solid var(--accent);outline-offset:1px}
+.ex{background:#fff;border:1px solid var(--line2);border-radius:12px;padding:10px 12px;margin-top:10px;font-size:13.5px}
+.ex b{font-size:13px}
+.ex summary{cursor:pointer}
+.ex .r{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin-top:6px;align-items:center}
+.ex code{font:inherit;font-weight:600;background:#f3f5f4;border-radius:5px;padding:0 6px;white-space:nowrap}
+.minidrop{display:flex;align-items:center;gap:10px;border:1.5px dashed var(--line-strong);border-radius:12px;padding:9px 12px;margin-top:10px;background:#fff;cursor:pointer;font-size:14px;color:var(--muted)}
+.minidrop.over{border-color:var(--accent);background:var(--accent-soft)}
+.minidrop b{color:var(--ink)}
+.read{margin-top:14px}
+.read h3{font-size:14.5px;margin:0 0 6px;display:flex;align-items:center;gap:8px}
+.read table{width:100%;border-collapse:collapse;font-size:14px;background:#fff;border:1px solid var(--line2);border-radius:10px;overflow:hidden}
+.read th{font-size:12px;color:var(--muted);font-weight:600;text-align:left;padding:5px 8px;background:#f7f8f7;border-bottom:1px solid var(--line2)}
+.read td{padding:5px 8px;border-bottom:1px solid #eef0f0}
+.read td.n{color:#9aa4a8;font-size:12px;width:24px}
+.read td.nm{font-weight:700}
+.read .tt{font-weight:700;letter-spacing:.2em}
+.colmap{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--muted);margin:0 0 8px}
+.colmap select{font:inherit;font-size:13px;border:1px solid var(--line-strong);border-radius:6px;padding:1px 4px}
+.pill{display:inline-flex;align-items:center;font-size:12px;font-weight:600;border-radius:999px;padding:1px 9px;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.info{background:var(--accent-soft);color:var(--accent)}
+.inp{font:inherit;font-size:15.5px;border:1.5px solid var(--line-strong);border-radius:10px;padding:8px 12px;width:100%;background:#fff}
+.done-head{display:flex;align-items:center;gap:10px;margin:18px 0 6px}
+.done-head .ck{width:34px;height:34px;border-radius:50%;background:var(--ok);color:#fff;display:grid;place-items:center;font-weight:800}
+.outs{display:grid;gap:8px;margin-top:8px}
+.outs .btn{width:100%;padding:11px 14px;text-align:left;display:flex;justify-content:space-between;align-items:center;border-radius:12px}
+.outs .btn small{font-weight:500;opacity:.8;font-size:12.5px;text-align:right}
+.outs .btn{border:1.5px solid var(--accent);color:var(--accent);background:#fff}
+.outs .btn:hover{background:var(--accent-soft)}
+.outs .btn.busy{opacity:.7;cursor:progress}
+.btn.primary{background:var(--accent);border-color:var(--accent)}
+details.more{margin-top:14px;background:#fff;border:1px solid var(--line2);border-radius:12px;padding:8px 12px}
+details.more summary{cursor:pointer;font-weight:700;font-size:14px}
+details.more .grid{margin-top:10px;grid-template-columns:1fr 1fr}
+.fixes{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.cta{flex:none;display:flex;gap:8px;padding:10px 18px 14px;border-top:1px solid var(--line2);background:var(--paper)}
+.cta .btn{flex:1;padding:10px 14px;border-radius:12px}
+.cta .btn.back{flex:0 0 auto}
+.right{min-width:0;min-height:0;display:flex;flex-direction:column;background:#e6e9ec}
+.rhead{display:flex;align-items:center;gap:8px;padding:8px 12px 0;flex:none}
+.rhead .t{font-size:13px;font-weight:700;color:var(--muted)}
+.vtabs{display:flex;gap:4px}
+.vtabs button{font:inherit;font-size:12.5px;font-weight:700;border:1px solid #c5ccd2;background:#fff;color:var(--muted);border-radius:7px;padding:2px 10px;cursor:pointer}
+.vtabs button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+#pickHint{color:#b5541f;font-weight:600}
+.choice .ck2{width:22px;height:22px;border-radius:6px;border:1.5px solid var(--line-strong);display:grid;place-items:center;font-size:14px;color:#fff}
+.choice[aria-pressed="true"] .ck2{background:var(--accent);border-color:var(--accent)}
+.papers{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.paper{border:1.5px solid var(--line2);background:#fff;border-radius:12px;padding:10px;cursor:pointer;font:inherit;text-align:left;color:var(--ink);display:flex;gap:10px;align-items:center}
+.paper[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.paper .gr{width:36px;height:50px;border:1px solid #9aa4a8;background:#fff;display:grid;gap:1.5px;padding:2px;flex:none}
+.paper .gr i{background:#cfdde2;border-radius:1px}
+.paper b{display:block;font-size:14px}.paper span{font-size:12px;color:var(--muted)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.lbl{font-size:13.5px;color:var(--muted);margin:12px 0 4px;display:block;font-weight:600}
+.group{background:#fff;border:1px solid var(--line2);border-radius:14px;padding:12px;margin-top:10px}
+.group h3{margin:0 0 8px;font-size:15.5px;display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:8px}
+.group h3 .pill{flex:none}
+.group .outs{margin-top:0}
+.bgrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+.bgthumb{width:44px;height:30px;object-fit:cover;border-radius:5px;border:1px solid var(--line2)}
+/* 미리보기(자) */
+.ppv{flex:1;display:flex;flex-direction:column;min-height:0;padding:6px 12px 12px}
+.ppv-bar{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.ppv-zoom{display:inline-flex;background:#fff;border:1px solid #cdd3d8;border-radius:8px;overflow:hidden}
+.ppv-zoom button{font:inherit;font-size:12.5px;font-weight:600;border:0;background:none;padding:3px 10px;cursor:pointer;color:var(--muted)}
+.ppv-zoom button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.ppv-info{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ppv-grid{flex:1;min-height:0;display:grid;grid-template-columns:20px 1fr;grid-template-rows:20px 1fr;border:1px solid #c5ccd2;border-radius:6px;overflow:hidden;background:#d0d5da}
+.ppv-corner{font-size:8.5px;color:#6b7480;display:grid;place-items:center;background:#d9dde2;border-right:1px solid #c5ccd2;border-bottom:1px solid #c5ccd2}
+.ppv-rt{border-bottom:1px solid #c5ccd2;display:block}
+.ppv-rl{border-right:1px solid #c5ccd2;display:block}
+.ppv-view{overflow:auto;position:relative;background:#cfd4d9}
+.ppv-stage{position:relative;margin:0 auto}
+.ppv-f{position:absolute;left:0;top:0;border:0;transform-origin:0 0;background:transparent}
+.pvtoggle{display:none}
+@media (max-width:900px){
+  body{height:auto;overflow:auto}
+  .app{grid-template-columns:1fr}
+  .left{border-right:0}
+  .right{height:72vh}
+  .top h1 span{display:none}
+  .pvtoggle{display:block}
+  .top h1{white-space:nowrap;font-size:18px}
+  .top .schoolchip>span{display:none}
+}
+.foot{font-size:12px;color:var(--muted);padding:6px 18px 10px}
+.foot a{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>출력 도우미<span>명패 · 라벨 · 견출지 · 등록부</span></h1>
+  <div class="sp"></div>
+  <div id="schoolHost"></div>
+</div>
+<div class="app">
+  <section class="left" aria-label="질문">
+    <nav class="steps" id="steps" aria-label="단계"></nav>
+    <div class="prog"><i id="progFill"></i></div>
+    <div class="pane" id="pane"></div>
+    <div class="cta" id="cta"></div>
+    <p class="foot"><span id="ver"></span> · <a href="https://blog.naver.com/oderobong" target="_blank" rel="noopener">blog.naver.com/oderobong</a> · 입력한 내용은 이 브라우저에만 저장돼요 · <a href="#" id="forget">기억한 내용 지우기</a></p>
+  </section>
+  <section class="right" aria-label="미리보기">
+    <div class="rhead"><span class="t">미리보기</span><div class="vtabs" id="vtabs" role="tablist"></div><span class="hint" id="pickHint" style="margin:0"></span></div>
+    <div id="pv"></div>
+  </section>
+</div>
+<input type="file" id="fileIn" accept=".xlsx,.xls,.csv,.txt" hidden>
+<input type="file" id="bgIn" accept="image/*" hidden>
+<script>
+/*__VENDOR:jszip.min.js__*/
+</script>
+<script>
+const TOOL = {name:"출력 도우미", version:"1.0", date:"2026-11-12"};
+/*__SHARED:school_info.js__*/
+/*__SHARED:hwpx_engine.js__*/
+/*__SHARED:hwpx_parts.js__*/
+/*__SHARED:plates.js__*/
+/*__SHARED:print_labels.js__*/
+/*__SHARED:sign_sheet.js__*/
+/*__SHARED:upside_hwpx.js__*/
+/*__SHARED:roster.js__*/
+/*__SHARED:print_preview.js__*/
+/*__SHARED:tool_ui.js__*/
+$("ver").textContent = `${TOOL.name} v${TOOL.version} (${TOOL.date})`;
+const KEY = "schooltools_printhelper";
+const SCH = () => SCHOOL_INFO.get().name || "";
+const DEF = {
+  make:{plate:true, label:false, sign:false, index:false},
+  names:"학교장 김교장\n학부모위원장 홍길동 (1-1 홍아름)\n교원위원(교무부장) 이영희\n지역위원 박민수\n위 원 장", roles:null,
+  plate:{style:"garland", font:"serif", w:250, h:85, flip:true, topMode:"common", org:""},
+  label:{preset:"2x7", cols:2, rows:7, w:99.1, h:38.1, mt:15.1, ml:4.65, gx:2.5, gy:0, start:1, used:false, topMode:"common", top:"", frameMode:"none", frameIdx:[], space:true, bgMode:"none", bgSrc:null, bgIdx:[], bgFit:"fill"},
+  sign:{title:"교직원 연수 참석자 등록부", sub:"", when:"", place:"", cols:"", blank:5, signer:""},
+  index:{pre:"안건", n:5, st:1, pre2:"붙임", n2:0, extra:"", w:13, h:9, copies:1},
+  view:"plate"
+};
+const ST = JSON.parse(JSON.stringify(DEF));
+try{ const o = JSON.parse(localStorage.getItem(KEY) || "{}"); for(const k in o){ if(ST[k] && typeof ST[k] === "object" && !Array.isArray(ST[k])) Object.assign(ST[k], o[k]); else ST[k] = o[k]; } }catch(e){}
+if(!ST.plate.org) ST.plate.org = SCH(); if(!ST.label.top) ST.label.top = SCH();
+let STEP = "what", PICK = null;
+// 예전 주소(nameplate·labels·sign-sheet.html)에서 넘어오면 ?make=plate|label|sign|index 로 그 도구만 고른 채 시작
+{ const q = new URLSearchParams(location.search).get("make");
+  if(q && ["plate","label","sign","index"].includes(q)){ ST.make = {plate:false, label:false, sign:false, index:false, [q]:true}; ST.view = q; STEP = q === "index" ? "i_text" : "who"; } }   // PICK: 미리보기에서 칸 누르기 모드 {kind:'start'|'bg', src}
+function keep(){ const o = JSON.parse(JSON.stringify(ST)); try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(e){ o.label.bgSrc = null; o.label.bgMode = "none"; try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(_){} } }
+const TOOLS = {plate:"명패", label:"라벨", sign:"등록부", index:"견출지"};
+const made = () => Object.keys(TOOLS).filter(k => ST.make[k]);
+const needNames = () => ST.make.plate || ST.make.label || ST.make.sign;
+
+/* ---------- 명단 ---------- */
+const roster = () => parseRoster(ST.names, {roles: ST.roles});
+const topFor = (mode, common, p) => mode === "none" ? "" : mode === "each" ? (p.org || "") : common.trim();
+/* ---------- 명패 ---------- */
+function plateList(){ const P = ST.plate; return roster().rows.map(p => { const org = topFor(P.topMode, P.org, p); return p.title ? {org, title:p.title} : {org, pos:p.pos, posSub:p.posSub, name:p.name.replace(/\s+/g, ""), note:p.note}; }); }
+function plateHtml(list){ const P = ST.plate; return plateSheetHtml(list || plateList(), {w:P.w, h:P.h, style:P.style, flip:P.flip, font:P.font, org:P.topMode === "common" ? P.org.trim() : "", bgSrc:P.bg && P.bg.src}); }
+/* ---------- 라벨 ---------- */
+const PRESET = {"2x7":{cols:2,rows:7,w:99.1,h:38.1,mt:15.1,ml:4.65,gx:2.5,gy:0,d:"봉투·서류철 (가장 흔함)"}, "2x8":{cols:2,rows:8,w:99.1,h:33.9,mt:13,ml:4.65,gx:2.5,gy:0,d:"조금 낮은 라벨"},
+  "3x7":{cols:3,rows:7,w:63.5,h:38.1,mt:15.15,ml:7.2,gx:2.5,gy:0,d:"작은 라벨"}, "2x5":{cols:2,rows:5,w:99.1,h:57,mt:6,ml:4.65,gx:2.5,gy:0,d:"큰 라벨"}};
+const NUM = ["cols","rows","w","h","mt","ml","gx","gy"];
+function labelItems(){ const L = ST.label;
+  const bgOn = i => L.bgSrc && (L.bgMode === "all" || (L.bgMode === "some" && L.bgIdx.includes(i)));
+  const frOn = i => L.frameMode === "all" || (L.frameMode === "some" && L.frameIdx.includes(i));
+  return roster().rows.map((p, i) => { const bg = bgOn(i) ? L.bgSrc : null, frame = frOn(i);
+    if(p.title) return {free:p.title, bg, frame};
+    const nm = L.space && [...p.name].length === 3 ? [...p.name].join(" ") : p.name;
+    return {top:topFor(L.topMode, L.top, p), role:p.pos, roleSub:p.posSub, name:nm, child:p.note, bg, frame}; }); }
+function labelOpt(){ const L = ST.label, o = {start:L.used ? L.start : 1, frame:false, title:"라벨", bgFit:L.bgFit, pick:true, picked:PICK && PICK.kind === "bg" ? L.bgIdx : PICK && PICK.kind === "frame" ? L.frameIdx : []}; NUM.forEach(k => o[k] = L[k]); return o; }
+const labelHtml = () => labelSheetHtml(labelItems(), labelOpt());
+/* 라벨 한글 파일: 배경 그림은 라벨 크기 비율로 잘라(미리보기와 같은 모양) 칸 배경으로 넣음 */
+async function labelHwpxBlob(){
+  const L = ST.label, items = labelItems(), bins = [], ids = new Map();
+  for(const src of new Set(items.map(it => it.bg).filter(Boolean))){
+    const im = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
+    const k = 6, cw = Math.round(L.w*k), ch = Math.round(L.h*k), c = document.createElement("canvas"); c.width = cw; c.height = ch;   // 약 150dpi
+    const sc = Math.max(cw / im.naturalWidth, ch / im.naturalHeight), dw = im.naturalWidth*sc, dh = im.naturalHeight*sc;
+    c.getContext("2d").drawImage(im, (cw - dw)/2, (ch - dh)/2, dw, dh);
+    const blob = await new Promise(r => c.toBlob(r, "image/png")), id = `image${bins.length + 1}`;
+    bins.push({id, ext:"png", mime:"image/png", data:new Uint8Array(await blob.arrayBuffer())}); ids.set(src, id);
+  }
+  const r = labelHwpx(items, {...labelOpt(), binOf: src => ids.get(src)});
+  return ENG.hwpx(r.blocks, "라벨", {page:r.page, noFill:true, bins});
+}
+/* ---------- 등록부 ---------- */
+const COLS = {full:{head:["연번","소속","직위","성명","서명","비고"], w:[8,16,14,15,24,14], t:"소속까지", d:"연번 · 소속 · 직위 · 성명 · 서명 · 비고"},
+  mid:{head:["연번","직위","성명","서명","비고"], w:[8,18,18,28,18], t:"직위 · 성명", d:"연번 · 직위 · 성명 · 서명 · 비고"},
+  min:{head:["연번","성명","서명","비고"], w:[9,26,40,20], t:"성명만", d:"연번 · 성명 · 서명 · 비고"}};
+const signCols = () => ST.sign.cols || (roster().rows.some(p => p.org) ? "full" : roster().rows.some(p => p.pos) ? "mid" : "min");
+function signOpt(){ const S = ST.sign, c = COLS[signCols()], R = roster().rows.filter(p => !p.title);
+  const pos = p => p.pos + (p.posSub ? `(${p.posSub})` : "");
+  const all = [...R, ...Array.from({length:Math.max(0, +S.blank||0)}, () => ({org:"", pos:"", name:"", note:""}))];
+  const row = (p, i) => { const no = String(i+1); const k = signCols(); return k === "full" ? [no, p.org, pos(p), p.name, "", p.note] : k === "mid" ? [no, pos(p), p.name, "", p.note] : [no, p.name, "", p.note]; };
+  return {title:S.title.trim() || "참석자 등록부", sub:S.sub.trim(), info:[S.when.trim() && `○ 일시: ${S.when.trim()}`, S.place.trim() && `○ 장소: ${S.place.trim()}`], head:c.head, widths:c.w, rows:all.map(row), rowH:2600, split:true,
+    foot:[`○ 인원: ${R.length}명`], sign: S.signer.trim() ? `${S.signer.trim()}　　　(서명)` : ""}; }
+const signHtml = () => signSheetHtml(signOpt());
+const signHwpx = () => ENG.hwpx(signSheetBlocks(signOpt()), ST.sign.title || "참석자 등록부", {noFill:true, pageNum:true});
+/* ---------- 견출지 ---------- */
+function ixSets(){ const I = ST.index, n = Math.max(0, +I.n||0), st = Math.max(1, +I.st||1), n2 = Math.max(0, +I.n2||0), cp = Math.max(1, +I.copies||1);
+  const one = [...Array(n)].map((_, i) => `${I.pre.trim()}${st+i}`).concat([...Array(n2)].map((_, i) => `${I.pre2.trim()}${i+1}`));
+  const sets = one.length ? Array.from({length:cp}, () => one) : [];
+  const ex = I.extra.split("\n").map(s => s.trim()).filter(Boolean); if(ex.length) sets.push(ex); return sets; }
+const indexHtml = () => indexTabsHtml(ixSets(), {w:ST.index.w, h:ST.index.h, title:"견출지"});
+const HTML = {plate:plateHtml, label:labelHtml, sign:signHtml, index:indexHtml};
+
+/* ---------- 미리보기 ---------- */
+const PV = makePreview($("pv"), {onPick:(el, i) => {
+  if(ST.view !== "label" || !PICK) return;
+  const L = ST.label;
+  if(PICK.kind === "start"){ const slot = el.dataset.slot != null ? +el.dataset.slot : i + (L.used ? L.start - 1 : 0); L.start = slot + 1; L.used = true; redraw(); render(); return; }
+  if(PICK.kind === "bg" || PICK.kind === "frame"){ if(i < 0 || el.classList.contains("empty")) return; const a = PICK.kind === "bg" ? L.bgIdx : L.frameIdx, j = a.indexOf(i); if(j >= 0) a.splice(j, 1); else a.push(i); redraw(); render(); }
+}});
+let tm = null;
+function redraw(){ clearTimeout(tm); tm = setTimeout(() => { if(!ST.make[ST.view]) ST.view = made()[0] || "plate"; PV.show(HTML[ST.view]()); tabs(); keep(); }, 120); }
+function tabs(){ $("vtabs").innerHTML = made().map(k => `<button type="button" role="tab" data-v="${k}" aria-selected="${ST.view === k}">${TOOLS[k]}</button>`).join("");
+  $("vtabs").querySelectorAll("button").forEach(b => b.onclick = () => { ST.view = b.dataset.v; PICK = null; redraw(); render(); });
+  $("pickHint").textContent = PICK && ST.view === "label" ? (PICK.kind === "start" ? "← 미리보기에서 첫 라벨을 붙일 칸을 누르세요" : PICK.kind === "bg" ? "← 그림을 넣을 칸을 누르세요 (다시 누르면 빠져요)" : "← 테두리를 넣을 칸을 누르세요 (다시 누르면 빠져요)") : ""; }
+
+/* ---------- 화면 조각 ---------- */
+const choice = (k, ic, t, d, on, extra = "") => `<button type="button" class="choice" data-k="${k}" aria-pressed="${on}" ${extra}><span class="ic">${ic}</span><span><b>${t}</b>${d ? `<span class="d">${d}</span>` : ""}</span></button>`;
+const fld = (id, label, val, attrs = "") => `<label class="lbl" for="${id}">${label}</label><input class="inp" id="${id}" value="${esc(val ?? "")}" ${attrs}>`;
+function bindInputs(el, obj, keys, num = []){ keys.forEach(k => { const e = el.querySelector("#" + k); if(!e) return; e.addEventListener("input", () => { obj[k] = num.includes(k) ? (e.value === "" ? "" : +e.value) : (e.type === "checkbox" ? e.checked : e.value); redraw(); }); }); }
+function topStep(obj, field, what){ const hasOrg = roster().rows.some(p => p.org);
+  return `<div class="choices">${choice("common","🏫","모두 같은 글로 넣을게요","아래 칸의 글을 모든 " + what + "에", obj.topMode === "common")}
+    ${hasOrg ? choice("each","👥","사람마다 소속으로 넣을게요","명단에 적은 소속(교무부 등)을 그 사람 " + what + "에", obj.topMode === "each") : ""}
+    ${choice("none","∅","안 넣을게요","", obj.topMode === "none")}</div>
+    <div id="topBox" ${obj.topMode === "common" ? "" : "hidden"}>${fld("topTxt", "넣을 글", obj[field], 'placeholder="예: 한빛초등학교 학교운영위원회"')}
+    <div class="chips" style="margin-top:8px">${[SCH(), SCH() && SCH() + " 학교운영위원회"].filter(Boolean).map(t => `<button type="button" class="chip" data-t="${esc(t)}">${esc(t)}</button>`).join("")}</div></div>`; }
+function bindTop(el, obj, field, next){ el.querySelectorAll(".choice").forEach(b => b.onclick = () => { obj.topMode = b.dataset.k; el.querySelectorAll(".choice").forEach(x => x.setAttribute("aria-pressed", x === b)); $("topBox").hidden = obj.topMode !== "common"; redraw(); if(obj.topMode !== "common" && next) autoNext(); });
+  const o = $("topTxt"); o.oninput = () => { obj[field] = o.value; redraw(); };
+  el.querySelectorAll(".chip[data-t]").forEach(c => c.onclick = () => { obj[field] = o.value = c.dataset.t; redraw(); }); }
+function pickImage(cb){ const inp = $("bgIn"); inp.onchange = () => { const f = inp.files[0]; inp.value = ""; if(!f) return; const fr = new FileReader();
+  fr.onload = () => { const im = new Image(); im.onload = () => { const sc = Math.min(1, 1600 / im.naturalWidth), c = document.createElement("canvas"); c.width = Math.round(im.naturalWidth*sc); c.height = Math.round(im.naturalHeight*sc);
+    c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); let src = c.toDataURL("image/png"); if(src.length > 1500000) src = c.toDataURL("image/jpeg", 0.85); cb(src); }; im.src = fr.result; }; fr.readAsDataURL(f); }; inp.click(); }
+
+/* ---------- 단계 ---------- */
+const DESIGNS = [["garland","삼각 깃발"],["flower","꽃"],["line","금색 테두리"],["plain","테두리 없음"],["image","내 배경 그림"]];
+const STEPS = {
+  what:{label:"무엇을", html: () => `<h2 class="q">무엇을 만들까요?</h2><p class="qs">여러 개를 고르면 명단을 한 번만 넣고 같이 만들어요.</p>
+    <div class="choices">${[["plate","🪧","명패","회의·연수 책상에 세우는 접는 이름표"],["label","🏷️","라벨","봉투·서류에 붙이는 라벨지"],["sign","✍️","등록부","참석자 서명 칸이 있는 한글 파일"],["index","📑","견출지","서류철 안건 인덱스 (명단 없이)"]]
+      .map(([k, ic, t, d]) => `<button type="button" class="choice" data-k="${k}" aria-pressed="${!!ST.make[k]}"><span class="ic">${ic}</span><span><b>${t}</b><span class="d">${d}</span></span><span class="ck2">✓</span></button>`).join("")}</div>`,
+    bind: el => el.querySelectorAll(".choice").forEach(b => b.onclick = () => { ST.make[b.dataset.k] = !ST.make[b.dataset.k]; b.setAttribute("aria-pressed", ST.make[b.dataset.k]); if(ST.make[b.dataset.k]) ST.view = b.dataset.k; redraw(); render(true); }),
+    ok: () => made().length > 0 },
+  who:{label:"명단", html: () => `<h2 class="q">누가 오나요?</h2><p class="qs">한 줄에 한 사람씩 적거나 엑셀에서 복사해 붙여 넣으세요.</p>
+    <textarea class="names" id="names" spellcheck="false" aria-label="명단">${esc(ST.names)}</textarea>
+    <label class="minidrop" id="drop"><span style="font-size:20px">📄</span><span><b>엑셀 파일을 여기에 놓기</b> · 또는 눌러서 고르기</span></label>
+    <details class="ex" ${ST.names.trim() ? "" : "open"}><summary><b>이렇게 읽어요</b> — 맨 끝은 이름, 바로 앞은 직위, 그 앞은 소속 · 괄호는 바로 앞 낱말에 딸린 작은 글씨</summary>
+      <div class="r"><code>교사 홍길동</code><span>직위 · 이름</span><code>교무부 교사 홍길동</code><span>소속 · 직위 · 이름</span><code>교사(담임) 홍길동</code><span>직위 옆 작은 글씨 (담임)</span><code>홍길동 (1-1 홍아름)</code><span>이름 옆 작은 글씨 · 등록부는 비고 칸</span><code>한빛초, 학부모 위원, 홍길동</code><span>직위가 두 낱말이면 쉼표(,)로</span><code>위 원 장</code><span>한 글자씩 띄우면 큰 글자 한 줄</span></div></details>
+    <div class="read" id="read"></div>`,
+    bind: el => { const ta = $("names"); ta.oninput = () => { ST.names = ta.value; ST.roles = null; readBack(); redraw(); };
+      wireDrop($("drop"), $("fileIn"), loadFile); $("drop").onclick = e => { e.preventDefault(); $("fileIn").click(); }; readBack(); },
+    ok: () => roster().rows.length > 0 },
+  p_look:{tool:"plate", label:"명패 모양", html: () => `<h2 class="q">명패는 어떤 모양이 좋을까요?</h2><p class="qs">누르면 오른쪽 미리보기에 바로 보여요. 정했으면 아래 [맞아요, 다음]을 누르세요.</p>
+    <div class="designs">${DESIGNS.map(([k, t]) => `<button type="button" class="design" data-k="${k}" aria-pressed="${ST.plate.style === k}"><div class="th" data-th="${k}"></div><b>${t}</b></button>`).join("")}</div>
+    <div id="bgBox" style="margin-top:12px" ${ST.plate.style === "image" ? "" : "hidden"}><button type="button" class="btn sm" id="bgPick">${ST.plate.bg ? "다른 그림 고르기" : "배경 그림 고르기"}</button> <span class="hint">PC에 있는 그림(png·jpg)을 명패 크기에 맞게 늘려요</span></div>
+    <details class="more"><summary>크기 · 글꼴 · 접는 명패</summary><div class="row2">
+      <div>${fld("w","가로 (mm)",ST.plate.w,'type="number"')}</div><div>${fld("h","세로 (mm)",ST.plate.h,'type="number"')}</div></div>
+      <label class="lbl" for="font">이름 글꼴</label><select class="inp" id="font"><option value="serif">바탕(명조)</option><option value="sans">돋움(고딕)</option></select>
+      <label class="opts" style="margin:10px 0 0"><input type="checkbox" id="flip" ${ST.plate.flip ? "checked" : ""}> 접는 명패 (윗장을 거꾸로 찍어 반 접어 세움)</label>
+      <p class="hint">A4 가로(297 × 210mm)에 들어가려면 가로 287mm, 세로(접는 명패) 100mm 안쪽이어야 해요.</p></details>`,
+    bind: el => { el.querySelectorAll(".design").forEach(b => b.onclick = () => { ST.plate.style = b.dataset.k; el.querySelectorAll(".design").forEach(x => x.setAttribute("aria-pressed", x === b)); $("bgBox").hidden = ST.plate.style !== "image"; redraw(); if(ST.plate.style !== "image" || ST.plate.bg) autoNext(); });
+      $("bgPick").onclick = () => pickImage(src => { ST.plate.bg = {src}; ST.plate.style = "image"; redraw(); render(); toast("배경 그림을 넣었어요"); });
+      $("font").value = ST.plate.font; bindInputs(el, ST.plate, ["w","h","font","flip"], ["w","h"]); thumbs(el); } },
+  p_top:{tool:"plate", label:"명패 윗줄", html: () => `<h2 class="q">명패 이름 위에 작은 글씨를 넣을까요?</h2><p class="qs">보통 학교 이름이나 회의 이름을 넣어요.</p>${topStep(ST.plate, "org", "명패")}`,
+    bind: el => bindTop(el, ST.plate, "org", true) },
+  l_paper:{tool:"label", label:"라벨지", html: () => { const L = ST.label;
+    return `<h2 class="q">어떤 라벨지인가요?</h2><p class="qs">라벨지 상자에 적힌 칸 수(예: 2×7, 14칸)를 보고 고르세요.</p>
+    <div class="papers">${Object.entries(PRESET).map(([k, p]) => `<button type="button" class="paper" data-k="${k}" aria-pressed="${L.preset === k}"><span class="gr" style="grid-template-columns:repeat(${p.cols},1fr);grid-template-rows:repeat(${p.rows},1fr)">${"<i></i>".repeat(p.cols*p.rows)}</span><span><b>${p.cols}칸 × ${p.rows}줄 (${p.cols*p.rows}칸)</b><span>${p.w} × ${p.h}mm · ${p.d}</span></span></button>`).join("")}</div>
+    <details class="more" ${L.preset ? "" : "open"}><summary>숫자 직접 고치기 (상자에 적힌 규격이 다를 때)</summary><div class="row2">
+      ${[["cols","칸 수"],["rows","줄 수"],["w","라벨 가로(mm)"],["h","라벨 세로(mm)"],["mt","위 여백(mm)"],["ml","왼쪽 여백(mm)"],["gx","칸 사이(mm)"],["gy","줄 사이(mm)"]].map(([k, t]) => `<div>${fld(k, t, L[k], 'type="number" step="0.1"')}</div>`).join("")}</div>
+      <p class="hint">처음엔 빈 A4에 찍어 라벨지에 겹쳐 보세요. 오른쪽 자로 여백을 확인할 수 있어요.</p></details>
+    <label class="lbl">쓰다 남은 라벨지인가요?</label>
+    <div class="chips"><button type="button" class="chip" data-used="0" aria-pressed="${!L.used}">새 라벨지예요</button><button type="button" class="chip" data-used="1" aria-pressed="${!!L.used}">쓰던 거예요${L.used ? ` · ${L.start}번째 칸부터` : ""}</button></div>`; },
+    bind: el => { const L = ST.label;
+      el.querySelectorAll(".paper").forEach(b => b.onclick = () => { L.preset = b.dataset.k; NUM.forEach(k => L[k] = PRESET[L.preset][k]); L.start = 1; render(); redraw(); });
+      NUM.forEach(k => { const e = $(k); e.oninput = () => { L[k] = +e.value || 0; L.preset = ""; el.querySelectorAll(".paper").forEach(x => x.setAttribute("aria-pressed", "false")); redraw(); }; });
+      el.querySelectorAll("[data-used]").forEach(b => b.onclick = () => { L.used = b.dataset.used === "1"; PICK = L.used ? {kind:"start"} : null; if(!L.used) L.start = 1; ST.view = "label"; render(); redraw(); });
+      if(L.used) PICK = {kind:"start"}; tabs(); } },
+  l_deco:{tool:"label", label:"라벨 꾸미기", html: () => { const L = ST.label;
+    const three = (key, mode, n) => `<div class="chips">${[["none","안 넣기"],["all","모든 라벨에"],["some","칸 골라 넣기"]].map(([k, t]) => `<button type="button" class="chip" data-${key}="${k}" aria-pressed="${mode === k}">${t}${k === "some" && mode === "some" ? ` · ${n}칸` : ""}</button>`).join("")}</div>`;
+    return `<h2 class="q">라벨을 꾸밀까요?</h2><p class="qs">건너뛰어도 돼요. 바꾸면 오른쪽에 바로 보여요.</p>
+    <label class="lbl">맨 윗줄 작은 글씨</label>
+    <div class="chips"><button type="button" class="chip" data-tm="common" aria-pressed="${L.topMode === "common"}">모두 같은 글</button>${roster().rows.some(p => p.org) ? `<button type="button" class="chip" data-tm="each" aria-pressed="${L.topMode === "each"}">사람마다 소속</button>` : ""}<button type="button" class="chip" data-tm="none" aria-pressed="${L.topMode === "none"}">안 넣기</button></div>
+    <div id="topBox" ${L.topMode === "common" ? "" : "hidden"} style="margin-top:6px"><input class="inp" id="lbTop" value="${esc(L.top)}" placeholder="예: 한빛초등학교 운영위원회" aria-label="윗줄 글"></div>
+    <label class="lbl">검은 테두리 상자</label>${three("fr", L.frameMode, L.frameIdx.length)}
+    <label class="lbl">배경 그림</label>${three("bg", L.bgMode, L.bgIdx.length)}
+    ${L.bgSrc && L.bgMode !== "none" ? `<div class="bgrow"><img class="bgthumb" src="${L.bgSrc}" alt=""><button type="button" class="btn sm" id="bgPick">다른 그림 고르기</button></div>
+      <div class="chips" style="margin-top:8px"><button type="button" class="chip" data-fit="fill" aria-pressed="${L.bgFit !== "cover"}">칸에 맞게 늘리기</button><button type="button" class="chip" data-fit="cover" aria-pressed="${L.bgFit === "cover"}">비율 그대로 잘라 채우기</button></div>
+      <p class="hint">테두리 꽃 그림처럼 네 귀퉁이가 다 보여야 하면 '늘리기', 사진이면 '잘라 채우기'가 좋아요.</p>` : ""}
+    ${PICK && (PICK.kind === "bg" || PICK.kind === "frame") ? `<p class="hint" style="color:#b5541f;font-weight:600">오른쪽 미리보기에서 ${PICK.kind === "bg" ? "그림" : "테두리"}을 넣을 칸을 누르세요. 다시 누르면 빠져요.</p>` : ""}
+    <label class="opts" style="margin:14px 0 0"><input type="checkbox" id="space" ${L.space ? "checked" : ""}> 3글자 이름은 한 칸씩 띄우기 (홍 길 동)</label>`; },
+    bind: el => { const L = ST.label;
+      el.querySelectorAll("[data-tm]").forEach(b => b.onclick = () => { L.topMode = b.dataset.tm; render(); redraw(); });
+      $("lbTop").oninput = () => { L.top = $("lbTop").value; redraw(); };
+      bindInputs(el, L, ["space"]);
+      el.querySelectorAll("[data-fr]").forEach(b => b.onclick = () => { L.frameMode = b.dataset.fr; PICK = L.frameMode === "some" ? {kind:"frame"} : (PICK && PICK.kind === "frame" ? null : PICK); ST.view = "label"; render(); redraw(); });
+      const setBg = m => { L.bgMode = m; PICK = m === "some" ? {kind:"bg"} : (PICK && PICK.kind === "bg" ? null : PICK); ST.view = "label"; render(); redraw(); };
+      el.querySelectorAll("[data-bg]").forEach(b => b.onclick = () => { const m = b.dataset.bg; if(m !== "none" && !L.bgSrc) pickImage(src => { L.bgSrc = src; setBg(m); toast("그림을 넣었어요"); }); else setBg(m); });
+      el.querySelectorAll("[data-fit]").forEach(b => b.onclick = () => { L.bgFit = b.dataset.fit; render(); redraw(); });
+      if($("bgPick")) $("bgPick").onclick = () => pickImage(src => { L.bgSrc = src; render(); redraw(); });
+      tabs(); } },
+  s_meet:{tool:"sign", label:"모임", html: () => `<h2 class="q">무슨 모임의 등록부인가요?</h2><p class="qs">등록부 맨 위 제목이 돼요.</p>
+    <input class="inp" id="title" value="${esc(ST.sign.title)}" aria-label="제목">
+    <div class="chips" style="margin-top:8px">${["교직원 연수","협의회","학교운영위원회","학부모 연수","회의"].map(t => `<button type="button" class="chip" data-t="${t} 참석자 등록부">${t}</button>`).join("")}</div>
+    ${fld("sub","부제목 (비워도 돼요)",ST.sign.sub,'placeholder="예: 2026학년도 개인정보보호 연수"')}`,
+    bind: el => { bindInputs(el, ST.sign, ["title","sub"]); el.querySelectorAll(".chip").forEach(c => c.onclick = () => { ST.sign.title = $("title").value = c.dataset.t; redraw(); }); } },
+  s_when:{tool:"sign", label:"일시·장소", html: () => `<h2 class="q">언제, 어디서 하나요?</h2><p class="qs">비워 두면 등록부에 넣지 않아요. 날짜는 숫자만 이어 쳐도 돼요(202611261500).</p>
+    ${fld("when","일시",ST.sign.when,'placeholder="2026. 11. 26.(목) 15:00"')}${fld("place","장소",ST.sign.place,'placeholder="시청각실"')}`,
+    bind: el => { bindInputs(el, ST.sign, ["when","place"]); $("when").onblur = () => { const v = fmtWhen($("when").value); if(v !== $("when").value){ $("when").value = ST.sign.when = v; redraw(); } }; } },
+  s_cols:{tool:"sign", label:"등록부 칸", html: () => `<h2 class="q">등록부에 어떤 칸이 필요한가요?</h2><p class="qs">명단에 적은 것을 보고 미리 골라 뒀어요. 괄호 글은 비고 칸에 들어가요.</p>
+    <div class="choices">${Object.entries(COLS).map(([k, c]) => choice(k, k === "full" ? "▦" : k === "mid" ? "▤" : "▢", c.t, c.d, signCols() === k)).join("")}</div>
+    <label class="lbl">늦게 오는 사람을 위한 빈 줄</label><div class="chips">${[0,3,5,10].map(n => `<button type="button" class="chip" data-b="${n}" aria-pressed="${+ST.sign.blank === n}">${n}줄</button>`).join("")}</div>
+    ${fld("signer","맨 아래 확인자 (비워도 돼요)",ST.sign.signer,'placeholder="담당자 홍길동"')}`,
+    bind: el => { el.querySelectorAll(".choice").forEach(b => b.onclick = () => { ST.sign.cols = b.dataset.k; el.querySelectorAll(".choice").forEach(x => x.setAttribute("aria-pressed", x === b)); redraw(); });
+      el.querySelectorAll("[data-b]").forEach(b => b.onclick = () => { ST.sign.blank = +b.dataset.b; el.querySelectorAll("[data-b]").forEach(x => x.setAttribute("aria-pressed", x === b)); redraw(); });
+      bindInputs(el, ST.sign, ["signer"]); } },
+  i_text:{tool:"index", label:"견출지 글자", html: () => { const I = ST.index; return `<h2 class="q">견출지에 무엇을 찍을까요?</h2><p class="qs">보통 '안건1, 안건2…'처럼 앞 글자와 번호를 찍어요.</p>
+    <div class="row2"><div>${fld("pre","앞 글자",I.pre)}</div><div>${fld("n","몇 개",I.n,'type="number" min="0"')}</div></div>
+    <div class="chips" style="margin-top:8px">${["안건","붙임","보고","협의"].map(t => `<button type="button" class="chip" data-t="${t}">${t}</button>`).join("")}</div>
+    <details class="more"><summary>더 넣기 (시작 번호 · 둘째 묶음 · 따로 찍을 글자)</summary>
+      <div class="row2"><div>${fld("st","시작 번호",I.st,'type="number" min="1"')}</div><div></div><div>${fld("pre2","둘째 묶음 앞 글자",I.pre2)}</div><div>${fld("n2","둘째 묶음 개수",I.n2,'type="number" min="0"')}</div></div>
+      <label class="lbl" for="extra">따로 찍을 글자 (한 줄에 하나, 예: 사람 이름)</label><textarea class="inp" id="extra" rows="3">${esc(I.extra)}</textarea></details>`; },
+    bind: el => { bindInputs(el, ST.index, ["pre","n","st","pre2","n2","extra"], ["n","st","n2"]); el.querySelectorAll(".chip[data-t]").forEach(c => c.onclick = () => { ST.index.pre = $("pre").value = c.dataset.t; redraw(); }); },
+    ok: () => ixSets().length > 0 },
+  i_size:{tool:"index", label:"견출지 크기", html: () => { const I = ST.index; return `<h2 class="q">몇 부, 어떤 크기로 찍을까요?</h2><p class="qs">한 부는 새 줄에서 시작해요. 위아래 두 면을 가운데 점선에서 접어 붙여요.</p>
+    ${fld("copies","부수",I.copies,'type="number" min="1"')}
+    <label class="lbl">크기</label><div class="chips">${[[13,9,"보통"],[16,10,"조금 크게"],[11,8,"작게"]].map(([w, h, t]) => `<button type="button" class="chip" data-wh="${w},${h}" aria-pressed="${+I.w === w && +I.h === h}">${t} ${w}×${h}mm</button>`).join("")}</div>
+    <details class="more"><summary>숫자 직접 고치기</summary><div class="row2"><div>${fld("w","칸 가로 (mm)",I.w,'type="number"')}</div><div>${fld("h","한 면 세로 (mm)",I.h,'type="number"')}</div></div></details>`; },
+    bind: el => { bindInputs(el, ST.index, ["copies","w","h"], ["copies","w","h"]); el.querySelectorAll("[data-wh]").forEach(b => b.onclick = () => { const [w, h] = b.dataset.wh.split(",").map(Number); ST.index.w = w; ST.index.h = h; render(); redraw(); }); } },
+  done:{label:"다 됐어요", html: () => { const R = roster().rows;
+    const g = {plate:[`명패 ${R.length}장`, "A4 가로 한 장에 한 사람 · 반 접어 세워요", 1, "명패"], label:[`라벨 ${R.length}칸`, `${ST.label.cols}칸 × ${ST.label.rows}줄 라벨지${ST.label.used ? ` · ${ST.label.start}번째 칸부터` : ""}`, 1, "라벨"],
+      sign:[`등록부 ${R.filter(p => !p.title).length}명 + 빈 줄 ${+ST.sign.blank||0}`, COLS[signCols()].d, 1, ST.sign.title || "등록부"], index:[`견출지 ${ixSets().reduce((a, s) => a + s.length, 0)}칸`, `${ST.index.w}×${ST.index.h}mm · ${ST.index.copies}부`, 1, "견출지"]};
+    return `<div class="done-head"><span class="ck">✓</span><h2 class="q" style="margin:0">다 됐어요</h2></div><p class="qs">인쇄 창에서 <b>배율 100%(실제 크기)</b>, 여백 '없음', '배경 그래픽' 켜기를 고르세요.</p>
+    ${made().map(k => `<div class="group"><h3 style="display:block">${TOOLS[k]} <span class="pill info" style="vertical-align:2px;margin-left:6px">${g[k][0]}</span></h3><p class="hint" style="margin:-4px 0 8px">${esc(g[k][1])}</p><div class="outs">
+      <button type="button" class="btn" data-out="print" data-t="${k}"><span>🖨️ 인쇄하기</span><small>바로 프린터로</small></button>
+      <button type="button" class="btn" data-out="hwpx" data-t="${k}" ${g[k][2] ? "" : "disabled"}><span>📝 한글 파일 받기 (.hwpx)</span><small>${k === "plate" || k === "index" ? "거꾸로 면은 그림 (고치려면 여기서 다시)" : ""}</small></button>
+      <button type="button" class="btn" data-out="html" data-t="${k}"><span>🌐 HTML로 받기</span><small>다른 PC에서 열어 인쇄</small></button></div></div>`).join("")}
+    <div class="fixes">${plan().filter(s => s !== "what" && s !== "done").map(s => `<button type="button" class="chip" data-go="${s}">${STEPS[s].label} 고치기</button>`).join("")}</div>`; },
+    bind: el => { el.querySelectorAll("[data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
+      el.querySelectorAll("[data-out]").forEach(b => b.onclick = async () => { if(b.classList.contains("busy")) return; const k = b.dataset.t, o = b.dataset.out, lab = b.innerHTML;
+        if(o === "hwpx"){ b.classList.add("busy"); b.innerHTML = `<span>⏳ 한글 파일 만드는 중…</span><small>그림이 있으면 몇 초 걸려요</small>`; await new Promise(r => setTimeout(r, 30)); }
+        const done = ok => { b.classList.remove("busy"); b.innerHTML = lab; if(ok && o !== "print") toast("받았어요. 내려받기 폴더를 보세요"); }; name = {plate:"명패", label:"라벨", sign:(ST.sign.title || "등록부").replace(/[\\/:*?"<>|]/g, ""), index:"견출지"}[k];
+        try{
+          if(o === "print"){ const w = window.open("", "_blank"); if(!w){ toast("팝업이 막혔어요. HTML로 받아 열어 인쇄하세요"); return; } const html = k === "label" ? labelSheetHtml(labelItems(), {...labelOpt(), pick:false, picked:[]}) : HTML[k](); w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); }
+          if(o === "html") save(new Blob([k === "label" ? labelSheetHtml(labelItems(), {...labelOpt(), pick:false, picked:[]}) : HTML[k]()], {type:"text/html"}), `${name}.html`);
+          if(o === "hwpx"){ if(k === "sign") save(await signHwpx(), `${name}.hwpx`); if(k === "label") save(await UPS.labelHwpx(labelItems(), {...labelOpt(), pick:false}), "라벨.hwpx");
+            if(k === "plate"){ const P = ST.plate; save(await UPS.plateHwpx(plateList(), {w:P.w, h:P.h, style:P.style, flip:P.flip, font:P.font, bgSrc:P.bg && P.bg.src}), "명패.hwpx"); }
+            if(k === "index") save(await UPS.indexHwpx(ixSets(), {w:ST.index.w, h:ST.index.h}), "견출지.hwpx"); }
+          done(true);
+        }catch(e){ console.error(e); done(false); alert("만들지 못했어요: " + (e.message || e)); } }); } },
+};
+function plan(){ const p = ["what"]; if(needNames()) p.push("who");
+  if(ST.make.plate) p.push("p_look","p_top"); if(ST.make.label) p.push("l_paper","l_deco"); if(ST.make.sign) p.push("s_meet","s_when","s_cols"); if(ST.make.index) p.push("i_text","i_size");
+  p.push("done"); return p; }
+function go(s){ STEP = s; if(STEPS[s].tool && ST.make[STEPS[s].tool]) ST.view = STEPS[s].tool; if(s === "who" && ST.view === "index") ST.view = ["plate","label","sign"].find(k => ST.make[k]) || ST.view; if(!(s === "l_paper" && ST.label.used) && !(s === "l_deco" && PICK && (PICK.kind === "bg" || PICK.kind === "frame"))) PICK = null; render(); redraw(); $("pane").scrollTop = 0; }
+function autoNext(){ /* 고르면 미리보기만 바뀜. 다음 단계는 아래 [맞아요, 다음] 버튼으로만 (2026-11-12 사용자 결정) */ }
+function render(stepsOnly){
+  const P = plan(); if(!P.includes(STEP)) STEP = "what";
+  const S = STEPS[STEP], i = P.indexOf(STEP);
+  if(!stepsOnly){ $("pane").innerHTML = S.html(); S.bind && S.bind($("pane")); }
+  // 단계 칩: 도구별로 묶어 한 칩 (명패 1/2처럼 안에서 몇 번째인지)
+  const G = []; P.forEach(k => { const t = STEPS[k].tool; const last = G[G.length-1]; if(t && last && last.tool === t) last.steps.push(k); else G.push({tool:t, steps:[k]}); });
+  const gi = G.findIndex(g => g.steps.includes(STEP));
+  $("steps").innerHTML = `<button type="button" data-home="1" title="처음 화면(무엇을 만들까요?)으로">⌂ 처음으로</button>` + G.map((g, j) => { const cur = j === gi, lab = g.tool ? TOOLS[g.tool] : STEPS[g.steps[0]].label;
+    return `<button type="button" data-s="${g.steps[0]}" ${cur ? 'aria-current="step"' : ""} class="${j < gi ? "done" : ""}">${j+1} ${lab}${cur && g.steps.length > 1 ? ` ${g.steps.indexOf(STEP)+1}/${g.steps.length}` : ""}</button>`; }).join("");
+  $("steps").querySelectorAll("button").forEach(b => b.onclick = () => go(b.dataset.home ? "what" : b.dataset.s));
+  $("progFill").style.width = `${i/(P.length-1)*100}%`;
+  const last = i === P.length - 1;
+  $("cta").innerHTML = `${i > 0 ? `<button type="button" class="btn back" id="bk">← 뒤로</button>` : ""}${last ? `<button type="button" class="btn" id="home">처음으로</button>` : `<button type="button" class="btn primary" id="nx" data-primary>${STEP === "what" ? "다음" : "맞아요, 다음"}</button>`}`;
+  if($("bk")) $("bk").onclick = () => go(P[i-1]);
+  if($("home")) $("home").onclick = () => go("what");
+  if($("nx")){ $("nx").disabled = S.ok ? !S.ok() : false; $("nx").onclick = () => go(P[i+1]); }
+  tabs();
+}
+document.addEventListener("keydown", e => { if(e.key !== "Enter" || e.isComposing) return; const t = e.target; if(["TEXTAREA","BUTTON","SELECT"].includes(t.tagName)) return; const b = document.querySelector("[data-primary]"); if(b && !b.disabled){ e.preventDefault(); b.click(); } });
+/* 일시: 202611261500 → 2026. 11. 26.(목) 15:00 */
+function fmtWhen(v){ const d = v.replace(/\D/g, ""); if(!/^\d{8}(\d{4})?$/.test(d) || /[가-힣.]/.test(v)) return v;
+  const dt = new Date(+d.slice(0,4), +d.slice(4,6)-1, +d.slice(6,8)); if(isNaN(dt)) return v;
+  return `${dt.getFullYear()}. ${dt.getMonth()+1}. ${dt.getDate()}.(${"일월화수목금토"[dt.getDay()]})${d.length === 12 ? ` ${d.slice(8,10)}:${d.slice(10,12)}` : ""}`; }
+
+/* ---------- '이렇게 읽었어요' ---------- */
+function readBack(){
+  const R = roster(), host = $("read"); if(!host) return;
+  if($("nx")) $("nx").disabled = !R.rows.length;
+  if(!R.rows.length){ host.innerHTML = ""; return; }
+  const showOrg = R.rows.some(p => p.org), sus = R.rows.map(rosterSuspect);
+  const map = R.mode === "cells" && R.ncol > 1 ? `<div class="colmap">${R.header ? `<span class="pill ok">머리글을 보고 읽었어요</span>` : `<span>칸 ${R.ncol}개를 이렇게 봤어요:</span>`}
+    ${R.roles.map((r, i) => `<label>칸${i+1} <select data-c="${i}">${Object.entries(ROSTER_ROLE).map(([k, l]) => `<option value="${k}" ${k === r ? "selected" : ""}>${l}</option>`).join("")}</select></label>`).join("")}</div>` : "";
+  const sm = t => t ? ` <small style="color:var(--muted);font-weight:400">(${esc(t)})</small>` : "";
+  host.innerHTML = `<h3>이렇게 읽었어요 <span class="pill info">${R.rows.length}명</span>${sus.some(Boolean) ? `<span class="pill warn">${sus.indexOf(true)+1}번 줄 확인</span>` : ""}</h3>${map}
+    <table><thead><tr><th></th>${showOrg ? "<th>소속</th>" : ""}<th>직위</th><th>이름</th></tr></thead><tbody>
+    ${R.rows.map((p, i) => p.title ? `<tr><td class="n">${i+1}</td><td colspan="${2 + showOrg}"><span class="tt">${esc([...p.title].join(" "))}</span> <span class="pill info">큰 글자 한 줄</span></td></tr>`
+      : `<tr><td class="n">${i+1}</td>${showOrg ? `<td>${esc(p.org)}</td>` : ""}<td>${esc(p.pos) || '<span style="color:#b5bcc0">—</span>'}${sm(p.posSub)}</td><td class="nm">${esc(p.name)}${sm(p.note)}</td></tr>
+        ${sus[i] ? `<tr><td></td><td colspan="${2 + showOrg}"><span class="pill warn">'${esc(p.name)}'이(가) 이름이 맞나요?</span> <span class="hint">이름 뒤 글이면 괄호로 묶어 주세요: ${esc(p.pos)} <b>(${esc(p.name)})</b></span></td></tr>` : ""}`).join("")}</tbody></table>
+    <p class="hint">작은 글씨 = 괄호 안 글. 틀린 줄은 위 칸에서 고치면 바로 바뀌어요.</p>`;
+  host.querySelectorAll("[data-c]").forEach(s => s.onchange = () => { const r = roster().roles.slice(); r[+s.dataset.c] = s.value; ST.roles = r; readBack(); redraw(); });
+}
+async function loadFile(files){
+  try{ const t = await rosterFromFile(files[0]); ST.names = t; ST.roles = null; $("names").value = t; readBack(); redraw(); toast(`'${files[0].name}'에서 명단을 읽었어요`); }
+  catch(e){ console.error(e); toast("파일을 읽지 못했어요: " + (e.message || e)); }
+}
+/* ---------- 명패 모양 카드 그림 ---------- */
+function thumbs(el){
+  const first = plateList().find(p => p.name) || {org:"", pos:"직위", name:"홍길동"}, P = ST.plate;
+  el.querySelectorAll("[data-th]").forEach(box => {
+    const k = box.dataset.th, f = document.createElement("iframe"), pxW = P.w*3.7795, pxH = P.h*3.7795;
+    const sc = Math.min(box.clientWidth / pxW, 66 / pxH);
+    f.style.width = pxW + "px"; f.style.height = pxH + "px"; f.style.transform = `scale(${sc})`;
+    f.style.left = ((box.clientWidth - pxW*sc)/2) + "px"; f.style.top = ((66 - pxH*sc)/2) + "px";
+    f.srcdoc = plateSheetHtml([first], {w:P.w, h:P.h, style:k, flip:false, font:P.font, org:first.org, bgSrc:P.bg && P.bg.src})
+      .replace("</head>", `<style>html,body{background:#fff!important;margin:0;padding:0}.sheet{width:auto!important;height:auto!important;margin:0!important;display:block!important}.pair .card:nth-child(2){display:none}</style></head>`);
+    box.appendChild(f);
+  });
+}
+$("forget").onclick = e => { e.preventDefault(); if(!confirm("이 도구가 기억한 명단·모양을 지울까요?")) return; localStorage.removeItem(KEY); location.reload(); };
+schoolChip("schoolHost", () => { if(!ST.plate.org) ST.plate.org = SCH(); if(!ST.label.top) ST.label.top = SCH(); render(); redraw(); });
+render(); redraw();
+</script>
+</body>
+</html>
