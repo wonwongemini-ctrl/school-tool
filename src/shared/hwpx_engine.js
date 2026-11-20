@@ -94,14 +94,15 @@ const ENG = (() => {
     DYN = { hdr, base, cp: new Map(), pp: new Map(), bf: new Map(), cpX: [], ppX: [], bfX: [], cpN: maxId(hdr, 'charPr') + 1, ppN: maxId(hdr, 'paraPr') + 1, bfN: maxId(hdr, 'borderFill') + 1 };
   }
   const tplPart = (tag, id) => { const m = DYN.hdr.match(new RegExp(`<hh:${tag} id="${id}"[\\s\\S]*?</hh:${tag}>`)); if (m) return m[0]; return DYN.hdr.match(new RegExp(`<hh:${tag} id="\\d+"[\\s\\S]*?</hh:${tag}>`))[0]; };
-  function cpId(sz, b, f = 0, sp = 0, ra = 100) {
-    const k = [sz, b ? 1 : 0, f, sp, ra].join('|'); if (DYN.cp.has(k)) return DYN.cp.get(k);
+  function cpId(sz, b, f = 0, sp = 0, ra = 100, u = false) {
+    const k = [sz, b ? 1 : 0, f, sp, ra].join('|') + (u ? '|u' : ''); if (DYN.cp.has(k)) return DYN.cp.get(k);
     const id = DYN.cpN++;
     let x = tplPart('charPr', DYN.base.cp).replace(/^<hh:charPr id="\d+"/, `<hh:charPr id="${id}"`).replace(/height="\d+"/, `height="${Math.round(sz * 100)}"`).replace(/<hh:bold\/>/g, '').replace(/<hh:italic\/>/g, '');
     if (!DYN.base.keepFont) x = x.replace(/<hh:fontRef [^>]*\/>/, `<hh:fontRef hangul="${f}" latin="${f}" hanja="${f}" japanese="${f}" other="${f}" symbol="${f}" user="${f}"/>`);
     x = x.replace(/<hh:ratio [^>]*\/>/, `<hh:ratio hangul="${ra}" latin="${ra}" hanja="${ra}" japanese="${ra}" other="${ra}" symbol="${ra}" user="${ra}"/>`);
     x = x.replace(/<hh:spacing [^>]*\/>/, `<hh:spacing hangul="${sp}" latin="${sp}" hanja="${sp}" japanese="${sp}" other="${sp}" symbol="${sp}" user="${sp}"/>`);
     if (b) x = x.replace('<hh:underline', '<hh:bold/><hh:underline');
+    if (u) x = x.replace(/<hh:underline type="[A-Z]+"/, '<hh:underline type="BOTTOM"');
     DYN.cpX.push(x); DYN.cp.set(k, id); return id;
   }
   const ALN = { c: 'CENTER', l: 'LEFT', r: 'RIGHT', j: 'JUSTIFY', d: 'CENTER' }; // 배분 정렬은 한글에서 치우쳐 보여 가운데 정렬로 통일
@@ -181,7 +182,7 @@ const ENG = (() => {
       r.forEach(c => {
         let w = 0; for (let i = 0; i < c.cs; i++) w += cw[c.col + i];
         const avail = (w - 1020) / 100;
-        const ps = String(c.t).split('\n').map(ln => { const sq = needSqueeze(ln, 10, avail, c.h); return `<hp:p id="${++pid}" paraPrIDRef="${c.al === 'l' ? ppId('l', 130, 0, 0, -hangOf(ln, 10), 0, 0, sq) : ppId('c', 130, 0, 0, 0, 0, 0, sq)}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">${runT(ln, 10, c.h, 1)}</hp:p>`; }).join('');
+        const ps = String(c.t).split('\n').map(ln0 => { const ln = ln0.replace(/[\uE000\uE001]/g, ''); const sq = needSqueeze(ln, 10, avail, c.h); const rs = /[\uE000\uE001]/.test(ln0) ? ln0.split(/(\uE000[^\uE001]*\uE001)/).filter(Boolean).map(seg => seg[0] === '\uE000' ? `<hp:run charPrIDRef="${cpId(10, c.h, 1, 0, 100, true)}"><hp:t>${esc(seg.slice(1, -1))}</hp:t></hp:run>` : runT(seg, 10, c.h, 1)).join('') : runT(ln, 10, c.h, 1); return `<hp:p id="${++pid}" paraPrIDRef="${c.al === 'l' ? ppId('l', 130, 0, 0, -hangOf(ln, 10), 0, 0, sq) : ppId('c', 130, 0, 0, 0, 0, 0, sq)}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">${rs}</hp:p>`; }).join('');
         x += `<hp:tc name="" header="${c.h ? 1 : 0}" hasMargin="0" protect="0" editable="0" dirty="0" borderFillIDRef="${bfId(sd, c.h ? '#E7E6E6' : null, false)}"><hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">${ps}</hp:subList><hp:cellAddr colAddr="${c.col}" rowAddr="${c.row}"/><hp:cellSpan colSpan="${c.cs}" rowSpan="${c.rs}"/><hp:cellSz width="${w}" height="${rh * c.rs}"/><hp:cellMargin left="510" right="510" top="141" bottom="141"/></hp:tc>`;
       });
       x += '</hp:tr>';

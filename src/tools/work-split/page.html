@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>실무사 업무 분장 도우미</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+
+/* 한 화면에 질문 하나 (에듀파인 품의 도우미 v2와 같은 화면 요소) */
+:root{
+  --paper:#f4f6f5; --card:#ffffff; --ink:#18242c; --muted:#5b6970; --line:#dde3e0; --line-strong:#b9c3bf;
+  --accent:#1f5e74; --accent-ink:#ffffff; --accent-soft:#e3eef1;
+  --ok:#1d7a4c; --ok-soft:#e2f2e9; --warn:#9a6200; --warn-soft:#fbf0d9; --err:#b3261e; --err-soft:#fbe5e3;
+  --doc:#fffefa; --doc-line:#cfc9b8;
+  --f-body:"IBM Plex Sans KR","Malgun Gothic","맑은 고딕","Apple SD Gothic Neo",sans-serif;
+  --f-doc:"Nanum Myeongjo","바탕","Batang","AppleMyungjo",serif;
+  --f-num:"IBM Plex Mono",Consolas,"D2Coding",monospace;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#12181b; --card:#1b2327; --ink:#e4eaec; --muted:#9aa8ae; --line:#2b373c; --line-strong:#43535a;
+  --accent:#6cb6cc; --accent-ink:#0d1c22; --accent-soft:#1d3239;
+  --ok:#6fcf9b; --ok-soft:#173327; --warn:#e7b65a; --warn-soft:#352a12; --err:#f08a80; --err-soft:#3a1d1a;
+  --doc:#1f2629; --doc-line:#46504f; color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --paper:#12181b; --card:#1b2327; --ink:#e4eaec; --muted:#9aa8ae; --line:#2b373c; --line-strong:#43535a;
+  --accent:#6cb6cc; --accent-ink:#0d1c22; --accent-soft:#1d3239;
+  --ok:#6fcf9b; --ok-soft:#173327; --warn:#e7b65a; --warn-soft:#352a12; --err:#f08a80; --err-soft:#3a1d1a;
+  --doc:#1f2629; --doc-line:#46504f; color-scheme:dark; }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* 위 막대 */
+.bar{position:sticky;top:0;z-index:5;background:var(--paper)}
+.bar-in{max-width:1080px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:10px max(16px,env(safe-area-inset-left,0px)) 8px}
+.bar .back{border:none;background:none;padding:6px 8px;margin-left:-8px;border-radius:8px;cursor:pointer;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:4px}
+.bar .back:hover{background:var(--line)}
+.bar .brand{font-weight:700;font-size:14px;color:var(--muted);letter-spacing:-.01em;cursor:pointer;border:none;background:none;padding:6px 0}
+.bar .sp{flex:1}
+.prog{height:3px;background:var(--line);max-width:1080px;margin:0 auto}
+.prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .35s ease}
+
+/* 무대 */
+.stage{max-width:580px;margin:0 auto;padding:12px max(16px,env(safe-area-inset-left,0px)) 120px;animation:rise .28s ease both}
+.stage.wide{max-width:1080px}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.stage{animation:none}.prog i{transition:none}}
+h1.q{font-size:clamp(23px,4.6vw,28px);line-height:1.35;letter-spacing:-.025em;margin:26px 0 8px;font-weight:700;text-wrap:balance}
+p.qs{margin:0 0 22px;color:var(--muted);font-size:15.5px}
+.stage h2{font-size:15px;margin:26px 0 10px}
+
+/* 큰 놓기 칸 */
+.bigdrop{display:grid;justify-items:center;gap:6px;text-align:center;border:2px dashed var(--line-strong);border-radius:20px;padding:46px 20px;background:var(--card);cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
+.bigdrop:hover{border-color:var(--accent)}
+.bigdrop.over{border-color:var(--accent);background:var(--accent-soft);transform:scale(1.01)}
+.bigdrop svg{width:46px;height:46px;color:var(--accent)}
+.bigdrop strong{font-size:19px;letter-spacing:-.02em}
+.bigdrop span{color:var(--muted);font-size:13.5px}
+.minidrop{display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px dashed var(--line-strong);border-radius:12px;padding:14px;cursor:pointer;color:var(--muted);font-weight:600;font-size:14px;background:transparent}
+.minidrop.over,.minidrop:hover{border-color:var(--accent);color:var(--accent)}
+
+/* 고르기 카드 */
+.choices{display:grid;gap:10px}
+.choice{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;text-align:left;width:100%;border:1.5px solid var(--line);background:var(--card);border-radius:var(--r);padding:16px 18px;cursor:pointer;transition:border-color .12s,background .12s}
+.choice:hover{border-color:var(--line-strong)}
+.choice[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.choice .ic{width:40px;height:40px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:17px}
+.choice[aria-pressed="true"] .ic{background:var(--accent);color:var(--accent-ink)}
+.choice b{display:block;font-size:16px;letter-spacing:-.01em}
+.choice span.d{display:block;color:var(--muted);font-size:13.5px;margin-top:1px}
+.choice .chev{color:var(--muted)}
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:520px){.twocol{grid-template-columns:1fr}}
+
+/* 입력 */
+.fld{display:grid;gap:6px;margin-bottom:16px;min-width:0}
+.fld > label,.fld > .lab{font-size:13.5px;font-weight:600;color:var(--muted)}
+.fld .help{font-size:12.5px;color:var(--muted)}
+input[type=text],input[type=number],input[type=search],select,textarea{width:100%;min-width:0;background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font-size:16px;transition:border-color .12s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none}
+input.big{font-size:20px;font-weight:600;padding:14px 16px}
+textarea{resize:vertical;line-height:1.6}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:0 12px}
+@media (max-width:520px){.grid2,.grid3{grid-template-columns:1fr}}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:7px 14px;cursor:pointer;font-weight:600;font-size:14px}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
+.found{background:var(--ok-soft);color:var(--ok);border-radius:10px;padding:9px 12px;font-size:14px;font-weight:600}
+
+/* 아래 고정 버튼 */
+.cta{position:fixed;left:0;right:0;bottom:0;z-index:6;padding:14px max(16px,env(safe-area-inset-left,0px)) calc(14px + env(safe-area-inset-bottom,0px));background:linear-gradient(to top,var(--paper) 72%,transparent)}
+.cta-in{max-width:580px;margin:0 auto;display:flex;gap:8px}
+.stage.wide + .cta .cta-in{max-width:1080px}
+.btn{border:1.5px solid var(--line-strong);background:var(--card);border-radius:12px;padding:10px 16px;font-weight:600;font-size:14.5px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--ink)}
+.btn.small{font-size:13px;padding:5px 10px;border-radius:8px;font-weight:500}
+.btn.link{border:none;background:none;color:var(--accent);padding:6px 4px}
+.btn.link:hover{text-decoration:underline}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn:disabled{opacity:.4;cursor:not-allowed;filter:none}
+.btn.go{flex:1;padding:16px;font-size:17px;border-radius:14px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;border-radius:999px;padding:2px 10px;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.err{background:var(--err-soft);color:var(--err)} .pill.info{background:var(--accent-soft);color:var(--accent)}
+details > summary{cursor:pointer;font-size:13.5px;color:var(--accent);font-weight:600;width:max-content;max-width:100%}
+details[open] > summary{margin-bottom:8px}
+.muted{color:var(--muted)} .mono{font-family:var(--f-num)}
+/* 표 */
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border-bottom:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:middle}
+th{background:var(--paper);font-weight:600;font-size:12.5px;color:var(--muted);white-space:nowrap}
+td.num,th.num{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+tfoot td{font-weight:700;border-top:1.5px solid var(--line-strong);border-bottom:none}
+tbody tr:last-child td{border-bottom:none}
+tr.bad td{background:var(--err-soft)} tr.warnrow td{background:var(--warn-soft)}
+td input[type=text],td input[type=number],td select{padding:5px 7px;font-size:13.5px;border-radius:7px;border-width:1px}
+td input.w-qty{width:72px} td input.w-price{width:110px} td input.w-unit{width:64px} td input.w-spec{min-width:110px}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(16px);background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:20;max-width:calc(100vw - 32px)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.spin{display:inline-block;width:18px;height:18px;border:2.5px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-3px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+footer.site{max-width:1080px;margin:0 auto;padding:18px max(16px,env(safe-area-inset-left,0px)) 110px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+footer.site p{margin:0 0 4px} footer.site a{color:inherit}
+footer.site details summary{color:inherit;font-weight:500;font-size:12.5px}
+footer.site ul{margin:6px 0 0;padding-left:18px}
+
+
+/* ===== 실무사 업무 분장 도우미 ===== */
+:root{--c1:#1f5e74;--c1s:#e3eef1;--c2:#5a4fa0;--c2s:#ecebf7;--c3:#1d7a4c;--c3s:#e2f2e9;--cs:#6b6f1d;--css:#eff0dc;--tch:#5b6970;--tchs:#eef1f0;--adm:#8a5a12;--adms:#f8eedb;--nb:#7a5c8c;--nbs:#f1ecf4}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--c1:#6cb6cc;--c1s:#1d3239;--c2:#ada4ea;--c2s:#2a2742;--c3:#6fcf9b;--c3s:#173327;--cs:#d4d68a;--css:#30311a;--tch:#9aa8ae;--tchs:#222b2f;--adm:#e7b65a;--adms:#352a12;--nb:#cdb0dd;--nbs:#2f2636}}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:0 0 14px}
+.sbox{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.sbox .k{font-size:12.5px;color:var(--muted);font-weight:600}
+.sbox .v{font-family:var(--f-num);font-size:24px;font-weight:600;letter-spacing:-.02em;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.sbox .v small{font-family:var(--f-body);font-size:13px;color:var(--muted);font-weight:500}
+.meter{position:relative;height:8px;background:var(--paper);border:1px solid var(--line);border-radius:5px;margin:8px 0 5px}
+.meter i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--ok)}
+.meter i.over{background:var(--warn)}
+.meter .band{position:absolute;top:-4px;bottom:-4px;border-left:1.5px dashed var(--line-strong);border-right:1.5px dashed var(--line-strong)}
+.sbox .t{font-size:12px;color:var(--muted)}
+.toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 12px}
+.toolbar .sp{flex:1}
+.lede{color:var(--muted);font-size:14px;margin:0 0 14px}
+.staff{display:grid;gap:10px;margin-bottom:10px}
+.zone{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px;min-height:90px}
+.zone.over{outline:2.5px solid var(--accent);outline-offset:1px}
+.zone.hint1{outline:2px dashed var(--accent);outline-offset:1px}
+.zone h3{margin:0 0 2px;font-size:16px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;letter-spacing:-.01em}
+.zone h3 .sc{margin-left:auto;font-family:var(--f-num);font-size:13px;color:var(--muted);font-weight:500}
+.zone .zsub{font-size:12.5px;color:var(--muted);margin-bottom:8px}
+.zone.k-A{border-top:4px solid var(--c1)}.zone.k-B{border-top:4px solid var(--c2)}.zone.k-C{border-top:4px solid var(--c3)}.zone.k-S{border-top:4px solid var(--cs)}
+.zone.k-교사{border-top:4px solid var(--tch)}.zone.k-행정실{border-top:4px solid var(--adm)}.zone.k-늘봄{border-top:4px solid var(--nb)}.zone.k-없앰{border:1.5px dashed var(--line-strong);background:transparent}
+.lower{display:grid;grid-template-columns:2.2fr 1fr;gap:10px}
+.lower .side{display:grid;gap:10px;align-content:start}
+.catlab{font-size:11.5px;color:var(--muted);margin:8px 2px 4px;font-weight:600}
+.cards{display:flex;flex-wrap:wrap;gap:6px}
+.staff .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+.card{position:relative;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:6px 28px 6px 9px;font-size:13px;line-height:1.4;cursor:grab;min-width:150px;max-width:270px;flex:1 1 170px;user-select:none}
+.staff .card{max-width:none}
+.card.k-A{background:var(--c1s);border-color:transparent}
+.zone.k-조정{border:1.5px dashed var(--warn);background:var(--warn-soft);margin-bottom:10px}.card.k-조정{background:var(--paper)}
+.card .why{color:var(--warn);font-weight:600}.card.ghost{cursor:default;opacity:.85;border-style:dashed}.card .co{color:var(--accent);font-weight:600}.card.k-B{background:var(--c2s);border-color:transparent}.card.k-C{background:var(--c3s);border-color:transparent}.card.k-S{background:var(--css);border-color:transparent}
+.card.k-교사{background:var(--tchs);border-color:transparent}.card.k-행정실{background:var(--adms);border-color:transparent}.card.k-늘봄{background:var(--nbs);border-color:transparent}
+.card.dragging{opacity:.4}
+.card .nm{display:block;font-weight:500}
+.card .meta{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:3px;font-size:11px;color:var(--muted)}
+.card .sc{font-family:var(--f-num);font-weight:600;color:var(--ink)}
+.card .ed{width:6px;height:6px;border-radius:50%;background:var(--warn);display:inline-block}
+.card .mo{background:var(--warn-soft);color:var(--warn);border-radius:4px;padding:0 4px;font-weight:600}
+.card .au{background:var(--accent-soft);color:var(--accent);border-radius:4px;padding:0 4px;font-weight:600}
+.card .dots{position:absolute;top:2px;right:3px;border:0;background:none;color:var(--muted);font-size:17px;line-height:1;padding:3px 5px;border-radius:6px;cursor:pointer}
+.card .dots:hover{background:var(--line)}
+.card.adj{animation:adjPulse 2.6s ease-in-out infinite}
+@keyframes adjPulse{0%,100%{box-shadow:0 0 0 1.5px rgba(214,98,52,.9)}50%{box-shadow:0 0 0 4px rgba(214,98,52,.12)}}
+@media (prefers-reduced-motion:reduce){.card.adj{animation:none;box-shadow:0 0 0 2px rgba(214,98,52,.9)}}
+body.noblink .card.adj{animation:none;box-shadow:0 0 0 2px rgba(214,98,52,.9)}
+.adjkey{display:inline-block;width:12px;height:12px;border-radius:4px;box-shadow:0 0 0 2px rgba(214,98,52,.9);vertical-align:-1px;margin-right:6px}
+.card.zero .nm{color:var(--muted);text-decoration:line-through}
+.addbtn{margin-top:8px;border:1.5px dashed var(--line-strong);background:transparent;color:var(--muted);border-radius:10px;padding:6px 10px;font-size:13px;width:100%;cursor:pointer;font-weight:600}
+.addbtn:hover{border-color:var(--accent);color:var(--accent)}
+.menu{position:absolute;z-index:50;max-height:min(600px,calc(100vh - 90px));overflow:auto;overscroll-behavior:contain;background:var(--card);border:1px solid var(--line-strong);border-radius:var(--r);box-shadow:0 10px 30px rgba(15,30,40,.18);width:360px;padding:12px 14px;font-size:13.5px}
+.menu .mh{font-weight:700;margin-bottom:2px}
+.menu .ms{font-size:12px;color:var(--muted);margin-bottom:8px}
+.menu .sec{border-top:1px solid var(--line);padding:8px 0 4px}
+.menu .lab{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:5px}
+.menu .chips{gap:4px}
+.menu .chip{padding:4px 10px;font-size:13px;font-weight:500;border-width:1px}
+.menu .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:0}
+.menu .metc{margin-top:4px}.menu .metc .chip{font-size:12px;padding:3px 9px;color:var(--muted)}
+.menu .msum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;background:var(--bg);border-radius:8px;padding:8px 10px;margin:8px 0 10px;font-size:11.5px;color:var(--muted)}
+.menu .msum b{display:block;font-size:13.5px;color:var(--ink);font-weight:600;line-height:1.35}
+.menu .mnavs{margin-top:10px;border-top:1px solid var(--line)}
+.menu .mnav{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;border-bottom:1px solid var(--line);padding:10px 2px;font:inherit;font-size:13.5px;color:var(--ink);cursor:pointer;text-align:left}
+.menu .mnav:hover{background:var(--bg)}
+.menu .mtag{font-size:12px;color:var(--muted)}
+.menu .mback{background:none;border:0;padding:0;font:inherit;font-size:12.5px;color:var(--muted);cursor:pointer}
+.menu .mvt{font-weight:700;font-size:14.5px;margin:4px 0 10px}
+.menu .mhint{font-size:11.5px;color:var(--muted);margin:6px 0 0}
+.menu .mdel{margin-top:16px;padding-top:10px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media (max-width:600px){.menu{position:fixed;left:0!important;right:0;top:auto!important;bottom:0;width:auto;max-height:75vh;border-radius:14px 14px 0 0}}
+.menu input[type=number]{width:80px;padding:4px 8px;font-size:13px;border-radius:8px;border-width:1px}
+.menu input[type=text]{padding:5px 8px;font-size:13px;border-radius:8px;border-width:1px}
+.menu .danger{color:var(--err);border:0;background:none;padding:4px 0;cursor:pointer;font-weight:600}
+.nrow2{padding:10px 12px;border-bottom:1px solid var(--line)}.nrow2:last-child{border-bottom:0}
+.nrow2.isdel .nname{color:var(--muted);text-decoration:line-through}
+.nrow2 .nname{margin-bottom:4px}
+.nq{font-size:12px;color:var(--muted);margin:6px 0 4px}
+.nmuted{font-size:11.5px;color:var(--muted);font-weight:400}
+.nchips{gap:5px}.nchips .chip{text-align:left;white-space:normal}
+.nchips .ndel{color:var(--err)}
+.nlv{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.nst{font-size:13.5px;margin-top:2px}.nst.ok{color:var(--ok,#2e7d4f)}.nst.del{color:var(--muted)}
+.nfbox{margin:6px 0 2px;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--bg)}
+.nfq{width:100%;box-sizing:border-box;margin-bottom:6px}
+.nflist{max-height:260px;overflow:auto}
+.nfh{font-size:11.5px;color:var(--muted);font-weight:600;margin:6px 0 2px}
+.nfi{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:5px 8px;margin:2px 0;font:inherit;font-size:13px;cursor:pointer}
+.nfi:hover{border-color:var(--line-strong)}
+.nlist{border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.nrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line)}
+.nrow:last-child{border-bottom:0}
+.nname{min-width:0;overflow-wrap:anywhere;font-size:14px}
+.ncol{display:block;font-size:12px;color:var(--muted)}
+.nchips .chip{padding:4px 10px;font-size:12.5px}
+@media (max-width:560px){.nrow{grid-template-columns:minmax(0,1fr)}}
+.menu .row{gap:6px}
+.menu details.desc{border-top:1px solid var(--line);padding:8px 0 4px}
+.menu details.desc summary{font-size:12px;color:var(--muted);font-weight:600;cursor:pointer;list-style:none}
+.menu details.desc summary::-webkit-details-marker{display:none}
+.menu details.desc summary::before{content:'▸ ';}
+.menu details.desc[open] summary::before{content:'▾ ';}
+.menu .dl{margin:6px 0 0;font-size:12.5px;line-height:1.55}
+.menu .dl div{margin-bottom:5px}
+.menu .dl b{display:block;font-size:11.5px;color:var(--muted);font-weight:600}
+.menu .dnote{font-size:11px;color:var(--muted);margin-top:4px}
+.menu textarea.dta{width:100%;min-height:180px;font:inherit;font-size:12.5px;padding:6px 8px;border:1px solid var(--line-strong);border-radius:8px;background:var(--bg);color:var(--ink);box-sizing:border-box}
+.modal-back{position:fixed;inset:0;background:rgba(15,25,30,.35);z-index:60;display:grid;place-items:center;padding:16px}
+.modal{background:var(--card);border-radius:18px;max-width:540px;width:100%;padding:20px 20px 16px;max-height:86vh;overflow:auto}
+.modal h2{margin:0 0 8px;font-size:19px}
+details.set{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 16px}
+.setgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:6px;font-size:13px;color:var(--muted)}
+.setgrid input{color:var(--ink)!important;width:80px!important;padding:5px 8px!important;font-size:13.5px!important;border-radius:8px!important;border-width:1px!important;display:inline-block}
+.grid2 > .fld,.grid3 > .fld{align-content:start}
+.plantabs .chip{padding:5px 13px;font-size:13.5px}
+.tblwrap td:first-child,.tblwrap th:first-child{white-space:nowrap}
+.steprow{display:flex;align-items:center;gap:10px}
+.steprow input{max-width:120px}
+.sr{position:absolute;left:-9999px}
+@media (max-width:760px){.lower{grid-template-columns:1fr}.staff{grid-template-columns:1fr!important}}
+@media print{.card.adj{animation:none!important;box-shadow:none!important;border:1.5px solid #d66234!important}.bar,.cta,.toolbar,.card .dots,.addbtn,details.set,footer.site{display:none!important}body{background:#fff;font-size:11px}.stage{padding:0;max-width:none;animation:none}.zone{break-inside:avoid}.card{border:1px solid #ccc!important;background:#fff!important;min-width:0}}
+</style>
+</head>
+<body>
+<div class="bar"><div class="bar-in">
+  <button class="back" id="backBtn" hidden aria-label="뒤로"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>뒤로</button>
+  <button class="brand" id="homeBtn">실무사 업무 분장 도우미</button>
+  <span class="sp"></span>
+</div><div class="prog"><i id="progFill"></i></div></div>
+
+<main id="stage" class="stage" aria-live="polite"></main>
+<div class="cta" id="cta" hidden><div class="cta-in" id="ctaIn"></div></div>
+
+<footer class="site">
+  <p><span id="ver"></span> · 만든 사람: <a href="https://blog.naver.com/oderobong" target="_blank" rel="noopener">blog.naver.com/oderobong</a></p>
+  <p>기본 점수와 기본 자리는 경기 초등학교 행정실무사 업무 분장 사례 12곳을 참고해 네 단계(아주 가벼움 0.25 · 가벼움 0.5 · 보통 1 · 무거움 1.5)로 다시 매긴 값이에요. 공인된 점수가 아니라 대략 비교용이에요. 입력한 내용은 이 브라우저 안에서만 처리하고 서버로 보내지 않아요. <button class="btn link" id="forget" style="font-size:12.5px;padding:0">기억한 내용 지우기</button></p>
+  <details><summary>사용한 공개 소프트웨어</summary><ul>
+    <li>JSZip 3.10.1 (MIT 또는 GPLv3) · 한글 파일 만들기</li>
+    <li>IBM Plex Sans KR, IBM Plex Mono (SIL Open Font License) · Google Fonts</li>
+  </ul></details>
+</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+/*__VENDOR:jszip.min.js__*/
+</script>
+<script>
+/*__SHARED:hwpx_engine.js__*/
+</script>
+<script>
+const APP={name:'실무사 업무 분장 도우미',version:'0.9.0',date:'2026-11-19'};
+const BASE=[{"id":"t1","name":"기간제교원 채용 지원","cat":"교원·인사","lv":0.5,"months":[],"stu":true,"cnt":{"g12":{"교무1":2.0,"교무2":1.0},"g1s":{"교무1":2.0},"g123":{"교무1":5.5,"교무2":0.5,"교사":1.0},"all":{"교무1":9.5,"교무2":1.5,"교사":1.0}},"freq":"수시","own":["교무1","교무1","교무1","교무1","교무1","교무1","교무1","교무2","교무1","교무1/교무2","교무1","교사"],"desc":"하는 일: 채용 공고와 지원 서류 접수, 지원자 명단 정리. 합격자의 학력·경력증명서, 자격증 사본, 채용신체검사서, 성범죄·아동학대 범죄전력 조회 동의서, 마약류 검사 확인서, 잠복결핵 검진 확인서 등 구비서류 확인. 행정정보공동이용시스템으로 결격·범죄 유무 조회.\n바쁜 시기: 수시 (결원이 생길 때)\n결과물: 채용 공고, 구비서류철, 결격사유 조회 결과\n챙길 것: 같은 학교에서 끊김 없이 재계약하면 이미 낸 서류를 가능한 범위에서 다시 씀\n근거: Ⅳ 교무행정 › 교원인사 › 계약제교원 운영, 220~223쪽"},{"id":"t2","name":"월중행사취합","cat":"교무행정","lv":1,"months":[],"stu":false,"cnt":{"g12":{"교사":1.0,"교무2":1.0,"교무1":1.0},"g1s":{"교사":2.0},"g123":{"교사":6.5,"교무1":0.5},"all":{"교사":9.5,"교무2":1.0,"교무1":1.5}},"freq":"매월","own":["교사","교사","교사","교사","교사","교사","교사","교무2","교사","교사/교무1","교무1","교사"],"desc":"하는 일: 다음 달 부서·학년 행사와 출장, 연수 일정 취합. 장소나 날짜가 겹치는 일정 확인 후 월중 행사표 작성과 교직원 공유. (추정)\n바쁜 시기: 매월 말 (추정)\n결과물: 월중 행사표\n근거: 매뉴얼에 없음 (K-에듀파인 일정관리 기능 안내만 8쪽)"},{"id":"t3","name":"월출결마감","cat":"교무행정","lv":1,"months":[],"stu":false,"cnt":{"g12":{"교사":2.0,"교무1":1.0},"g1s":{"교사":2.0},"g123":{"교사":4.0,"교무1":3.0},"all":{"교사":8.0,"교무1":4.0}},"freq":"매월","own":["교사","교사","교사","교사","교사","교무1","교무1","교사","교사","교무1","교무1","교사"],"desc":"하는 일: 담임의 나이스 출결 입력이 끝났는지 확인하고 달마다 학교 출결 마감. 결석 종류(질병·미인정·기타·출석인정)가 증빙서류와 맞는지 점검. 마감 절차는 (추정).\n바쁜 시기: 매월 말 (참고 학교: 매월)\n결과물: 나이스 월 출결 마감, 출결 현황\n단계별 담당: 학생별 출결 입력과 특기사항은 담임, 학교 마감은 업무 담당 (추정)\n챙길 것: 같은 날 지각·조퇴·결과가 함께 있으면 학교장 판단으로 하나만 처리, 결과는 하루 여러 번이어도 1회\n근거: Ⅱ 교수학습 › 학교생활기록 작성 및 관리 › 출결, 15~18쪽"},{"id":"t4","name":"학급운영비 품의","cat":"교무행정","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"교사":3.0},"g1s":{"교사":2.0},"g123":{"교사":4.0,"교무2":2.5,"교무1":0.5},"all":{"교사":9.0,"교무2":2.5,"교무1":0.5}},"freq":"매년","own":["교사","교사","교사","교사","교사","교무2","교무2","교사","교사","교사","교사","교무1/교무2"],"desc":"하는 일: 학급마다 배정된 학급운영비 안내와 담임 신청 취합. 쓸 곳이 정해지면 K-에듀파인 지출 품의, 쓴 뒤 남은 금액 확인. (추정)\n바쁜 시기: 학기 초 (추정)\n결과물: 학급운영비 품의\n근거: 매뉴얼에 없음"},{"id":"t5","name":"학생 비상연락망","cat":"교무행정","lv":1,"months":[3,9],"stu":true,"cnt":{"g12":{"교무1":1.0,"교무2":1.0,"행정실":1.0},"g1s":{"교무1":2.0},"g123":{"교무1":2.0,"교무2":2.0,"교사":3.0},"all":{"교무1":5.0,"교무2":3.0,"교사":3.0,"행정실":1.0}},"freq":"매 학기","own":["교무1","교무1","교무1","교무1","교무1","교무2","교무2","교무2","교사","교사","행정실","교사"],"desc":"하는 일: 학년 초 보호자 연락처를 모아 학급·학교 비상연락망 작성. 전입·전출이나 번호가 바뀔 때마다 고침. (추정)\n바쁜 시기: 3월, 9월 (참고 학교)\n결과물: 학생 비상연락망\n근거: 매뉴얼에 없음 (대기오염 대응에서 학생·보호자 비상연락망 구축만 언급, 102쪽)"},{"id":"t6","name":"교직원 비상연락망 작성 관리","cat":"교무행정","lv":1,"months":[3,9],"stu":true,"cnt":{"g12":{"행정실":1.0,"교무2":1.0,"교무1":1.0},"g1s":{"행정실":2.0},"g123":{"행정실":2.5,"교무2":2.0,"교무1":2.5},"all":{"행정실":5.5,"교무2":3.0,"교무1":3.5}},"freq":"매 학기","own":["행정실","행정실","행정실","행정실","행정실","교무2","교무2","교무2","교무1","교무1/행정실","교무1","교무1"],"desc":"하는 일: 인사이동 뒤 교직원 연락처를 모아 비상연락망 작성과 배부. 사람이 바뀌면 그때마다 고침. 개인정보가 담겨 있어 나눠 주는 범위를 좁게 잡음. (추정)\n바쁜 시기: 3월, 9월 (참고 학교)\n결과물: 교직원 비상연락망\n근거: 매뉴얼에 없음"},{"id":"t7","name":"외부수상 대장관리","cat":"교무행정","lv":0.25,"months":[],"stu":true,"cnt":{"g12":{"교무1":3.0},"g1s":{"교무1":2.0},"g123":{"교무1":2.0,"교무2":2.0},"all":{"교무1":7.0,"교무2":2.0}},"freq":"수시","own":["교무1","교무1","교무1","교무1","교무1","교무2","교무2","교무1","","","교무1",""],"desc":"하는 일: 교육청과 외부 기관에서 받은 학생·교직원 상장 접수와 대장 기록, 수상자 전달. 학생 수상 가운데 학생부에 넣을 것은 나이스 수상대장에 등록하고 결재. (대장 관리 방식은 추정)\n바쁜 시기: 수시, 학년말 (추정)\n결과물: 외부수상 대장, 나이스 수상 기록\n챙길 것: 나이스 수상대장은 결재가 끝나야 학생부 수상경력에 들어감 (경남 사례)\n근거: 매뉴얼에 없음 · 경남 사례: 경상남도교육청 학교업무 도움자료(교무행정) 3-08 수상대장"},{"id":"t8","name":"행정정보공동이용 사무 처리(범죄경력 조회)","cat":"교무행정","lv":1,"months":[],"stu":false,"cnt":{"g12":{"교무1":2.0,"교무2":1.0},"g1s":{"교무1":2.0},"g123":{"교무1":4.0,"교사":2.0,"교무2":1.0},"all":{"교무1":8.0,"교무2":2.0,"교사":2.0}},"freq":"수시","own":["교무1","교무1","교무1","교무1","교무1","교무1","교무1","교무2","교사","교사","교무1","교무2"],"desc":"하는 일: 기간제교원, 강사, 현장체험학습 외부 안전요원처럼 학교에서 일할 사람의 성범죄·아동학대 범죄전력 확인. 방법은 두 가지. 학교 조회는 동의서를 받아 행정정보공동이용시스템으로 결격사유와 범죄경력 조회. 본인 발급은 외부강사·단기 인력에게 학교 기관 아이디와 검증번호를 알려 주고 범죄경력회보서 발급시스템(CRIMS)에서 회보서를 직접 출력해 내게 함.\n바쁜 시기: 수시, 학기 초 채용이 몰릴 때\n결과물: 조회 동의서와 조회 결과, 또는 제출받은 회보서. 기안에 첨부하고 원본 보관\n단계별 담당: CRIMS 시설 등록과 검증번호는 학교장(시설장) 이름으로, 회보서 조회·출력은 시설장이 지정한 업무담당자가 대행 가능\n챙길 것: 본인 발급은 직접출력이 원칙. 시설(기관)출력을 고르면 본인 확인 뒤 학교에서만 출력. 직접 출력한 회보서는 처리 완료나 신청 취소 뒤 다시 출력할 수 없음. 학교운영위원 결격사유·범죄경력도 행정정보공동이용센터에서 통합 조회. 특수학급 채용이면 장애인학대 관련 범죄 조회 동의서도 받음\n근거: Ⅳ 교무행정 › 계약제교원 운영, 220쪽 · 학교운영위원회, 160쪽 · Ⅴ 기타 › 안전한 현장체험학습, 251쪽 · 범죄경력회보서 발급시스템(CRIMS) 사용자 매뉴얼"},{"id":"t9","name":"공문접수 및 처리. 자료집계 배부. 업무관리","cat":"교무행정","lv":1.5,"months":[],"stu":false,"cnt":{"g12":{"교무1":3.0},"g1s":{"교무1":2.0},"g123":{"교무1":4.5,"교무2":2.5},"all":{"교무1":9.5,"교무2":2.5}},"freq":"매일","own":["교무1","교무1","교무1","교무1","교무1","교무2","교무2","교무1","교무1","교무1/교무2","교무1","교무1"],"desc":"하는 일: K-에듀파인 접수함의 공문 접수와 업무 담당자 지정, 교장·교감과 관련자 공람 지정. 종이 문서는 비전자문서로 등록하고 원본은 따로 보관. 자료집계 요청을 담당자에게 넘기고 기한 안에 제출됐는지 확인.\n바쁜 시기: 매일\n결과물: 공문 접수·배부, 문서등록대장, 자료집계 제출\n챙길 것: 외부공문관리 담당자(1인)를 정해 두면 홍보성 외부 공문이 학교 공문게시판에 자동으로 올라감. 수기입력 수신처는 실제로 발송되지 않아 따로 보내야 함\n근거: Ⅰ 공통행정 › 공문서 작성, 3~4쪽 · K-에듀파인(업무관리), 5~8쪽"},{"id":"t10","name":"K에듀파인 업무관리(과제카드 정비)","cat":"교무행정","lv":0.5,"months":[3],"stu":false,"cnt":{"g12":{"교무1":3.0},"g1s":{"교무1":2.0},"g123":{"교무1":4.0,"교무2":3.0},"all":{"교무1":9.0,"교무2":3.0}},"freq":"연초","own":["교무1","교무1","교무1","교무1","교무1","교무2","교무2","교무1","교무1/교무2","교무1/교무2","교무1","교무1"],"desc":"하는 일: 새 학년도와 인사이동에 맞춰 과제카드 등록, 담당자 바꾸기, 쓰지 않는 카드 종료 요청. 초등은 교육지원청 승인 담당자가 등록을 승인.\n바쁜 시기: 3월 (참고 학교)\n결과물: 정비된 과제카드 목록\n챙길 것: 과제카드의 보존연한이 문서 보존기간이 되므로 단위과제 보존연한 확인. 진행 중 실적이 있는 카드는 종료할 수 없음\n근거: Ⅰ 공통행정 › K-에듀파인(업무관리), 7쪽"},{"id":"t11","name":"교무실 관리(보안점검, 비품구입 등)","cat":"교무행정","lv":0.25,"months":[],"stu":false,"cnt":{"g12":{"교무1":2.5,"교무2":0.5},"g1s":{"교무1":2.0},"g123":{"교무1":3.0,"교무2":4.0},"all":{"교무1":7.5,"교무2":4.5}},"freq":"수시, 매일","own":["교무1","교무1","교무1","교무1","교무1","교무2","교무2","교무1/교무2","교무1/교무2","교무1/교무2","교무1","교무2"],"desc":"하는 일: 교무실 사무용품과 소모품 재고 확인, 구입 품의와 배부. 복합기 같은 사무기기 고장 신고. 퇴근 때 문단속과 전원 확인 등 보안 점검표 작성. 교무실에서 맡을 비치 장부(보안점검표 등)를 정해 관리. (품의·점검은 추정)\n바쁜 시기: 매일, 수시 (참고 학교)\n결과물: 소모품 품의, 보안점검표, 교무실 비치 장부\n챙길 것: 학교의 모든 장부가 아니라 교무실에서 쓰는 장부만 맡음. 학교연혁지는 내부결재 뒤 영구 보관 (경남 사례)\n근거: 매뉴얼에 없음 · 경남 사례: 경상남도교육청 학교업무 도움자료(교무행정) 4-04 기록대장관리"},{"id":"t12","name":"교육홍보(타기관, 학교, 언론 뉴스 배포)","cat":"교무행정","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"교무1":1.0,"교사":1.0},"g1s":{"교사":2.0},"g123":{"교무1":4.0,"교사":1.0},"all":{"교무1":5.0,"교사":4.0}},"freq":"수시","own":["교무1","교무1","교사","교사","교무1","교무1","교무1","교사","교사","","",""],"desc":"하는 일: 담당 교사에게 받은 교육활동 내용으로 보도자료 정리와 교육지원청·언론 배포. 정기 행사는 학교 누리집에 올리고 다른 학교가 참고할 만한 특색 있는 활동만 보도 요청. 보도된 기사 모아 두기.\n바쁜 시기: 수시, 큰 행사 뒤 (추정)\n결과물: 보도자료, 보도 기사 모음\n챙길 것: 인물 사진은 당사자에게 미리 동의 받기 (경남 사례)\n근거: 매뉴얼에 없음 · 경남 사례: 경상남도교육청 학교업무 도움자료(교무행정) 4-02 홍보관리. 경기 보도자료 게시 방법은 확인하지 못함"},{"id":"t13","name":"학교홍보(현수막, 홈페이지 등록)","cat":"교무행정","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"교사":2.0,"교무1":1.0},"g1s":{"교무1":2.0},"g123":{"교사":3.5,"교무1":2.5},"all":{"교사":5.5,"교무1":5.5}},"freq":"수시","own":["교사","교사","교무1","교무1","교사/교무1","교무1","교무1","교사","교사","교사","교무1",""],"desc":"하는 일: 입학식·졸업식·수상 축하 같은 현수막 문안 정리와 제작 품의, 정문과 식장 설치, 끝난 뒤 철거. 누리집과 문자로 행사 소식 안내. (설치·철거는 추정)\n바쁜 시기: 2~3월, 행사 전\n결과물: 현수막 품의, 누리집 게시물\n근거: 매뉴얼에 없음 · 경남 사례: 경상남도교육청 학교업무 도움자료(중고) 1-06 입학식, 1-09 졸업식"},{"id":"t14","name":"인증서 발급","cat":"교무행정","lv":0.25,"months":[],"stu":true,"cnt":{"g12":{"교무1":1.0,"교사":2.0},"g1s":{"교무1":2.0},"g123":{"교무1":3.5,"과학":2.0,"교무2":1.5},"all":{"교무1":6.5,"과학":2.0,"교사":2.0,"교무2":1.5}},"freq":"수시","own":["교무1","교무1","교무1","교무1","교무1","과학","과학","교사","교무1","교무1/교무2","교사","교무2"],"desc":"하는 일: 새로 온 교직원의 업무용 인증서(GPKI) 신청서 받기와 교육지원청에 공문 제출. 교육지원청이 발급하면 대상자에게 전자서명 인증센터에서 받는 방법 안내.\n바쁜 시기: 3월, 9월 인사이동 때 (추정)\n결과물: 인증서 신청 공문\n근거: Ⅳ 교무행정 › 교육활동 지원 › 나이스 업무, 149쪽"},{"id":"t15","name":"나이스상장 및 상장 출력","cat":"교무행정","lv":0.25,"months":[],"stu":true,"cnt":{"g12":{"교사":2.0,"교무2":1.0},"g1s":{"교사":2.0},"g123":{"교사":6.0,"교무1":1.0},"all":{"교사":10.0,"교무2":1.0,"교무1":1.0}},"freq":"수시","own":["교사","교사","교사","교사","교사","교사","교사","교무2","교사","교사","교사","교무1"],"desc":"하는 일: 학년 초 교육계획서의 시상 계획 확인, 대회가 끝나면 운영 결과 기안을 근거로 나이스 수상대장 입력. 나이스 상장 양식 등록과 상장번호 설정, 상장 출력과 직인, 수상대장 결재.\n바쁜 시기: 행사 뒤, 학기말 (추정)\n결과물: 나이스 수상대장, 출력한 상장\n단계별 담당: 대회 계획과 수상자 선발 기안은 담당 교사, 상장 양식·번호 관리와 출력은 업무 담당 (경남 사례)\n챙길 것: 상장번호 양식은 학교 전체에 적용되니 학기 중에 바꾸지 않음. 참가 부문이 있는 대회는 수상명 괄호 안에 부문 표시 (경남 사례)\n근거: 매뉴얼에 없음 · 경남 사례: 경상남도교육청 학교업무 도움자료(교무행정) 3-08 수상대장"},{"id":"t16","name":"교과용 도서(학생, 교사용 도서) 주문 정산","cat":"교무행정","lv":1,"months":[3,9],"stu":true,"cnt":{"g12":{"교무1":2.0,"교무2":1.0},"g1s":{"과학":2.0},"g123":{"과학":2.0,"교무2":3.0,"교사":1.0},"all":{"과학":4.0,"교무1":2.0,"교무2":4.0,"교사":1.0}},"freq":"매 학기","own":["과학","교무1","과학","과학","과학","교무2","교무2","교무2","교사","교무2","교무1",""],"desc":"하는 일: 교원 협의와 학운위 심의를 거쳐 정한 교과서·지도서를 나이스에서 다음 해 물량을 세어 주문. 들어온 뒤 추가·반품 처리, 마감과 정산, 재고 관리.\n바쁜 시기: 3월, 9월 (참고 학교)\n결과물: 나이스 교과서 신청·추가/반품·정산, 홈페이지에 선정 기준표와 결과 공개\n단계별 담당: 어떤 책을 쓸지는 교원 협의와 학운위 심의를 거쳐 교장이 확정, 주문과 정산은 교과서 업무 담당자\n챙길 것: 교과서 선정은 해마다 학운위 심의를 거침\n근거: Ⅳ 교무행정 › 교육활동 지원 › 교과서 선정 및 운영, 144~145쪽"},{"id":"t17","name":"정보공시","cat":"교무행정","lv":1,"months":[],"stu":false,"cnt":{"g12":{"교사":3.0},"g1s":{"교사":2.0},"g123":{"교무2":1.0,"교사":5.0},"all":{"교무2":1.0,"교사":10.0}},"freq":"4회","own":["교무2","교사","교사","교사","교사","교사","교사","교사","교사","교사","교사",""],"desc":"하는 일: 학교알리미 공시 차수마다 항목별 담당자 안내와 입력 확인, 기한 안에 공시. 학교규칙과 교육과정 운영 같은 학교 정보를 공개.\n바쁜 시기: 4월(1차), 5월(2차), 9월(3차), 11월(4차), 수시\n결과물: 학교알리미 공시\n단계별 담당: 공시 총괄 담당자가 전체 운영, 작성자가 항목별 자료 입력, 확인자가 입력한 자료 확인\n근거: Ⅴ 기타 › 정보 › 정보공시, 200~201쪽"},{"id":"t18","name":"민원 처리(민원 대응팀 1차 업무)","cat":"교무행정","lv":1.5,"months":[],"stu":false,"cnt":{"g12":{"교무1":0.5,"교무2":0.5},"g1s":{"교무1":2.0},"g123":{"교무1":0.5,"교무2":0.5},"all":{"교무1":3.0,"교무2":1.0}},"freq":"매일","own":["교무1/교무2","교무1/교무2","교무1","교무1","","","","","","","",""],"desc":"하는 일: 대표전화와 교무실 방문 민원 1차 응대. 간단한 문의는 바로 안내하고, 판단이 필요한 민원은 민원대응팀이나 담당자에게 연결, 접수 내용 기록. (추정)\n바쁜 시기: 매일 (참고 학교), 3월 (추정)\n결과물: 민원 접수 기록\n근거: 매뉴얼에 1차 응대 절차는 없음. 기관 중심 민원 대응 체계는 Ⅴ 기타 › 교육활동 보호, 185쪽"},{"id":"t19","name":"학적(유예 및 면제(정원외)관리, 재적, 편입생, 귀국학생)","cat":"학적","lv":1.5,"months":[],"stu":true,"cnt":{"g12":{"교무1":3.0},"g1s":{"교무1":2.0},"g123":{"교무1":5.0,"교무2":1.0,"교사":1.0},"all":{"교무1":10.0,"교무2":1.0,"교사":1.0}},"freq":"수시","own":["교무1","교무1","교무1","교무1","교무1","교무1","교무1","교무1","교무2","교사","교무1","교무1"],"desc":"하는 일: 보호자 신청을 받아 의무교육관리위원회 심의를 거쳐 유예·면제 결정, 생활기록부 등록과 보호자·교육장·읍면동 통보. 장기결석 학생의 정원 외 학적 관리. 귀국학생은 재학증명서와 성적증명서로 학년 배정.\n바쁜 시기: 수시, 학기 시작 전후\n결과물: 나이스 학적 변동, 승인 통지문, 관련 서류철\n챙길 것: 의무교육 대상자는 퇴학시킬 수 없어 사유에 따라 유예나 면제로 처리. 면제일은 출입국 사실 확인 뒤 출국일 기준. 유예 기간이 끝나기 1개월 전부터 재취학 안내\n근거: Ⅳ 교무행정 › 학적 관리 › 유예·면제·정원 외 관리, 136~138쪽 · 귀국학생 등의 학적 처리, 139~141쪽"},{"id":"t20","name":"학적(교과목이수인정위원회, 의무교육관리위원회 개최)","cat":"학적","lv":1,"months":[],"stu":false,"cnt":{"g12":{"교무1":3.0},"g1s":{"교무1":2.0},"g123":{"교무1":3.0,"교사":2.0,"교무2":1.0},"all":{"교무1":8.0,"교사":2.0,"교무2":1.0}},"freq":"수시","own":["교무1","교무1","교무1","교무1","교무1","","교사","교무1","교무2","교사","교무1","교무1"],"desc":"하는 일: 취학 유예·면제 신청, 미취학 학생, 보호자 동의 없는 전학을 심의하는 의무교육관리위원회 열기. 회의록과 결과보고서 작성, 승인·불승인 사유 기록. 미인정 유학 뒤 돌아온 학생은 교과목별 이수인정평가로 학년 결정.\n바쁜 시기: 학기 시작 전이나 직후(반드시 개최), 수시\n결과물: 회의록, 결과보고서, 정기 개최 결과 보고\n챙길 것: 정기 개최 결과는 매년 3월 말 교육장에 보고. 재적위원 과반수 출석에 출석위원 과반수 찬성으로 의결\n근거: Ⅳ 교무행정 › 학적 관리 › 입학 및 취학, 131~132쪽 · 귀국학생 등의 학적 처리, 140쪽"},{"id":"t21","name":"학적(신입생 입학업무, 취학면제 등)","cat":"학적","lv":1.5,"months":[3],"stu":true,"cnt":{"g12":{"교무1":3.0},"g1s":{"교무1":2.0},"g123":{"교무1":4.0,"교사":2.0,"교무2":1.0},"all":{"교무1":9.0,"교사":2.0,"교무2":1.0}},"freq":"연초","own":["교무1","교무1","교무1","교무1","교무1","교사","교무1","교무1","교무2","교사","교무1","교무1"],"desc":"하는 일: 읍면동의 취학아동 명부 확인과 예비소집. 보호자 인적 정보와 개인정보·행정정보공동이용 동의서 받기, 예비소집 결과를 교육지원청에 보고. 오지 않은 아동은 전화로 소재와 안전을 확인하고 안 되면 경찰에 협조 요청.\n바쁜 시기: 12월~3월 (참고 학교: 3월)\n결과물: 예비소집 결과 보고, 미취학 아동 보고, 신입생 학적\n챙길 것: 입학기일부터 사흘 안에 미취학 아동 전화 확인, 9일째에 교육장 보고. 입학연기·유예 신청 학생은 신입생 명단에 넣지 않음\n근거: Ⅳ 교무행정 › 학적 관리 › 입학 및 취학, 129~132쪽"},{"id":"t22","name":"전출입","cat":"학적","lv":1,"months":[],"stu":true,"cnt":{"g12":{"교무1":3.0},"g1s":{"교무1":2.0},"g123":{"교무1":6.0,"교무2":1.0},"all":{"교무1":11.0,"교무2":1.0}},"freq":"수시","own":["교무1","교무1","교무1","교무1","교무1","교무1","교무1","교무1","교무2","교무1","교무1","교무1"],"desc":"하는 일: 전입은 주민센터 전입신고서 확인, 반 배정, 나이스 전입생 등록과 전출교 자료 요청. 자료가 오면 생활기록부·건강기록부 빠진 곳 확인 후 기안과 학적 반영. 전출은 전입교 요청 접수 뒤 기록 확인과 자료 보내기.\n바쁜 시기: 수시. 개학일이 다른 학교로 가면 방학 중에도 처리\n결과물: 나이스 전입·전출 처리와 기안, 학적 반영\n단계별 담당: 출결과 종합의견 같은 생활기록부 입력은 담임, 서류 접수와 나이스 처리는 학적 담당 (추정)\n챙길 것: 전출일과 전입일 사이에 빈 날이 없게. 학교폭력이나 아동학대로 학교를 지정해 옮기는 전학은 비밀전입\n근거: Ⅳ 교무행정 › 학적 관리 › 전입학 및 전출, 133~135쪽"},{"id":"t23","name":"공무원 단체 업무지원","cat":"교원단체","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{},"g1s":{"교사":2.0},"g123":{},"all":{"교사":2.0}},"freq":"","own":["","","교사","교사","","","","","","","",""],"desc":"하는 일: 교원단체와 노동조합이 보낸 공문과 안내물 전달, 회의 장소 사용 같은 학교 협조 처리. (추정)\n바쁜 시기: 수시 (추정)\n결과물: 공문 전달, 협조 처리 문서\n근거: 매뉴얼에 없음 (교원단체 대의원회 참석 공가 기준만 239쪽)"},{"id":"t24","name":"공무원 단체(교사노조, 교총) 업무 총괄","cat":"교원단체","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"교사":3.0},"g1s":{"교사":2.0},"g123":{"교사":5.0,"교무1":2.0},"all":{"교사":10.0,"교무1":2.0}},"freq":"","own":["교사","교사","교사","교사","교사","교무1","교무1","교사","교사","교사","교사","교사"],"desc":"하는 일: 교원단체 관련 공문과 협조 요청 총괄, 교육청 실태조사 자료 제출. (추정)\n바쁜 시기: 수시 (추정)\n결과물: 자료 제출, 관련 공문철\n근거: 매뉴얼에 없음"},{"id":"t25","name":"학교행사 지원(입학식, 졸업식, 총회 등)","cat":"교육과정","lv":1,"months":[],"stu":false,"cnt":{"g12":{"교무1":2.5,"교무2":0.5},"g1s":{"교무1":2.0},"g123":{"교무1":4.0,"교무2":2.0},"all":{"교무1":8.5,"교무2":2.5}},"freq":"수시","own":["교무1","교무1","교무1","교무1","교무1","교무1/교무2","교무1/교무2","교무1/교무2","교무1/교무2","교무1/교무2","교무1",""],"desc":"하는 일: 행사 추진 계획 기안과 전 교원 공람, 행정실과 함께 물품 품의. 안내장·초청장 발송, 현수막과 식순 정리, 내빈 참석 확인. 당일 방송·촬영 점검과 주차·내빈 안내, 끝난 뒤 식장 정리와 홍보.\n바쁜 시기: 2월(졸업식), 3월(입학식·총회). 입학식 계획은 10일 전쯤 (경남 사례)\n결과물: 추진 계획 기안, 물품 품의, 안내장\n단계별 담당: 계획 수립과 식순은 담당 부서, 품의는 행정실 협조, 방송·촬영은 방송부 협조 (경남 사례)\n근거: 매뉴얼에 없음 · 경남 사례: 경상남도교육청 학교업무 도움자료(중고) 1-06 입학식, 1-09 졸업식"},{"id":"t26","name":"보결 수업 배정, 품의 정산","cat":"교육과정","lv":1.5,"months":[3,9],"stu":true,"cnt":{"g12":{"교무1":3.0},"g1s":{"교무1":2.0},"g123":{"교무1":7.0},"all":{"교무1":12.0}},"freq":"매 학기","own":["교무1","교무1","교무1","교무1","교무1","교무1","교무1","교무1","교무1","교무1","교무1","교무1"],"desc":"하는 일: 학교 보결 규정의 우선순위대로 보결 교사를 정해 미리 알림, 그 교사가 어려우면 다음 순서로. 하루 전 해당 학급에 공지, 결보강일지 상신과 결재. 보결 뒤 보결수업비 지급 품의.\n바쁜 시기: 매일, 2월 말 규정 정비 (경남 사례), 3월·9월 (참고 학교)\n결과물: 결보강일지, 보결수당 품의\n단계별 담당: 보결 사유는 교사가 적어도 하루 전에 담당자에게 알림. 사흘 이상 비면 교감이 교육지원청에 순회 보결 전담 교사 신청 (경남 사례)\n챙길 것: 현장체험학습 인솔로 생기는 보결은 수당 근거를 학교 계획에 적어 둠\n근거: 매뉴얼 Ⅴ 기타 › 안전한 현장체험학습, 251쪽 · 경남 사례: 경상남도교육청 학교업무 도움자료(초등) 1-03 보결수업규정"},{"id":"t27","name":"결석계 및 학교장 체험학습서류 취합","cat":"체험학습","lv":1,"months":[],"stu":true,"cnt":{"g12":{"교무1":2.0,"교사":1.0},"g1s":{"교무1":2.0},"g123":{"교무1":5.0,"교사":2.0},"all":{"교무1":9.0,"교사":3.0}},"freq":"매달","own":["교무1","교무1","교무1","교무1","교무1","교무1","교무1","교무1","교사","교무1","교사","교사"],"desc":"하는 일: 담임에게 결석신고서와 증빙서류, 교외체험학습 신청서·보고서를 받아 모으기. 나이스 출결과 맞는지, 허용 일수를 넘지 않았는지 확인 후 학년도별로 묶어 보관.\n바쁜 시기: 매달 (참고 학교)\n결과물: 결석신고서·체험학습 서류철\n챙길 것: 질병 결석은 결석한 날부터 5일 안에 진단서나 의견서를 붙인 결석신고서 제출(상습적이지 않은 2일 이내는 학부모 의견서 등도 가능). 교외체험학습은 공휴일·방학·재량휴업일을 빼고 연 20일 이내, 미리 허가 여부와 출석 인정 일수를 보호자에게 통보\n근거: Ⅱ 교수학습 › 출결, 16~18쪽 · Ⅴ 기타 › 학교장허가 교외체험학습 및 교환학습, 247~248쪽"},{"id":"t28","name":"체험학습 품의 및 업무지원","cat":"체험학습","lv":1.5,"months":[],"stu":false,"cnt":{"g12":{"교사":3.0},"g1s":{"교사":2.0},"g123":{"교사":3.0,"교무2":2.83,"교무1":0.83,"과학":0.33},"all":{"교사":8.0,"교무2":2.83,"교무1":0.83,"과학":0.33}},"freq":"수시","own":["교사","교사","교사","교사","교사","교무2","교무2","교사","교무1/교무2/과학","교사","교사","교무1/교무2"],"desc":"하는 일: 현장체험학습 차량·시설 계약 의뢰와 품의, 보험 가입 확인. 외부 안전요원 범죄전력 조회, 끝난 뒤 경비 정산과 보조인력 활동 확인서 정리. 숙박형은 경기교육모아 사전사후방 입력.\n바쁜 시기: 수시, 봄·가을 체험학습 철 (추정)\n결과물: 계약 의뢰와 품의, 정산 자료\n챙길 것: 표준약관 적용과 영업배상책임보험 가입 확인, 숙박형이나 고위험 활동은 여행자보험 필수. 보조인력(안전요원) 수당은 교육지원청에서 지급\n근거: Ⅴ 기타 › 체험학습 › 안전한 현장체험학습, 249~252쪽 · 학교안전공제회(여행자안심공제), 100쪽"},{"id":"t29","name":"학교운영위원회 구성","cat":"학교운영위원회","lv":1.5,"months":[3],"stu":false,"cnt":{"g12":{"교무2":1.0,"교무1":1.0,"교사":1.0},"g1s":{"교사":1.0,"교무1":1.0},"g123":{"교무2":3.0,"교사":4.0},"all":{"교무2":4.0,"교사":6.0,"교무1":2.0}},"freq":"연초","own":["교무2","교무2","교사","교무1","교무2","교사","교사","교무1","교사","교사","교사","교무2"],"desc":"하는 일: 3월 1일 학생 수로 위원 수(5~15명) 정하기, 선출관리위원회 구성과 선거 공고. 학부모위원과 교원위원은 3월 21일까지, 지역위원은 3월 30일까지 선출하고 4월 15일까지 위원장·부위원장 선출. 위원 결격사유와 범죄경력은 행정정보공동이용센터에서 조회. 빈자리가 생기면 보궐 선출.\n바쁜 시기: 3월 (임기는 4월 1일 시작)\n결과물: 구성 계획 기안, 선거 공고, 선거 결과 안내, 결격사유 조회\n근거: Ⅳ 교무행정 › 학칙 및 학교운영위원회 › 학교운영위원회, 158~160쪽"},{"id":"t30","name":"학교운영위원회 운영","cat":"학교운영위원회","lv":1.5,"months":[],"stu":false,"cnt":{"g12":{"교무1":1.0,"교무2":1.0,"교사":1.0},"g1s":{"교무1":1.0,"교사":1.0},"g123":{"교무1":0.5,"교무2":4.0,"교사":2.5},"all":{"교무1":2.5,"교무2":5.0,"교사":4.5}},"freq":"수시","own":["교무2","교무2","교사","교무1","교무2","교사/교무1","교사/교무1","교무1","교사","교무2","교사","교무2"],"desc":"하는 일: 부서와 행정실에서 예결산, 교육과정 운영, 교과서, 방과후 같은 심의 안건 모으기와 형식 정리. 회의 소집 기안과 위원에게 안건 자료 배부. 간사로 회의 때 전회 심의 결과 보고와 진행 보조, 회의록 작성과 홈페이지 공개.\n바쁜 시기: 회의 1~2주 전부터 회의 뒤 7일까지 (기간은 일부 추정)\n결과물: 소집 기안, 안건 자료, 회의록, 홈페이지 공개\n챙길 것: 학칙 개정, 학부모 경비 부담(교복·졸업앨범 등), 학교운영지원비, 급식 같은 안건은 학부모 의견을 먼저 들음. 회의록은 회의 뒤 7일 안에 공개(비공개 의결 때 제외)\n근거: Ⅳ 교무행정 › 학교운영위원회, 161~163쪽 · 단위학교 위원회, 126쪽"},{"id":"t32","name":"학교운영위원회 운영지원","cat":"학교운영위원회","lv":1,"months":[],"stu":false,"cnt":{"g12":{"교무2":1.0,"교무1":1.0,"교사":1.0},"g1s":{"교사":1.0,"교무1":1.0},"g123":{"교무2":5.0,"교무1":2.0},"all":{"교무2":6.0,"교사":2.0,"교무1":4.0}},"freq":"수시","own":["교무2","교무2","교사","교무1","교무2","교무1","교무1","교무1","교무2","교무2","교사","교무2"],"desc":"하는 일: 위원 참석 여부 확인, 회의실과 명패·등록부·다과 준비, 심의 자료 발송 지원. 회의 뒤 위원장이 학교장에게 보내는 심의 결과 문서와 회의비 처리 지원. (일부 추정)\n바쁜 시기: 회의가 있을 때\n결과물: 참석 등록부, 심의 결과 문서, 회의비 처리\n챙길 것: 재적위원 과반수 출석으로 개의. 위원 자격상실과 규정 개정은 출석위원 3분의 2 이상 찬성\n근거: Ⅳ 교무행정 › 학교운영위원회, 160~163쪽"},{"id":"t33","name":"학부모출장 처리 및 품의","cat":"학부모회","lv":0.25,"months":[],"stu":false,"cnt":{"g12":{"교무1":3.0},"g1s":{"교무1":2.0},"g123":{"교무2":1.0,"교무1":1.0,"교사":5.0},"all":{"교무2":1.0,"교무1":6.0,"교사":5.0}},"freq":"수시","own":["교무2","교무1","교무1","교무1","교무1","교사","교사","교무1","교사","교사","교무1","교사"],"desc":"하는 일: 교육청이나 외부 기관의 학부모 연수·간담회 안내, 참석한 학부모의 여비나 활동비 품의. (추정)\n바쁜 시기: 수시 (추정)\n결과물: 품의, 증빙서류\n근거: 매뉴얼에 없음"},{"id":"t34","name":"학부모회 간사","cat":"학부모회","lv":1,"months":[],"stu":false,"cnt":{"g12":{"교사":2.0,"교무1":1.0},"g1s":{"교사":2.0},"g123":{"교무2":1.0,"교사":6.0},"all":{"교무2":1.0,"교사":10.0,"교무1":1.0}},"freq":"수시","own":["교무2","교사","교사","교사","교사","교사","교사","교무1","교사","교사","교사","교사"],"desc":"하는 일: 학부모총회 안내와 학부모회 임원 구성 지원. 학부모회 연간 계획과 예산 집행 품의, 회의록 정리, 연말 정산 지원. (일부 추정)\n바쁜 시기: 3월(총회·구성), 연말(정산) (추정)\n결과물: 학부모회 구성, 활동 계획, 회의록, 정산\n챙길 것: 경기 공립학교는 학부모회를 반드시 설치\n근거: Ⅴ 기타 › 자율적 학교 운영 › 학부모 교육참여, 182~184쪽"},{"id":"t35","name":"시청각 기자재 관리(TV, 빔 프로젝터 등)","cat":"과학·정보","lv":1,"months":[],"stu":false,"cnt":{"g12":{"교무2":2.0,"교무1":1.0},"g1s":{"과학":2.0},"g123":{"과학":5.5,"교사":1.5},"all":{"과학":7.5,"교무2":2.0,"교무1":1.0,"교사":1.5}},"freq":"수시","own":["과학","교무2","과학","과학","과학","과학","과학","교무1","교사/과학","과학","교무2","교사"],"desc":"하는 일: 교실과 특별실의 TV, 빔 프로젝터, 실물화상기 고장 신고 접수와 업체 수리 요청, 유지보수 내역 기록. 기기마다 관리번호·구입일·모델명 라벨을 붙이고 관리대장 정리. 램프나 리모컨 같은 소모품 품의.\n바쁜 시기: 3월 관리 계획 (경남 사례), 수시\n결과물: 기기 관리대장, 수리 요청과 유지보수 기록, 소모품 품의\n근거: 매뉴얼에 없음 · 경남 사례: 경상남도교육청 학교업무 도움자료(중고) 4-01 정보화 기기 관리"},{"id":"t36","name":"스마트 교육용 기자재 관리(스마트탭, 펜슬 등)","cat":"과학·정보","lv":1.5,"months":[],"stu":false,"cnt":{"g12":{"교사":2.0,"교무2":1.0},"g1s":{"과학":2.0},"g123":{"교사":2.5,"과학":4.5},"all":{"교사":4.5,"과학":6.5,"교무2":1.0}},"freq":"수시","own":["교사","교사","과학","과학","교사/과학","과학","과학","교사","교사","과학","교무2","과학"],"desc":"하는 일: 학생용 태블릿과 펜, 충전함에 관리번호 라벨을 붙여 대장 관리. 학급별 배부와 회수, 고장 기기 수리 접수. (배부·회수 절차는 추정)\n바쁜 시기: 학기 초(배부), 학년말(회수) (추정)\n결과물: 기기 대장, 배부·회수 기록\n챙길 것: 학교에서 받은 스마트패드도 비밀번호, 최신 백신, 보안패치 같은 단말기 보안 수칙을 지킴\n근거: 단말기 보안은 매뉴얼 Ⅴ 기타 › 학교정보보안, 198쪽 · 라벨·대장은 경남 사례: 경상남도교육청 학교업무 도움자료(중고) 4-01 정보화 기기 관리"},{"id":"t37","name":"정보화 기자재 선정(선정위원회 운영)","cat":"과학·정보","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"교사":2.0,"교무2":1.0},"g1s":{"과학":2.0},"g123":{"교사":7.0},"all":{"교사":9.0,"과학":2.0,"교무2":1.0}},"freq":"수시","own":["교사","교사","과학","과학","교사","교사","교사","교사","교사","교사","교무2","교사"],"desc":"하는 일: PC나 전자칠판 같은 정보화 기자재를 살 때 선정위원회 협의와 협의록 작성. 조달청 종합쇼핑몰에서 모델명과 가격을 확인해 견적 받기, 학교장 결정 뒤 구입 기안. 납품되면 검수·설치, 라벨 부착, 관리대장 다시 정리.\n바쁜 시기: 예산이 내려올 때 (추정)\n결과물: 선정위원회 협의록, 구입 기안, 관리대장\n근거: 매뉴얼에 없음 · 경남 사례: 경상남도교육청 학교업무 도움자료(중고) 4-01 정보화 기기 관리"},{"id":"t38","name":"과학실 폐수","cat":"과학·정보","lv":0.5,"months":[3,9],"stu":false,"cnt":{"g12":{"교사":1.0,"교무1":1.0,"교무2":1.0},"g1s":{"과학":2.0},"g123":{"과학":7.0},"all":{"과학":9.0,"교사":1.0,"교무1":1.0,"교무2":1.0}},"freq":"매 학기","own":["과학","교사","과학","과학","과학","과학","과학","교무1","과학","과학","교무2","과학"],"desc":"하는 일: 실험 폐수와 폐시약, 폐액침표본을 종류별로 나눠 보관. 보유량 조사에 답하고 수거 일정에 맞춰 위탁 업체 수거 처리. (보관 방법은 추정)\n바쁜 시기: 보유량 조사와 수거 시기 (경남은 2년마다 전 지역 일괄 수거, 경기 주기는 확인하지 못함)\n결과물: 폐수·폐시약 목록, 처리 기록\n근거: 매뉴얼에 없음 · 경남 사례: 경상남도교육청 학교업무 도움자료(중고) 5-01 과학실 운영"},{"id":"t39","name":"정보화 기자재 유지보수 및 소모품 관리","cat":"과학·정보","lv":1.5,"months":[],"stu":false,"cnt":{"g12":{"교무2":3.0},"g1s":{"과학":2.0},"g123":{"과학":6.5,"교사":0.5},"all":{"과학":8.5,"교무2":3.0,"교사":0.5}},"freq":"수시","own":["과학","교무2","과학","과학","과학","과학","과학","교무2","과학","과학","교무2","교사/과학"],"desc":"하는 일: PC와 프린터 고장 신청 접수, 연간 계약한 유지보수 업체에 수리 요청과 처리 내역 기록. 토너·드럼 같은 소모품 재고 확인과 품의, 교실 배부.\n바쁜 시기: 수시 (참고 학교)\n결과물: 유지보수 기록, 소모품 품의와 배부 기록\n챙길 것: 유지보수는 연간 계약을 맺고 내역을 자세히 남김 (경남 사례)\n근거: 매뉴얼에 없음 · 경남 사례: 경상남도교육청 학교업무 도움자료(중고) 4-01 정보화 기기 관리"},{"id":"t40","name":"사이버 보안진단의 날(내 PC 지킴이)","cat":"과학·정보","lv":0.5,"months":[],"stu":true,"cnt":{"g12":{"교사":2.0,"교무2":1.0},"g1s":{"교사":1.0,"과학":1.0},"g123":{"교사":5.0,"과학":2.0},"all":{"교사":8.0,"과학":3.0,"교무2":1.0}},"freq":"매달","own":["교사","교사","교사","과학","교사","과학","과학","교사","교사","교사","교무2","교사"],"desc":"하는 일: 매월 세 번째 수요일 사이버보안진단의 날 안내, 교직원 PC 점검 실시와 결과 확인. 하지 않은 PC는 다시 안내.\n바쁜 시기: 매월 세 번째 수요일\n결과물: 점검 결과\n챙길 것: 학교 전 직원 정보보안 교육은 연 1회 이상, 결과를 증빙자료와 함께 내부결재\n근거: Ⅴ 기타 › 정보 › 학교정보보안, 197쪽"},{"id":"t41","name":"프라이버시i","cat":"과학·정보","lv":0.5,"months":[],"stu":true,"cnt":{"g12":{"교사":2.0,"교무2":1.0},"g1s":{"교사":1.0,"과학":1.0},"g123":{"교사":7.0},"all":{"교사":10.0,"과학":1.0,"교무2":1.0}},"freq":"매달","own":["교사","교사","교사","과학","교사","교사","교사","교사","교사","교사","교무2","교사"],"desc":"하는 일: 교직원 PC에 주민등록번호 같은 개인정보 파일이 남아 있는지 점검하는 프로그램 실행 안내와 조치 확인. (프로그램 이름과 점검 방식은 추정)\n바쁜 시기: 매달 (참고 학교)\n결과물: 점검과 조치 결과\n챙길 것: 개인정보 내부 관리계획 이행 실태점검은 연 1회 이상(12월 권장)\n근거: Ⅴ 기타 › 정보 › 개인정보보호, 188쪽"},{"id":"t42","name":"행사 시 빔 설치","cat":"과학·정보","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"교사":1.0,"교무2":1.0},"g1s":{},"g123":{"교사":3.0,"과학":3.0},"all":{"교사":4.0,"과학":3.0,"교무2":1.0}},"freq":"수시","own":["","","","","교사","과학","과학","교사","교사","과학","교무2","교사"],"desc":"하는 일: 연수나 설명회 전에 강당·회의실에 빔 프로젝터, 스크린, 노트북 설치와 화면·소리 확인. 끝난 뒤 회수. (추정)\n바쁜 시기: 행사가 있을 때 (추정)\n결과물: 장비 설치·회수\n근거: 매뉴얼에 없음"},{"id":"t43","name":"서버관리(IP관리), 스쿨넷","cat":"과학·정보","lv":1,"months":[],"stu":false,"cnt":{"g12":{"교사":1.5,"교무2":1.5},"g1s":{"교사":2.0},"g123":{"교사":4.0,"과학":3.0},"all":{"교사":7.5,"과학":3.0,"교무2":1.5}},"freq":"수시","own":["교사/과학","교사/교무2","교사","교사","교사/과학","과학","과학","교사","교사","교사","교무2","교사"],"desc":"하는 일: 학내망 구성도와 IP 대장 정리, 새 PC나 프린터에 IP 주소 배정. 업무망과 교육망을 나눠 운영. 인터넷 장애가 나면 통신사와 교육청 지원센터에 접수. (장애 접수는 추정)\n바쁜 시기: 수시, 3월 자리 이동 때 (추정)\n결과물: IP 대장, 학내망 구성도, 장애 처리 기록\n챙길 것: IP 대장과 학내망 구성도는 외부에 내보내지 않음(경남은 대외비로 관리)\n근거: 매뉴얼에 없음 · 경남 사례: 경상남도교육청 학교업무 도움자료(중고) 4-01 정보화 기기 관리"},{"id":"t44","name":"교육용 SW관리","cat":"과학·정보","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"교무2":2.0,"교사":1.0},"g1s":{"과학":2.0},"g123":{"과학":4.0,"교사":3.0},"all":{"과학":6.0,"교무2":2.0,"교사":4.0}},"freq":"수시","own":["과학","교무2","과학","과학","과학","과학","과학","교사","교사","교사","교무2","교사"],"desc":"하는 일: 학기 초 한글·오피스 같은 프로그램 라이선스 계약 안내 공문을 받아 계약하고 소프트웨어 관리대장 작성. 교내 PC에 출처가 불분명하거나 업무에 필요 없는 프로그램이 깔려 있지 않은지 점검.\n바쁜 시기: 학기 초 라이선스 계약 (경남 사례), 수시\n결과물: 소프트웨어 관리대장, 점검 결과\n챙길 것: 최신 백신과 보안패치 유지, 출처가 불분명한 프로그램 사용 금지\n근거: 매뉴얼 Ⅴ 기타 › 학교정보보안, 198쪽 · 경남 사례: 경상남도교육청 학교업무 도움자료(중고) 4-01 정보화 기기 관리"},{"id":"t45","name":"과학실 운영(실험 준비), 교구 관리","cat":"과학·정보","lv":1.5,"months":[],"stu":false,"cnt":{"g12":{"교사":2.0,"교무2":1.0},"g1s":{"과학":2.0},"g123":{"과학":6.5,"교사":0.5},"all":{"과학":8.5,"교사":2.5,"교무2":1.0}},"freq":"수시","own":["과학","교사","과학","과학","과학","과학","과학","교사","과학/교사","과학","교무2","과학"],"desc":"하는 일: 단원별 과학실 사용 시간 배정과 사용일지. 학년별 진도에 맞춰 실험 기구와 재료 준비, 수업 뒤 정리. 교구 보유 현황 조사와 교구대장 기록, 대여 신청 받기, 소모·파손 교구 정리와 수리 신청.\n바쁜 시기: 2월 말 보유 현황 조사, 3월 운영 계획, 4월 초 교구 선정 심의 (경남 사례)\n결과물: 과학실 사용일지, 교구대장, 재료 품의\n단계별 담당: 운영 계획과 안전관리 책임자(전담교원)는 교사, 교구 선정은 교감이 위원장인 선정위원회, 구매 품의는 행정실, 검수는 담당 교사와 물품 분임출납원 (경남 사례)\n챙길 것: 실험 수업 전 교사 사전 실험. 매월 1회 이상 과학실 자체 안전점검 (경남 사례)\n근거: 매뉴얼에 없음 · 경남 사례: 경상남도교육청 학교업무 도움자료(중고) 5-01 과학실 운영, 5-02 과학교재교구관리"},{"id":"t47","name":"컴퓨터실 관리(불용처리 포함)","cat":"과학·정보","lv":1.5,"months":[],"stu":false,"cnt":{"g12":{"교무2":2.0,"교사":1.0},"g1s":{"교사":2.0},"g123":{"과학":4.0,"교사":3.0},"all":{"과학":4.0,"교무2":2.0,"교사":6.0}},"freq":"수시","own":["과학","교무2","교사","교사","과학","과학","과학","교사","교사","교사","교무2","교사"],"desc":"하는 일: 컴퓨터실 PC와 배선 상태 점검. 오래된 PC는 불용 요청과 저장장치 자료 삭제 후 행정실 불용 처리에 넘김. (점검은 추정)\n바쁜 시기: 수시 (참고 학교)\n결과물: 점검 기록, 불용 요청\n챙길 것: 업무자료가 든 교직원 PC는 디가우징이나 물리적 파괴, 업무자료가 없는 실습용 PC는 포맷이나 삭제로 충분\n근거: Ⅴ 기타 › 학교정보보안, 198쪽"},{"id":"t48","name":"방송부운영","cat":"방송","lv":1,"months":[3],"stu":false,"cnt":{"g12":{"교사":2.0,"교무2":1.0},"g1s":{"교사":2.0},"g123":{"교사":7.0},"all":{"교사":11.0,"교무2":1.0}},"freq":"학기초","own":["교사","교사","교사","교사","교사","교사","교사","교사","교사","교사","교무2","교사"],"desc":"하는 일: 학기 초 학생 방송부원 모집과 선발, 아침·점심 방송 편성과 연습 지도. (추정)\n바쁜 시기: 학기 초 (참고 학교: 3월)\n결과물: 방송부 명단, 방송 편성표\n근거: 매뉴얼에 없음"},{"id":"t49","name":"방송실 지원","cat":"방송","lv":1,"months":[],"stu":false,"cnt":{"g12":{"교무2":2.0},"g1s":{},"g123":{"과학":2.0,"교사":4.0},"all":{"과학":2.0,"교사":4.0,"교무2":2.0}},"freq":"수시","own":["","","","","과학","교사","교사","교무2","교사","과학","교무2","교사"],"desc":"하는 일: 입학식·졸업식·조회 때 방송 송출과 음향 조작. 강당이나 운동장 행사의 마이크·스피커 설치와 음향 확인. (추정)\n바쁜 시기: 행사가 있을 때 (추정)\n결과물: 행사 방송 지원\n근거: 매뉴얼에 없음"},{"id":"t50","name":"방송실관리","cat":"방송","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"교사":1.0,"교무2":2.0},"g1s":{"교사":2.0},"g123":{"교사":7.0},"all":{"교사":10.0,"교무2":2.0}},"freq":"수시","own":["교사","교사","교사","교사","교사","교사","교사","교무2","교사","교사","교무2","교사"],"desc":"하는 일: 방송실 장비 작동 상태 점검과 방송실 문단속, 장비 목록 관리. (추정)\n바쁜 시기: 수시 (참고 학교)\n결과물: 방송 장비 목록, 점검 기록\n근거: 매뉴얼에 없음"},{"id":"t51","name":"방송기자재 유지보수","cat":"방송","lv":1,"months":[],"stu":false,"cnt":{"g12":{"교무2":3.0},"g1s":{"과학":2.0},"g123":{"과학":4.5,"교사":2.5},"all":{"과학":6.5,"교무2":3.0,"교사":2.5}},"freq":"수시","own":["과학","교무2","과학","과학","과학","과학","과학","교무2","교사","교사/과학","교무2","교사"],"desc":"하는 일: 교실 스피커, 앰프, 마이크 고장 신고 접수와 업체 수리 요청. 마이크 배터리나 케이블 같은 부품 품의. (추정)\n바쁜 시기: 수시 (참고 학교)\n결과물: 수리 요청, 부품 품의\n근거: 매뉴얼에 없음"},{"id":"t52","name":"일반자료 관리","cat":"교재교구","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"교무2":1.0,"교사":1.0},"g1s":{"과학":2.0},"g123":{"과학":3.0,"교사":4.0},"all":{"과학":5.0,"교무2":1.0,"교사":5.0}},"freq":"","own":["과학","교무2","과학","과학","과학","교사","교사","교사","교사","교사","","과학"],"desc":"하는 일: 교무실이나 자료실의 교사용 참고 도서와 교재 목록 정리, 대출·반납 기록. 학년말에 낡은 자료 정리. (추정)\n바쁜 시기: 학년말 (추정)\n결과물: 자료 목록, 대출 기록\n근거: 매뉴얼에 없음"},{"id":"t53","name":"학습 준비물 취합 품의","cat":"교재교구","lv":1,"months":[3],"stu":true,"cnt":{"g12":{"교무2":3.0},"g1s":{"과학":2.0},"g123":{"과학":2.0,"교무2":3.0,"교사":2.0},"all":{"과학":4.0,"교무2":6.0,"교사":2.0}},"freq":"연초","own":["과학","교무2","과학","과학","과학","교무2","교무2","교무2","교사","교사","교무2","교무2"],"desc":"하는 일: 학년별 학습준비물 신청 목록 취합, 재고와 예산 확인 후 품의. 물품이 오면 수량 확인과 학년별 배부. (추정)\n바쁜 시기: 학기 초 (참고 학교: 3월)\n결과물: 학년별 신청 목록, 품의, 배부 확인\n근거: 매뉴얼에 없음"},{"id":"t54","name":"청소용품 취합 품의 배부","cat":"교재교구","lv":1,"months":[3,9],"stu":false,"cnt":{"g12":{"교무2":1.0,"교무1":1.0,"교사":1.0},"g1s":{"과학":2.0},"g123":{"과학":4.0,"교사":3.0},"all":{"과학":6.0,"교무2":1.0,"교사":4.0,"교무1":1.0}},"freq":"매 학기","own":["과학","교무2","과학","과학","과학","교사","교사","교무1","과학","교사","교사","과학"],"desc":"하는 일: 학급과 구역별 청소용품 필요량 조사, 품의와 배부. (추정)\n바쁜 시기: 3월, 9월 (참고 학교)\n결과물: 필요량 조사, 품의, 배부 기록\n근거: 매뉴얼에 없음"},{"id":"t55","name":"이지에듀투게더 조직도 관리","cat":"시스템","lv":0.5,"months":[3],"stu":true,"cnt":{"g12":{"교무1":1.0,"교사":1.0},"g1s":{"교무1":2.0},"g123":{"교사":5.0,"과학":2.0},"all":{"교사":6.0,"교무1":3.0,"과학":2.0}},"freq":"연초","own":["교사","교무1","교무1","교무1","교사","과학","과학","","교사","교사","교사","교사"],"desc":"하는 일: 새 학년도와 인사이동에 맞춰 이지에듀투게더의 학교 조직도와 교직원 정보 정리. (추정)\n바쁜 시기: 3월 (참고 학교)\n결과물: 정비된 조직도\n근거: 매뉴얼에 없음"},{"id":"t56","name":"하이클래스 조직도 관리","cat":"시스템","lv":0.5,"months":[3],"stu":true,"cnt":{"g12":{"교무1":1.0,"교무2":2.0},"g1s":{"교무1":2.0},"g123":{"교사":6.5,"과학":0.5},"all":{"교사":6.5,"교무1":3.0,"교무2":2.0,"과학":0.5}},"freq":"연초","own":["교사","교무1","교무1","교무1","교사","교사","교사","교무2","교사","교사","교무2","교사/과학"],"desc":"하는 일: 새 학년도 학급 개설과 담임·전담 배정, 새로 온 교직원 권한 주기, 떠난 교직원 권한 해제. (추정)\n바쁜 시기: 2월 말~3월 초 (참고 학교: 3월)\n결과물: 학급과 교직원 조직도\n근거: 매뉴얼에 없음"},{"id":"t57","name":"통합메신저 내용 및 권한 관리","cat":"시스템","lv":0.5,"months":[3,9],"stu":true,"cnt":{"g12":{"교무1":2.0,"교무2":1.0},"g1s":{"교무1":2.0},"g123":{"교무1":2.0,"과학":2.0,"교사":3.0},"all":{"교무1":6.0,"과학":2.0,"교사":3.0,"교무2":1.0}},"freq":"매 학기","own":["교무1","교무1","교무1","교무1","교무1","과학","과학","교무1","교사","교사","교무2","교사"],"desc":"하는 일: 업무용 메신저의 사용자 등록과 부서 이동, 조직도 정리. 공지 권한 주기와 해제, 오래된 공지 정리. (추정)\n바쁜 시기: 3월, 9월 (참고 학교)\n결과물: 메신저 사용자와 조직도\n근거: 매뉴얼에 없음"},{"id":"t58","name":"통합메신저 지원청 업무 연락","cat":"시스템","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"교무1":3.0},"g1s":{"교무1":2.0},"g123":{"교무1":3.0,"과학":2.0,"교사":2.0},"all":{"교무1":8.0,"과학":2.0,"교사":2.0}},"freq":"수시","own":["교무1","교무1","교무1","교무1","교무1","과학","과학","교무1","교무1","교사","교무1","교사"],"desc":"하는 일: 교육지원청이 메신저로 보내는 안내와 긴급 조사 확인, 학교 담당자에게 전달. 회신이 필요하면 모아서 기한 안에 답장. (추정)\n바쁜 시기: 수시 (참고 학교)\n결과물: 전달과 회신\n근거: 매뉴얼에 없음"},{"id":"t59","name":"학교 홈페이지 학기초 관리 및 계획","cat":"시스템","lv":1,"months":[3],"stu":false,"cnt":{"g12":{"교무1":2.0,"교무2":1.0},"g1s":{"교무1":2.0},"g123":{"과학":3.0,"교무1":1.0,"교사":3.0},"all":{"과학":3.0,"교무1":5.0,"교무2":1.0,"교사":3.0}},"freq":"연초","own":["과학","교무1","교무1","교무1","교무1","과학","과학","교무2","교사","교사","교무1","교사"],"desc":"하는 일: 게시판별 담당자와 게시 범위를 정한 누리집 운영 계획 수립. 3월에 회원과 게시판 권한 점검, 학교 현황과 교직원·학급 메뉴 정비. 정보공개 처리 지침 탑재. (메뉴 정비는 추정)\n바쁜 시기: 2~3월 (참고 학교: 3월)\n결과물: 누리집 운영 계획, 정비된 메뉴와 권한\n챙길 것: 관리자 페이지는 지정한 관리용 PC의 IP에서만 접속\n근거: 매뉴얼 Ⅴ 기타 › 학교정보보안, 198쪽 · 경남 사례: 경상남도교육청 학교업무 도움자료(초등) 4-06 학교누리집 관리 및 운영"},{"id":"t60","name":"학교 홈페이지 업무지원(기관홍보, 행사홍보)","cat":"시스템","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"교무1":2.0,"교무2":1.0},"g1s":{"교무1":2.0},"g123":{"과학":4.0,"교무1":1.0,"교사":2.0},"all":{"과학":4.0,"교무1":5.0,"교무2":1.0,"교사":2.0}},"freq":"수시","own":["과학","교무1","교무1","교무1","교무1","과학","과학","교무2","교사","교사","교무1","과학"],"desc":"하는 일: 교육청과 기관이 요청한 홍보물을 공지사항과 팝업에 올리기, 행사 사진 게시. 기간이 끝난 팝업 내리기. 게시물에 개인정보가 들어 있는지 수시 점검. (게시 업무는 추정)\n바쁜 시기: 수시 (참고 학교), 개인정보 노출 점검은 월 1회 이상 (경남 사례)\n결과물: 누리집 게시물, 개인정보 노출 점검 기록\n챙길 것: 올리기 전에 비공개 자료나 개인정보가 들어 있지 않은지 확인\n근거: 게시자료 보안은 매뉴얼 Ⅴ 기타 › 학교정보보안, 198쪽 · 경남 사례: 경상남도교육청 학교업무 도움자료(초등) 4-06 학교누리집 관리 및 운영"},{"id":"t61","name":"학교 홈페이지 가정통신문 탑재","cat":"시스템","lv":0.25,"months":[],"stu":false,"cnt":{"g12":{"교사":3.0},"g1s":{"교사":2.0},"g123":{"교사":4.0,"교무2":2.0,"과학":1.0},"all":{"교사":9.0,"교무2":2.0,"과학":1.0}},"freq":"수시","own":["교사","교사","교사","교사","교사","교무2","교무2","교사","교사","교사","교사","과학"],"desc":"하는 일: 결재가 끝난 가정통신문을 받아 번호를 매기고 누리집 게시판에 올리기. K-에듀파인 공고관리에 가정통신문 대장을 만들어 두면 승인할 때 가정통신문 번호가 자동으로 생김. (경남 사례)\n바쁜 시기: 수시 (참고 학교)\n결과물: 가정통신문 게시물, 가정통신문 대장\n챙길 것: 본문과 첨부파일에 학생·학부모 개인정보가 없는지 먼저 확인. 긴급한 안내는 문자나 알림장으로 한 번 더\n근거: 게시자료 보안은 매뉴얼 Ⅴ 기타 › 학교정보보안, 198쪽 · 공고관리 기능은 매뉴얼 K-에듀파인, 8쪽 · 가정통신문 대장 방법은 경남 업무 체크리스트(가정통신문 작성·발송)"},{"id":"t62","name":"늘봄학교(맞춤형,방과후학교) 수강생 모집 지원, 수납 계산","cat":"늘봄","lv":1,"months":[],"stu":false,"cnt":{"g12":{"늘봄":3.0},"g1s":{"늘봄":2.0},"g123":{"늘봄":7.0},"all":{"늘봄":12.0}},"freq":"분기","own":["늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄"]},{"id":"t63","name":"늘봄학교(맞춤형,방과후학교) 강사 채용","cat":"늘봄","lv":1,"months":[3],"stu":false,"cnt":{"g12":{"늘봄":3.0},"g1s":{"늘봄":2.0},"g123":{"늘봄":7.0},"all":{"늘봄":12.0}},"freq":"연초","own":["늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄"]},{"id":"t64","name":"방과후학교 미납자 관리","cat":"늘봄","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"늘봄":3.0},"g1s":{"늘봄":2.0},"g123":{"늘봄":7.0},"all":{"늘봄":12.0}},"freq":"분기","own":["늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄"]},{"id":"t65","name":"방과후학교 강사 및 학생 출결 관리","cat":"늘봄","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"늘봄":3.0},"g1s":{"늘봄":2.0},"g123":{"늘봄":7.0},"all":{"늘봄":12.0}},"freq":"수시","own":["늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄"]},{"id":"t66","name":"방과후학교 수업 공개, 전시회","cat":"늘봄","lv":1,"months":[3,9],"stu":false,"cnt":{"g12":{"늘봄":3.0},"g1s":{"늘봄":2.0},"g123":{"늘봄":7.0},"all":{"늘봄":12.0}},"freq":"학기","own":["늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄"]},{"id":"t67","name":"방과후학교 취소 추가자 관리","cat":"늘봄","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"늘봄":3.0},"g1s":{"늘봄":2.0},"g123":{"늘봄":7.0},"all":{"늘봄":12.0}},"freq":"분기","own":["늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄"]},{"id":"t68","name":"방과후학교 강사료, 취소 환불, 교재 교구 계산","cat":"늘봄","lv":1.5,"months":[],"stu":false,"cnt":{"g12":{"늘봄":3.0},"g1s":{"늘봄":2.0},"g123":{"늘봄":7.0},"all":{"늘봄":12.0}},"freq":"분기","own":["늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄"]},{"id":"t69","name":"방과후학교 강사료 품의","cat":"늘봄","lv":1,"months":[],"stu":false,"cnt":{"g12":{"늘봄":3.0},"g1s":{"늘봄":2.0},"g123":{"늘봄":7.0},"all":{"늘봄":12.0}},"freq":"매달","own":["늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄"]},{"id":"t70","name":"늘봄학교 강사 및 학부모 민원처리 (경력증명서 발급 등)","cat":"늘봄","lv":1,"months":[],"stu":false,"cnt":{"g12":{"늘봄":3.0},"g1s":{"늘봄":2.0},"g123":{"늘봄":7.0},"all":{"늘봄":12.0}},"freq":"수시","own":["늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄"]},{"id":"t71","name":"방과후학교 정산","cat":"늘봄","lv":1,"months":[],"stu":false,"cnt":{"g12":{"늘봄":3.0},"g1s":{"늘봄":2.0},"g123":{"늘봄":7.0},"all":{"늘봄":12.0}},"freq":"분기 말","own":["늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄"]},{"id":"t72","name":"방과후학교 홈페이지 게시판 및 시스템 관리 지원","cat":"늘봄","lv":0.25,"months":[],"stu":false,"cnt":{"g12":{"늘봄":3.0},"g1s":{"늘봄":2.0},"g123":{"늘봄":7.0},"all":{"늘봄":12.0}},"freq":"수시","own":["늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄"]},{"id":"t73","name":"방과후학교 자유수강권 지원","cat":"늘봄","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"늘봄":3.0},"g1s":{"늘봄":2.0},"g123":{"늘봄":7.0},"all":{"늘봄":12.0}},"freq":"분기","own":["늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄"]},{"id":"t74","name":"늘봄학교 학생, 학부모 수요조사","cat":"늘봄","lv":0.25,"months":[3],"stu":false,"cnt":{"g12":{"늘봄":3.0},"g1s":{"늘봄":2.0},"g123":{"늘봄":7.0},"all":{"늘봄":12.0}},"freq":"연초","own":["늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄"]},{"id":"t75","name":"연간 늘봄학교 운영 계획 수립 및 학교 운영위원회 심의","cat":"늘봄","lv":1.5,"months":[3],"stu":false,"cnt":{"g12":{"늘봄":3.0},"g1s":{"늘봄":2.0},"g123":{"늘봄":7.0},"all":{"늘봄":12.0}},"freq":"연초","own":["늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄"]},{"id":"t76","name":"늘봄학교(맞춤형, 방과후) 평가 환류(통계, 만족도조사)","cat":"늘봄","lv":1,"months":[12],"stu":false,"cnt":{"g12":{"늘봄":3.0},"g1s":{"늘봄":2.0},"g123":{"늘봄":7.0},"all":{"늘봄":12.0}},"freq":"연말","own":["늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄"]},{"id":"t77","name":"늘봄학교 강사 연수 교육","cat":"늘봄","lv":0.25,"months":[3],"stu":false,"cnt":{"g12":{"늘봄":3.0},"g1s":{"늘봄":2.0},"g123":{"늘봄":7.0},"all":{"늘봄":12.0}},"freq":"연초","own":["늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄"]},{"id":"t78","name":"방과후 학교 교재교구 선정","cat":"늘봄","lv":1,"months":[3],"stu":false,"cnt":{"g12":{"늘봄":3.0},"g1s":{"늘봄":2.0},"g123":{"늘봄":7.0},"all":{"늘봄":12.0}},"freq":"연초","own":["늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄"]},{"id":"t79","name":"이룸학교, 공유학교 공문 관리","cat":"늘봄","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"늘봄":3.0},"g1s":{"늘봄":2.0},"g123":{"늘봄":7.0},"all":{"늘봄":12.0}},"freq":"수시","own":["늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄","늘봄"]},{"id":"t80","name":"학생중심(시보조) 강사 출근부 관리","cat":"지원사업 강사","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"교사":2.0,"교무2":1.0},"g1s":{"교사":2.0},"g123":{"교무2":2.0,"교사":5.0},"all":{"교무2":3.0,"교사":9.0}},"freq":"","own":["교무2","교사","교사","교사","교사","교사","교사","교사","교사","교사","교무2","교무2"],"desc":"하는 일: 지자체 지원 프로그램 강사의 수업 시간표와 결강·보강 확인. 달마다 출근부와 수업 일지를 받아 계약 내용과 맞는지 확인. (추정)\n바쁜 시기: 매월 말 (추정)\n결과물: 강사 출근부, 수업 일지\n근거: 매뉴얼에 없음"},{"id":"t81","name":"학생중심(시보조) 강사비 및 물품 품의","cat":"지원사업 강사","lv":1.5,"months":[],"stu":false,"cnt":{"g12":{"교사":2.0,"교무2":1.0},"g1s":{"교사":2.0},"g123":{"교무2":5.0,"교사":2.0},"all":{"교무2":6.0,"교사":6.0}},"freq":"수시","own":["교무2","교사","교사","교사","교사","교무2","교무2","교사","교사","교무2","교무2","교무2"],"desc":"하는 일: 확인한 출근부로 강사비 품의. 프로그램 재료와 교구 신청을 받아 보조금 기준에 맞게 물품 품의. (추정)\n바쁜 시기: 매월 말(강사비), 학기 초(물품) (추정)\n결과물: 강사비 품의, 물품 품의\n근거: 매뉴얼에 없음"},{"id":"t82","name":"학생중심(시보조) 학기말 정산","cat":"지원사업 강사","lv":1,"months":[],"stu":false,"cnt":{"g12":{"교사":3.0},"g1s":{"교사":2.0},"g123":{"교무2":3.0,"교사":4.0},"all":{"교무2":3.0,"교사":9.0}},"freq":"","own":["교무2","교사","교사","교사","교사","교사","교사","교사","교사","교무2","교사","교무2"],"desc":"하는 일: 보조금 받은 금액과 쓴 금액, 남은 금액 계산. 품의서와 출근부, 활동 사진을 모아 정산서와 결과 보고서 제출, 남은 돈 반납. (추정)\n바쁜 시기: 학기말, 사업이 끝날 때 (추정)\n결과물: 정산서, 결과 보고 공문\n근거: 매뉴얼에 없음"},{"id":"t83","name":"학생중심(시보조) 지원사업-강사 선정 및 계약","cat":"지원사업 강사","lv":1,"months":[],"stu":false,"cnt":{"g12":{"교사":3.0},"g1s":{"교사":2.0},"g123":{"교무2":1.5,"교사":5.5},"all":{"교무2":1.5,"교사":10.5}},"freq":"","own":["교무2","교사","교사","교사","교사","교사","교사","교사","교사","교사/교무2","교사","교사"],"desc":"하는 일: 프로그램 강사 채용 공고와 서류 접수, 심사 지원. 선정된 강사의 범죄전력 조회 같은 결격사유 확인 후 계약. (추정)\n바쁜 시기: 학기 시작 전 (추정)\n결과물: 채용 공고, 심사 결과, 계약서\n근거: 매뉴얼에 없음"},{"id":"t84","name":"안전지킴이 업무 채용 봉사료 품의","cat":"안전","lv":1,"months":[],"stu":false,"cnt":{"g12":{"교사":2.0,"교무1":1.0},"g1s":{"교사":2.0},"g123":{"교무2":3.5,"교사":3.5},"all":{"교무2":3.5,"교사":7.5,"교무1":1.0}},"freq":"","own":["교무2","교사","교사","교사","교사","교무2","교무2","교무1","교사/교무2","교사","교사","교사"],"desc":"하는 일: 학교안전지킴이 모집과 서류 접수, 범죄전력 조회 뒤 위촉. 달마다 활동 일지를 확인해 봉사료(활동비) 품의. (추정)\n바쁜 시기: 학년 초(위촉), 매월 말(봉사료) (추정)\n결과물: 위촉 서류, 활동 일지, 봉사료 품의\n근거: 매뉴얼에 없음"},{"id":"t85","name":"안전공제회","cat":"안전","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"행정실":1.0,"교사":2.0},"g1s":{"행정실":2.0},"g123":{"행정실":2.0,"교사":4.0,"교무2":1.0},"all":{"행정실":5.0,"교사":6.0,"교무2":1.0}},"freq":"수시","own":["행정실","행정실","행정실","행정실","행정실","교사","교사","교사","교사","교무2","교사","교사"],"desc":"하는 일: 교육활동 중 학생 안전사고가 나면 학교안전사고보상지원시스템에 바로 사고 통지. 보호자에게 공제급여 청구 방법 안내와 청구서·구비서류 접수 지원.\n바쁜 시기: 사고가 날 때\n결과물: 사고 통지, 공제급여 청구 지원\n챙길 것: 가입은 의무가입이라 따로 할 일 없음, 공제료는 매년 4월 1일 재적 학생 수로 교육청이 일괄 납부. 사고 뒤 3년이 지나면 청구 권리 소멸. 학교장은 사고 때 보호자에게 청구 내용을 꼭 안내\n근거: Ⅲ 학생생활 › 학생안전 › 학교안전공제회, 97~100쪽"},{"id":"t86","name":"안전점검표 취합","cat":"안전","lv":1,"months":[],"stu":false,"cnt":{"g12":{"교사":3.0},"g1s":{"교사":2.0},"g123":{"교사":5.0,"교무2":2.0},"all":{"교사":10.0,"교무2":2.0}},"freq":"매달","own":["교사","교사","교사","교사","교사","교무2","교무2","교사","교사","교사","교사","교사"],"desc":"하는 일: 구역별 담당자에게 안전점검표 작성 안내와 취합. 고칠 곳은 행정실에 알리고 점검표 보관. (취합 방식은 추정)\n바쁜 시기: 매달 (참고 학교)\n결과물: 안전점검표 취합, 보수 요청\n챙길 것: 학교안전계획은 2월 말까지 수립, 3월 말까지 평가. 교육시설 자체 안전점검은 연 2회 이상\n근거: Ⅲ 학생생활 › 학생안전 › 학생안전사고 예방교육, 90~92쪽"},{"id":"t87","name":"안심알리미 업체 선청, 관리","cat":"안전","lv":1,"months":[3],"stu":false,"cnt":{"g12":{"교사":1.0,"교무2":1.0,"교무1":1.0},"g1s":{"교사":2.0},"g123":{"교사":7.0},"all":{"교사":10.0,"교무2":1.0,"교무1":1.0}},"freq":"연초","own":["교사","교사","교사","교사","교사","교사","교사","교무2","교사","교사","교무1","교사"],"desc":"하는 일: 등하교 알림 서비스 신청 조사와 업체 계약 지원. 단말기 배부·회수, 전입·전출 학생 명단 정리, 이용료 정산. (추정)\n바쁜 시기: 학년 초 (참고 학교: 3월)\n결과물: 신청 명단, 단말기 배부 기록, 정산\n근거: 매뉴얼에 없음"},{"id":"t88","name":"교내외 연수 공문 관리","cat":"연수","lv":0.5,"months":[],"stu":true,"cnt":{"g12":{"교사":2.0,"교무1":1.0},"g1s":{"교사":2.0},"g123":{"교사":5.0,"교무2":2.0},"all":{"교사":9.0,"교무2":2.0,"교무1":1.0}},"freq":"수시","own":["교사","교사","교사","교사","교사","교무2","교무2","교사","교사","교사","교무1","교사"],"desc":"하는 일: 3월 교내 자율연수 계획을 교육계획서에 넣고 안내. 교육청과 연수원의 연수 안내 공문을 교직원에게 공람, 추천이 필요한 연수는 신청자를 모아 추천 공문 발송. 연수 기관과 필수 이수 시간 안내. (추천 공문은 추정)\n바쁜 시기: 3월, 수시, 방학 전\n결과물: 연수 공문 공람, 추천 공문, 자율연수 계획\n근거: 교원 연수 체계는 매뉴얼 Ⅴ 기타 › 교원역량개발 › 교원 연수, 243~244쪽 · 경남 사례: 경상남도교육청 학교업무 도움자료(중고) 3-04 교원연수"},{"id":"t89","name":"교육비","cat":"기타","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"행정실":1.0,"교무2":1.0},"g1s":{"행정실":2.0},"g123":{"행정실":2.0,"교사":3.0,"과학":1.0,"교무2":1.0},"all":{"행정실":5.0,"교사":3.0,"교무2":2.0,"과학":1.0}},"freq":"","own":["행정실","행정실","행정실","행정실","행정실","교사","교사","교무2","과학","교사","","교무2"],"desc":"하는 일: 교육비 지원 신청 안내 가정통신문 배부, 대상 학생 확인. 방과후 자유수강권 같은 지원 내역을 확인해 담당 부서와 연계. (추정)\n바쁜 시기: 3월 신청 기간 (추정)\n결과물: 신청 안내, 대상자 확인\n챙길 것: 저소득층 방과후 자유수강권과 별개로 초3 방과후 이용권(1인 연 50만원 내외)이 있음\n근거: 매뉴얼에 교육비 지원 절차는 없음. 이용권은 Ⅴ 기타 › 초등 방과후돌봄, 173쪽"},{"id":"t90","name":"불우이웃돕기 성금 모금","cat":"기타","lv":0.25,"months":[],"stu":false,"cnt":{"g12":{"교사":2.0,"교무1":1.0},"g1s":{"교사":2.0},"g123":{"교사":4.0,"교무2":2.0},"all":{"교사":8.0,"교무2":2.0,"교무1":1.0}},"freq":"","own":["교사","교사","교사","교사","교사","교무2","교무2","교사","교사","교사","교무1",""],"desc":"하는 일: 성금 모금 안내 가정통신문 발송, 학급별 성금 모아 세기, 모금 기관에 보내고 결과 보고. (추정)\n바쁜 시기: 연말 (추정)\n결과물: 모금 안내, 학급별 모금 기록, 송금 결과\n근거: 매뉴얼에 없음"},{"id":"t91","name":"각종 교내 행사촬영(동료장학포함) 및 사진 관리","cat":"기타","lv":1,"months":[],"stu":false,"cnt":{"g12":{"교무2":1.0,"교사":1.0,"교무1":1.0},"g1s":{"과학":2.0},"g123":{"과학":2.67,"교무1":1.17,"교무2":1.17,"교사":2.0},"all":{"과학":4.67,"교무2":2.17,"교무1":2.17,"교사":3.0}},"freq":"","own":["과학","교무2","과학","과학","과학","교무1/교무2/과학","교무1/교무2/과학","교사","교사","교사","교무1","교무1/교무2"],"desc":"하는 일: 입학식·운동회·공개수업 같은 행사 사진 촬영. 행사별로 정리해 공유 폴더에 올리고 홈페이지와 교육계획서 자료로 제공. (추정)\n바쁜 시기: 행사가 있을 때 (추정)\n결과물: 행사별 사진 폴더\n근거: 매뉴얼에 없음"},{"id":"t92","name":"간행물, 우편물관리","cat":"기타","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"교무2":2.0,"교무1":1.0},"g1s":{"과학":2.0},"g123":{"과학":2.0,"교무2":3.5,"교무1":1.5},"all":{"과학":4.0,"교무2":5.5,"교무1":2.5}},"freq":"","own":["과학","교무2","과학","과학","과학","교무2","교무2","교무2","교무1/교무2","교무1/교무2","교무1","교무1/교무2"],"desc":"하는 일: 학교로 온 우편물과 간행물 수령, 받는 사람에게 전달. 등기는 수령 확인. (추정)\n바쁜 시기: 매일 (추정)\n결과물: 우편물 수령 기록\n근거: 매뉴얼에 없음"},{"id":"t93","name":"플로터 출력 및 관리","cat":"기타","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{"교사":2.0,"교무2":1.0},"g1s":{"교사":2.0},"g123":{"교사":2.5,"교무1":1.5,"교무2":3.0},"all":{"교사":6.5,"교무1":1.5,"교무2":4.0}},"freq":"","own":["교사","교사","교사","교사","교무1/교사","교무2","교무2","교사","교사","교무1/교무2","교무2","교무1/교무2"],"desc":"하는 일: 교직원이 요청한 배너와 게시물 같은 큰 인쇄물 출력. 롤용지와 잉크 재고 확인과 품의, 헤드 청소. (추정)\n바쁜 시기: 학기 초 환경 구성, 행사 전 (추정)\n결과물: 출력물, 소모품 품의\n근거: 매뉴얼에 없음"},{"id":"t94","name":"사회복무요원-안전지킴이(복무관리, 업무 외)","cat":"안전","lv":0.5,"months":[],"stu":false,"cnt":{"g12":{},"g1s":{},"g123":{"교무2":1.0,"교사":1.0},"all":{"교무2":1.0,"교사":1.0}},"freq":"","own":["","","","","","","","","교무2","","","교사"],"desc":"하는 일: 학교에 배치된 사회복무요원의 출퇴근과 휴가 확인, 복무 기록 관리. 달마다 복무 상황을 행정실에 넘겨 보수 지급에 쓰게 함. (추정)\n바쁜 시기: 매월 말 (추정)\n결과물: 복무 기록\n근거: 매뉴얼에 없음"}];
+const KEY='worksplit.v2';
+const BIN={'교사':'교사','조정':'조정 필요','행정실':'행정실','늘봄':'늘봄실무사','없앰':'없앰'};
+const LV=[[0.25,'아주 가벼움'],[0.5,'가벼움'],[1,'보통'],[1.5,'무거움']];
+const REAL=[[0,'거의 안 함'],[0.5,'줄었음'],[1,'보통'],[1.5,'많음']];
+const DEF_SET={hi:18,lo:13,rLo:31,rHi:46,baseStu:780,tchBase:44,bump:3,tchOther:1};
+/* 경기도 교과전담 배치 기준 (특수·특별학급 제외). 35학급 미만: 1~6학년 학급 수, 35학급 이상: 3~6학년 학급 수 */
+const JD_A=[[2,0],[6,1],[11,2],[17,3],[23,4],[28,5],[34,6]],JD_B=[[2,0],[4,1],[8,2],[12,3],[16,4],[20,5],[24,6],[28,7],[32,8],[36,9],[40,10],[44,11],[48,12],[52,13],[59,14]];
+function genCls(sc){sc=sc||ST.school;const c=num(sc.cls)||Math.ceil(num(sc.stu)/25);return Math.max(0,c-num(sc.spe));}
+function g36(sc){sc=sc||ST.school;return num(sc.g36)||Math.round(genCls(sc)*2/3);}
+function jeondam(sc){const g=genCls(sc);if(!g)return 0;const [n,T]=g<35?[g,JD_A]:[g36(sc),JD_B];const r=T.find(x=>n<=x[0]);return r?r[1]:T[T.length-1][1];}
+function estTch(sc){sc=sc||ST.school;const cls=num(sc.cls)||Math.ceil(num(sc.stu)/25);if(!cls)return 0;return cls+jeondam(sc)+2+((ST.set&&ST.set.tchOther)??1);}
+const STAFF=['교무1','교무2','과학'];
+const $=id=>document.getElementById(id);
+const clean=t=>String(t??'').replace(/[\u00a0\u200b\u3000\t\r\n]+/g,' ').replace(/\s{2,}/g,' ').trim();
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num=v=>{const n=parseFloat(String(v??'').replace(/[^0-9.]/g,''));return isFinite(n)?n:0;};
+const r1=v=>Math.round(v*10)/10;
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),1800);}
+function fresh(){return {v:2,school:{cls:'',spe:'',g36:'',stu:'',tch:'',total:'',adm:''},sci:null,names:{},paste:{},pasteLv:{},pasteFix:{},cards:null,plans:{},set:{...DEF_SET}};}
+/* v0.8.3: 학운위 운영 두 카드(t30·t31)를 하나로, 이름 셋 정리 */
+const RENAME={'학교운영위원회 구성 및 계획':'학교운영위원회 구성','학교운영위원회 운영(간사, 회의록 작성)':'학교운영위원회 운영','학교운영위원회 운영지원(회의 당일 준비 지원, 심의자료 발송 지원 등)':'학교운영위원회 운영지원'};
+function migCards(cards){if(!Array.isArray(cards))return cards;const out=cards.filter(c=>(c.ref||String(c.id).split('_')[0])!=='t31');
+  out.forEach(c=>{if(RENAME[c.name])c.name=RENAME[c.name];if(c.origName&&RENAME[c.origName])c.origName=RENAME[c.origName];const r=c.ref||String(c.id).split('_')[0];if(r==='t30'&&c.base===1&&c.lv===1&&!c.splitOf){c.base=1.5;c.lv=1.5;}});return out;}
+function migrate(s){s.cards=migCards(s.cards);if(s.plans)Object.values(s.plans).forEach(p=>{if(p&&p.cards)p.cards=migCards(p.cards);});if(s.before&&s.before.cards)s.before.cards=migCards(s.before.cards);}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.v===2){s.set={...DEF_SET,...(s.set||{})};migrate(s);return s;}}catch(e){}return null;}
+let ST=load()||fresh(), STEP=(ST&&ST.step)||'size', HIST=[], menuEl=null;
+function save(){ST.step=STEP;if(STEP==='board'&&ST.cards){ST.active=ST.active||'1안';ST.plans=ST.plans||{};ST.plans[ST.active]=snap();}try{localStorage.setItem(KEY,JSON.stringify(ST));}catch(e){}}
+
+/* ---------- 실무사 칸 ---------- */
+function tchHelp(){const c=num(ST.school.cls)||Math.ceil(num(ST.school.stu)/25);if(!c)return '비우면 학급 수로 어림해요';return `비우면 담임 ${c} + 교과전담 ${jeondam()} + 교장·교감 2 + 그 밖 ${ST.set.tchOther??1}명으로 어림해요`;}
+function officeN(){return Math.max(0,Math.round(num(ST.school.total)-num(ST.school.adm)));}
+function cols(){const n=officeN();const sci=n>=2&&ST.sci===true;const g=sci?n-1:n;const out=[];for(let i=0;i<g;i++)out.push('ABCDEFG'[i]);if(sci)out.push('S');return out;}
+function colName(k){if(BIN[k])return BIN[k];const nm=(ST.names[k]||'').trim();if(nm){const C=cols(),dup=C.filter(x=>x!==k&&(ST.names[x]||'').trim()===nm);if(dup.length&&C.indexOf(k)>C.indexOf(dup[0]))return nm+' ('+(C.indexOf(k)+1)+')';return nm;}if(k==='S')return '과학실무사';return cols().filter(x=>x!=='S').length===1?'교무실 실무사':'실무사 '+k;}
+const colCls=k=>'k-'+k;
+const isStaff=k=>cols().includes(k);
+
+/* ---------- 계산 ---------- */
+function studentFactor(){const s=num(ST.school.stu);if(!s)return 1;return Math.min(1.5,Math.max(0.5,0.5+0.5*s/ST.set.baseStu));}
+function tchCoef(){const t=num(ST.school.tch);if(!t)return 1;return Math.ceil(t/ST.set.tchBase*100)/100;}
+const NREF=[3,2,2,2,2,3,3.2,2,3.2,3.2,2,2.2];
+const BMAP=Object.fromEntries(BASE.map(t=>[t.id,t]));
+function refId(c){if(c.ref)return c.ref;if(!c.cnt)return null;const b=String(c.id).split('_')[0];return BMAP[b]?b:null;}
+function quart(a,p){const v=a.slice().sort((x,y)=>x-y);if(!v.length)return 0;const i=(v.length-1)*p,lo=Math.floor(i),hi=Math.ceil(i);return v[lo]+(v[hi]-v[lo])*(i-lo);}
+let _rg=null;
+function refRange(){const per=[],rat=[];
+  for(let j=0;j<NREF.length;j++){let st=0,tc=0;
+    ST.cards.forEach(c=>{if(c.owner==='없앰')return;const id=refId(c);if(!id||!BMAP[id])return;const w=c.lv*c.real;if(!w)return;const tk=(BMAP[id].own[j]||'').split('/').filter(Boolean);if(!tk.length)return;
+      tk.forEach(k=>{if(STAFF.includes(k))st+=w/tk.length;else if(k==='교사')tc+=w/tk.length;});});
+    per.push(st/NREF[j]);if(st+tc)rat.push(tc/(st+tc)*100);}
+  const h=x=>Math.round(x*2)/2;return {lo:h(quart(per,.25)),hi:h(quart(per,.75)),rLo:Math.round(quart(rat,.25)),rHi:Math.round(quart(rat,.75))};}
+function RG(){if(ST.set.manual)return {lo:RG().lo,hi:ST.set.hi,rLo:RG().rLo,rHi:RG().rHi,manual:true};return {...refRange(),manual:false};}
+function hiLimit(){return RG().hi+ST.set.bump*Math.min(1,Math.max(0,(1-studentFactor())/0.5));}
+function eff(c){return c.lv*c.real*(c.stu?studentFactor():1);}
+function tplCnt(c){if(!c.cnt)return null;const add=(a,b)=>{const o={...a};for(const k in b)o[k]=(o[k]||0)+b[k];return o;};
+  return ST.sci?add(c.cnt.g1s||{},c.cnt.g123||{}):(c.cnt.g12||{});}
+const BUNDLE=['학적','과학·정보'];const inB=c=>BUNDLE.includes(c.cat);
+const CORE=c=>c.cat==='학적'||c.cat==='교원·인사'||/공문|보결|교무실 관리|비상연락망|행정정보|의무취학|취학/.test(c.name);
+const TEACH_OK=0.34;
+const TCH_SHARE=[0.36,0.79]; /* 참고 안1(3명)→안2~4(2명): 빠진 사람 몫 14점 중 교사 5~11점 */
+function staffSum(o){return STAFF.reduce((s,k)=>s+(o[k]||0),0);}
+function shareTeacher(c){const a=c.cnt?c.cnt.all:{};const t=Object.values(a).reduce((x,y)=>x+y,0)||1;return (a['교사']||0)/t;}
+function shareStaff(c){const a=c.cnt?c.cnt.all:{};const t=Object.values(a).reduce((x,y)=>x+y,0)||1;return staffSum(a)/t;}
+/* 실무사·교사·행정실·늘봄 가운데 어디인가 + 실무사면 어떤 성향인가 */
+function classify(c){
+  if(!c.cnt)return {side:'staff',lean:'교무1'};
+  const g=tplCnt(c),a=c.cnt.all,opt={staff:staffSum(g),교사:g['교사']||0,행정실:g['행정실']||0,늘봄:g['늘봄']||0},alt={staff:staffSum(a),교사:a['교사']||0,행정실:a['행정실']||0,늘봄:a['늘봄']||0};
+  const ord=['staff','교사','행정실','늘봄'];
+  const side=ord.slice().sort((x,y)=>opt[y]-opt[x]||alt[y]-alt[x]||ord.indexOf(x)-ord.indexOf(y))[0];
+  const src=staffSum(g)?g:a;const lean=STAFF.slice().sort((x,y)=>(src[y]||0)-(src[x]||0)||(a[y]||0)-(a[x]||0))[0];
+  return {side,lean};}
+function coOK(c){return c.co&&(isStaff(c.owner)||c.owner==='교사')&&(isStaff(c.co.k)||c.co.k==='교사')&&c.co.k!==c.owner;}
+function shareOf(c,k){const e=eff(c);if(coOK(c)){if(c.owner===k)return e*(1-c.co.p);if(c.co.k===k)return e*c.co.p;return 0;}return c.owner===k?e:0;}
+function loads(){const L={};cols().forEach(k=>L[k]=0);let tch=0,adm=0,nb=0,adj=0;
+  const add=(k,v)=>{if(L[k]!==undefined)L[k]+=v;else if(k==='교사')tch+=v;else if(k==='행정실')adm+=v;else if(k==='늘봄')nb+=v;else if(k==='조정')adj+=v;};
+  ST.cards.forEach(c=>{const e=eff(c);if(coOK(c)){add(c.owner,e*(1-c.co.p));add(c.co.k,e*c.co.p);}else add(c.owner,e);});
+  const staff=Object.values(L).reduce((a,b)=>a+b,0);return {L,staff,tch,adm,nb,adj,ratio:staff+tch?tch/(staff+tch)*100:0};}
+function autoAssign(keepPins,opt){opt=opt||{};
+  const C=cols(),gen=C.filter(k=>k!=='S'),hasS=C.includes('S');
+  const free=ST.cards.filter(c=>!(keepPins&&c.pinned)&&!(!opt.free&&c.owner==='조정'));
+  free.forEach(c=>{c.auto=null;if(!keepPins)c.pinned=false;});
+  const pool=[];
+  free.forEach(c=>{
+    if(!opt.free&&c.ours&&C.includes(c.home)){c.owner=c.home;c.pinned=true;c.pasted=true;return;}
+    if(opt.free){c.pasted=false;c.why=null;}
+    if(!c.cnt){c.owner=C.includes(c.home)?c.home:gen[0];return;}
+    const {side,lean}=classify(c);
+    if(side!=='staff'){c.owner=side;return;}
+    if(hasS&&lean==='과학'){c.owner='S';return;}
+    pool.push({c,lean});});
+  /* 일반 실무사끼리: 교무1 성향은 첫 사람, 나머지는 성격 묶음째 가벼운 사람에게 */
+  const L={};C.forEach(k=>L[k]=0);ST.cards.forEach(c=>{if(L[c.owner]!==undefined&&!pool.some(p=>p.c===c))L[c.owner]+=eff(c);});
+  /* 학적 묶음은 첫 사람, 과학·정보 묶음은 한 사람(학적을 맡지 않은 가벼운 사람)에게 통째로 */
+  const sciP=pool.filter(p=>p.c.cat==='과학·정보');if(sciP.length){const tgt=gen.length>1?gen.slice(1).sort((x,y)=>L[x]-L[y])[0]:gen[0];sciP.forEach(p=>{p.c.owner=tgt;L[tgt]+=eff(p.c);});}
+  const core=pool.filter(p=>!sciP.includes(p)&&(p.lean==='교무1'||p.c.cat==='학적'||gen.length===1));core.forEach(p=>{p.c.owner=gen[0];L[gen[0]]+=eff(p.c);});
+  const rest=pool.filter(p=>!core.includes(p)&&!sciP.includes(p)),by={};rest.forEach(p=>{(by[p.c.cat]=by[p.c.cat]||[]).push(p.c);});
+  Object.values(by).sort((x,y)=>y.reduce((s,c)=>s+eff(c),0)-x.reduce((s,c)=>s+eff(c),0)).forEach(grp=>{
+    const tgt=(gen.length>1?gen.slice(1):gen).concat(gen.length>1?[gen[0]]:[]).sort((x,y)=>L[x]-L[y])[0];
+    grp.forEach(c=>{c.owner=tgt;L[tgt]+=eff(c);});});
+  /* 일반 실무사끼리 고르게: 학적·공문·보결 같은 핵심은 첫 사람에게 남김 */
+  const moved=new Set();ST.cards.forEach(c=>c.cand=null);
+  if(gen.length>1){for(let i=0;i<80;i++){const s=loads();const hv=gen.slice().sort((a,b)=>s.L[b]-s.L[a]),hiK=hv[0],loK=hv[hv.length-1],gap=s.L[hiK]-s.L[loK];if(gap<=1.5)break;
+    const mv=ST.cards.filter(c=>c.owner===hiK&&!c.pinned&&!c.star&&!inB(c)&&!moved.has(c.id)&&eff(c)>0&&eff(c)<=gap/2+0.01&&!(hiK===gen[0]&&CORE(c))).sort((a,b)=>eff(b)-eff(a))[0];
+    if(!mv)break;mv.owner=loK;moved.add(mv.id);}}
+  /* 양 맞추기 */
+  const hi=hiLimit();
+  for(let i=0;i<150;i++){
+    const s=loads();const over=C.find(k=>s.L[k]>hi+0.01);
+    if(over){const mv=ST.cards.filter(c=>c.owner===over&&!c.pinned&&!c.star&&!CORE(c)&&!moved.has(c.id)&&eff(c)>0&&shareTeacher(c)>=TEACH_OK).sort((a,b)=>shareTeacher(b)-shareTeacher(a)||eff(a)-eff(b))[0];
+      if(!mv)break;mv.owner='교사';mv.auto=colName(over)+' 몫이 넘쳐 교사로';moved.add(mv.id);continue;}
+    if(s.ratio>RG().rHi){const low=C.slice().sort((a,b)=>s.L[a]-s.L[b])[0];
+      /* 묶음 업무는 그 묶음을 자동으로 맡은 사람에게만 (실무사끼리 쪼개지 않음) */
+      const holder=cat=>{const n={};ST.cards.forEach(x=>{if(x.cat===cat&&!x.pinned&&C.includes(x.owner))n[x.owner]=(n[x.owner]||0)+1;});return Object.keys(n).sort((a,b)=>n[b]-n[a])[0]||null;};
+      const tgtOf=c=>inB(c)?(holder(c.cat)||low):low;
+      const mv=ST.cards.filter(c=>{if(c.owner!=='교사'||c.pinned||moved.has(c.id)||!(eff(c)>0)||shareStaff(c)<0.3)return false;const t=tgtOf(c);return eff(c)<=hi-s.L[t]+0.01&&(t!=='S'||classify(c).lean==='과학');}).sort((a,b)=>shareStaff(b)-shareStaff(a))[0];
+      if(!mv)break;const t=tgtOf(mv);mv.owner=t;mv.auto='교사 몫이 많아 '+colName(t)+'에게';moved.add(mv.id);continue;}
+    break;}
+}
+function buildCards(){
+  ST.cards=BASE.map(t=>({id:t.id,ref:t.id,name:t.name,cat:t.cat,base:t.lv,lv:t.lv,real:1,months:t.months.slice(),stu:t.stu,star:false,cnt:t.cnt,freq:t.freq,owner:null,pinned:false,auto:null,ours:false,src:'base'}));
+  applyPaste();if(ST.cards.some(c=>c.ours||c.tchHome))asIsAssign();else{ST.asIs=null;autoAssign(false);}}
+/* 붙여 넣었으면 먼저 지금 그대로: 붙인 업무는 그 사람, 목록에 없는 실무사 업무는 조정 필요로. 묶음 일부를 붙였다고 나머지를 그 사람에게 몰지 않음 */
+function asIsAssign(){const C=cols(),gen=C.filter(k=>k!=='S');
+  ST.cards.forEach(c=>{c.auto=null;c.from=null;c.cand=null;c.notOurs=false;
+    if(c.ours&&c.tchHome&&C.includes(c.home)){c.owner='조정';c.why='교사·실무사 분장표에 모두 있음 · 같이 맡기 검토';c.pinned=false;return;}
+    if(c.ours&&C.includes(c.home)){c.owner=c.home;c.pinned=true;c.pasted=true;return;}
+    c.pinned=false;c.why=null;if(!c.cnt){c.owner=C.includes(c.home)?c.home:gen[0];return;}
+    const {side}=classify(c);
+    if(c.ours&&c.tchHome){c.owner='조정';c.why='교사·실무사 분장표에 모두 있음 · 같이 맡기 검토';return;}
+    if(c.tchHome){c.owner='교사';c.pinned=true;c.pasted=true;return;}
+    if(side==='staff'){c.owner='조정';c.notOurs=true;c.why=hasTchPaste()?'어느 분장표에도 없음':'실무사 분장표에 없음';}else c.owner=side;});
+  ST.asIs=ST.active||'1안';}
+function makeProposal(){save();const tgt=['2안','3안'].find(p=>!ST.plans[p]&&p!==ST.active)||'2안';const was=Object.fromEntries(ST.cards.map(c=>[c.id,c.owner]));
+  ST.before=beforeSnap();ST.change=null;ST.active=tgt;autoAssign(false,{free:true});
+  const nm=k=>BIN[k]||colName(k);let n=0;ST.cards.forEach(c=>{if(was[c.id]!==c.owner){c.auto='지금 '+nm(was[c.id])+' → 자동 조정안 '+nm(c.owner);n++;}});
+  ST.change={asIs:true,moved:n};save();render();window.scrollTo(0,0);toast(`지금 그대로에서 ${n}개를 옮긴 자동 조정안을 ${tgt}에 담았어요`);}
+
+/* ---------- 붙여넣기 ---------- */
+const KW=[['학운위구성','학교운영위원회 구성'],['학교운영위원회구성','학교운영위원회 구성'],['공문','공문접수'],['학적','학적(유예'],['의무취학','신입생 입학'],['취학','신입생 입학'],['보결','보결'],['상장','상장 출력'],['수상','외부수상'],['출결','월출결'],['비상연락망','학생 비상연락망'],['메신저','통합메신저 내용'],['플로터','플로터'],['안전공제','안전공제회'],['교무실관리','교무실 관리'],['청소용품','청소용품'],['인증서','인증서'],['홈페이지','학교 홈페이지 학기초'],['안전지킴이','안전지킴이'],['학운위운영지원','학교운영위원회 운영지원'],['학교운영위원회운영지원','학교운영위원회 운영지원'],['회의당일','학교운영위원회 운영지원'],['학교운영위','학교운영위원회 운영'],['학운위','학교운영위원회 운영'],['안심알리미','안심알리미'],['교육비','교육비'],['교육급여','교육비'],['학습준비물','학습 준비물'],['불용','컴퓨터실'],['방송','방송실 지원'],['정보화소모품','정보화 기자재 유지보수'],['소모품','정보화 기자재 유지보수'],['행정정보','행정정보공동이용'],['계약제','기간제교원'],['기간제','기간제교원'],['사진','행사촬영'],['체험학습','체험학습 품의'],['교과서','교과용 도서'],['정보공시','정보공시'],['학부모회','학부모회 간사'],['폐수','과학실 폐수'],['과학실','과학실 운영']];
+const norm=s=>String(s).replace(/[\s·•,.()\[\]~\-]/g,'');
+function bigr(s){const a=[];for(let i=0;i<s.length-1;i++)a.push(s.slice(i,i+2));return a;}
+function dice(a,b){const A=bigr(norm(a)),B=bigr(norm(b));if(!A.length||!B.length)return 0;const m={};A.forEach(x=>m[x]=(m[x]||0)+1);let h=0;B.forEach(x=>{if(m[x]){h++;m[x]--;}});return 2*h/(A.length+B.length);}
+function splitItems(t){const out=[];let d=0,cur='';for(const ch of String(t||'')){if('(（'.includes(ch))d++;if(')）'.includes(ch))d=Math.max(0,d-1);if((ch===','||ch==='\n'||ch===';')&&d===0){out.push(cur);cur='';}else cur+=ch;}out.push(cur);return out.map(s=>clean(s)).filter(s=>s.length>1);}
+function matchItem(item,used,strict){const n=norm(item);
+  {let best=null,bs=0;BASE.forEach(b=>{if(used.has(b.id))return;const d=dice(item,b.name);if(d>bs){bs=d;best=b;}});if(bs>=0.75)return best;}
+  for(const [k,target] of KW){if(n.includes(norm(k))){const t=BASE.find(b=>b.name.includes(target)&&!used.has(b.id));if(t)return t;}}
+  let best=null,bs=0;BASE.forEach(b=>{if(used.has(b.id))return;const d=dice(item,b.name);if(d>bs){bs=d;best=b;}});return bs>=(strict?0.55:0.42)?best:null;}
+function pasteResult(){const used=new Set(),rows=[],F=ST.pasteFix||{};cols().forEach(k=>{splitItems(ST.paste[k]).forEach(it=>{const m=matchItem(it,used);if(m)used.add(m.id);const key=k+'|'+it,f=F[key];
+    const r={col:k,item:it,key,auto:m?m.id:null,fix:f||null,match:m?m.id:null,del:false};
+    if(f==='del'){r.del=true;r.match=null;}else if(f==='new')r.match=null;else if(f&&f.to&&BMAP[f.to])r.match=f.to;
+    rows.push(r);});});return rows;}
+let CHK={find:null,edit:null,q:'',mopen:false};
+const CATS_OF=()=>[...new Set(BASE.filter(b=>b.cat!=='늘봄').map(b=>b.cat))];
+/* 못 맞춘 줄의 후보: 이름 비슷함 + 업무 설명(하는 일)에 들어 있는 정도 */
+function candOf(item,n){const A=bigr(norm(item));if(!A.length)return [];
+  return BASE.filter(b=>b.cat!=='늘봄').map(b=>{const dn=dice(item,b.name);const d=norm((b.desc||'').split('\n')[0]+b.name);const inc=A.filter(x=>d.includes(x)).length/A.length;return {b,sc:Math.max(dn,inc*0.8)+dn*0.2};})
+   .filter(x=>x.sc>0.12).sort((x,y)=>y.sc-x.sc).slice(0,n).map(x=>x.b);}
+function hasTchPaste(){return !!String(ST.paste['교사']||'').trim();}
+function tchPasteResult(){const used=new Set(),rows=[];splitItems(ST.paste['교사']).forEach(it=>{const m=matchItem(it,used,true);if(m)used.add(m.id);rows.push({item:it,match:m?m.id:null});});return rows;}
+function applyPaste(){tchPasteResult().forEach(r=>{if(!r.match)return;const c=ST.cards.find(c=>c.id===r.match);if(c)c.tchHome=true;});
+  pasteResult().forEach((r,i)=>{if(r.del)return;if(r.match){const c=ST.cards.find(c=>c.id===r.match);if(c){if(!c.ours)c.home=r.col;c.ours=true;}}
+  else{const lv=ST.pasteLv[r.col+'|'+r.item]??1;ST.cards.push({id:'u'+i+Date.now().toString(36),name:r.item,cat:'우리 학교 업무',base:lv,lv,real:1,months:[],stu:false,star:false,cnt:null,home:r.col,owner:null,pinned:false,auto:null,ours:true,src:'custom'});}});}
+
+/* ---------- 흐름 ---------- */
+const STEPS={
+ size:{html(){const s=ST.school,n=officeN();return `
+  <h1 class="q">학교 크기를 알려 주세요</h1>
+  <p class="qs">학생 수와 교원 수로 업무 양을 대략 보정해요. 정확하지 않아도 괜찮아요.</p>
+  <div class="grid3">
+   <div class="fld"><label for="fCls">학급 수 (특수 포함)</label><input type="text" id="fCls" inputmode="numeric" value="${esc(s.cls)}" placeholder="14"></div>
+   <div class="fld"><label for="fSpe">그중 특수학급</label><input type="text" id="fSpe" inputmode="numeric" value="${esc(s.spe)}" placeholder="0"><span class="help">교과전담 수를 셀 때 빼요</span></div>
+   <div class="fld"><label for="fStu">학생 수</label><input type="text" id="fStu" inputmode="numeric" value="${esc(s.stu)}" placeholder="250"></div>
+  </div>
+  <div class="grid2">
+   <div class="fld"><label for="fTch">교원 수</label><input type="text" id="fTch" inputmode="numeric" value="${esc(s.tch)}" placeholder="${estTch()?'어림 '+estTch():'18'}"><span class="help" id="tHelp">${tchHelp()}</span></div>
+   <div class="fld" id="g36Box" ${genCls()>=35?'':'hidden'}><label for="fG36">3~6학년 학급 수</label><input type="text" id="fG36" inputmode="numeric" value="${esc(s.g36)}" placeholder="${Math.round(genCls()*2/3)||''}"><span class="help">35학급 이상은 3~6학년 학급 수로 교과전담을 정해요</span></div>
+  </div>
+  <div class="grid2">
+   <div class="fld"><label for="fTot">학교 실무사 전체</label><input type="text" id="fTot" inputmode="numeric" value="${esc(s.total)}" placeholder="3"><span class="help">교무·과학·행정실 실무사를 모두 합친 수 (늘봄실무사는 빼고)</span></div>
+   <div class="fld"><label for="fAdm">그중 행정실 소속</label><input type="text" id="fAdm" inputmode="numeric" value="${esc(s.adm)}" placeholder="1"><span class="help">행정실 실무사는 교무실 업무 분장에서 빼요</span></div>
+  </div>
+  <p class="note" id="nInfo">${n?`교무실 업무를 <b>${n}명</b>이 나눠요.`:''}</p>`;},
+  cta(){return `<button class="btn primary go" data-primary id="goNext" ${okSize()?'':'disabled'}>맞아요, 다음</button>`;},
+  bind(){const up=()=>{Object.assign(ST.school,{cls:$('fCls').value.trim(),spe:$('fSpe').value.trim(),g36:$('fG36').value.trim(),stu:$('fStu').value.trim(),tch:$('fTch').value.trim(),total:$('fTot').value.trim(),adm:$('fAdm').value.trim()});
+     $('fTch').placeholder=estTch()?'어림 '+estTch():'18';$('tHelp').textContent=tchHelp();$('g36Box').hidden=genCls()<35;$('fG36').placeholder=genCls()>=35?'어림 '+Math.round(genCls()*2/3):'';
+     const n=officeN();$('nInfo').innerHTML=num(ST.school.total)?(n?`교무실 업무를 <b>${n}명</b>이 나눠요.`:'<span class="pill warn">교무실 실무사가 1명 이상이어야 해요</span>'):'';$('goNext').disabled=!okSize();save();};
+   ['fCls','fSpe','fG36','fStu','fTch','fTot','fAdm'].forEach(i=>$(i).addEventListener('input',up));
+   $('goNext').onclick=()=>{if(!num(ST.school.tch))ST.school.tch=String(estTch());if(officeN()<2)ST.sci=false;ST.cards=null;save();go(officeN()>=2?'sci':'names');};}},
+ sci:{html(){return `
+  <h1 class="q">교무실 실무사 ${officeN()}명 가운데 과학실무사가 따로 있나요?</h1>
+  <p class="qs">과학실무사가 있으면 과학·정보 업무를 처음부터 그 사람에게 모아요. 없으면 과학·정보 업무도 다른 업무처럼 나눠요.</p>
+  <div class="choices">
+   <button class="choice" data-sci="1" aria-pressed="${ST.sci===true}"><span class="ic">과</span><span><b>있어요</b><span class="d">정보화 기자재, 과학실, 컴퓨터실 같은 업무를 과학실무사에게</span></span></button>
+   <button class="choice" data-sci="0" aria-pressed="${ST.sci===false}"><span class="ic">교</span><span><b>없어요</b><span class="d">교무실 실무사 ${officeN()}명이 모든 업무를 균형 맞춰 나눠요</span></span></button>
+  </div>`;},
+  cta(){return `<button class="btn primary go" data-primary id="goNext" ${ST.sci===null?'disabled':''}>맞아요, 다음</button>`;},
+  bind(){document.querySelectorAll('[data-sci]').forEach(b=>b.onclick=()=>{ST.sci=b.dataset.sci==='1';ST.cards=null;save();render();});$('goNext').onclick=()=>go('names');}},
+ names:{html(){return `
+  <h1 class="q">실무사를 어떻게 부를까요?</h1>
+  <p class="qs">비워 두면 이렇게 보여요: ${cols().map(colName).join(', ')}. 이름 대신 역할로 적어도 좋아요.</p>
+  ${cols().map(k=>`<div class="fld"><label for="n${k}">${esc(k==='S'?'과학실무사':'실무사 '+k)}</label><input type="text" id="n${k}" data-nm="${k}" value="${esc(ST.names[k]||'')}" placeholder="${k==='S'?'과학실무사':k==='A'?'예: 교무행정사':'예: 교무행정사 B'}"></div>`).join('')}`;},
+  cta(){return `<button class="btn primary go" data-primary id="goNext">맞아요, 다음</button>`;},
+  bind(){document.querySelectorAll('[data-nm]').forEach(i=>i.addEventListener('input',()=>{ST.names[i.dataset.nm]=i.value;save();}));$('goNext').onclick=()=>go('paste');}},
+ paste:{html(){return `
+  <h1 class="q">우리 학교 실무사 업무를 붙여 넣을까요?</h1>
+  <p class="qs">업무분장표의 담당업무 칸을 그대로 붙여 넣으면 쉼표로 나눠 업무 카드로 바꿔요. 건너뛰면 기본 업무 목록으로 시작해요.</p>
+  ${cols().map(k=>`<div class="fld"><label for="p${k}">${esc(colName(k))}</label><textarea id="p${k}" data-p="${k}" rows="4" placeholder="예: 업무관리공문처리, 자료집계안내, 학적업무, 의무취학지원, 보결수업관리 …">${esc(ST.paste[k]||'')}</textarea></div>`).join('')}
+  <details style="margin-top:6px" ${hasTchPaste()?'open':''}><summary>교사 업무도 붙여 넣기 (선택)</summary>
+   <div class="fld"><label for="p교사">교사 업무분장 (모든 교사 업무를 한꺼번에)</label><textarea id="p교사" data-p="교사" rows="4" placeholder="예: 학교운영위원회 구성 협조, 방송실 관리, 컴퓨터실 및 기자재 관리 …">${esc(ST.paste['교사']||'')}</textarea><span class="help">실무사 업무와 겹치는 것을 찾아 조정 필요 칸에 모아요. 기본 목록에 없는 교사 업무는 카드로 만들지 않아요.</span></div></details>
+  <p class="note">사람 이름이나 개인정보는 넣지 않아도 돼요. 넣은 글은 이 브라우저에만 남아요.</p>`;},
+  cta(){return `<button class="btn" id="skip">건너뛰기</button><button class="btn primary go" data-primary id="goNext">맞아요, 다음</button>`;},
+  bind(){document.querySelectorAll('[data-p]').forEach(t=>t.addEventListener('input',()=>{ST.paste[t.dataset.p]=t.value;save();}));
+   $('skip').onclick=()=>{ST.paste={};buildCards();save();go('board');};
+   $('goNext').onclick=()=>{if(pasteResult().some(r=>!r.auto))go('check');else{buildCards();save();go('board');}};}},
+ check:{html(){const rows=pasteResult(),m=rows.filter(r=>r.auto),u=rows.filter(r=>!r.auto),left=u.filter(r=>!r.fix).length;
+   const cnt={};rows.forEach(r=>{if(r.match&&!r.del)cnt[r.match]=(cnt[r.match]||0)+1;});
+   const picked=r=>r.fix&&r.fix.to&&BMAP[r.fix.to];
+   const chooser=r=>{const cs=candOf(r.item,3).filter(b=>b.id!==r.auto);const open=CHK.find===r.key;
+     return `<div class="nq">이 업무인가요?</div><div class="chips nchips">${cs.map(b=>`<button class="chip" data-pick="${esc(r.key)}" data-to="${b.id}">${esc(b.name)}${cnt[b.id]?` <span class="nmuted">· 이미 ${cnt[b.id]}줄</span>`:''}</button>`).join('')}<button class="chip nfind" data-find="${esc(r.key)}" aria-pressed="${open}">목록에서 찾기 ${open?'▴':'▾'}</button></div>
+     ${open?`<div class="nfbox"><input type="text" class="nfq" placeholder="업무 이름 일부를 적어 보세요" value="${esc(CHK.q)}"><div class="nflist">${CATS_OF().map(cat=>`<div class="nfg" data-g="${esc(cat)}"><div class="nfh">${esc(cat)}</div>${BASE.filter(b=>b.cat===cat).map(b=>`<button class="nfi" data-pick="${esc(r.key)}" data-to="${b.id}" data-n="${esc(norm(b.name))}">${esc(b.name)}${cnt[b.id]?` <span class="nmuted">· 이미 ${cnt[b.id]}줄</span>`:''}</button>`).join('')}</div>`).join('')}</div></div>`:''}
+     <div class="nq">목록에 없어요</div><div class="chips nchips"><button class="chip" data-new="${esc(r.key)}" aria-pressed="${r.fix==='new'}">새 카드로 만들기</button><button class="chip ndel" data-del="${esc(r.key)}">삭제</button></div>
+     ${r.fix==='new'||!r.fix?`<div class="nlv"><span class="nmuted">새 카드 무게</span> <div class="chips nchips">${LV.map(([n,l])=>`<button class="chip" data-k="${esc(r.key)}" data-v="${n}" aria-pressed="${(ST.pasteLv[r.key]??1)===n}">${l}</button>`).join('')}</div></div>`:''}`;};
+   const row=(r,inMatched)=>{const st=r.del?`<div class="nst del">삭제할 줄이에요 <button class="btn link" data-undo="${esc(r.key)}">되돌리기</button></div>`
+       :picked(r)?`<div class="nst ok">✓ ${esc(BMAP[r.fix.to].name)}으로 맞췄어요 <button class="btn link" data-undo="${esc(r.key)}">바꾸기</button></div>`
+       :inMatched&&CHK.edit!==r.key?`<div class="nst">→ ${esc(BMAP[r.auto].name)} <button class="btn link" data-edit="${esc(r.key)}">바꾸기</button></div>`:'';
+     const body=st||chooser(r);
+     return `<div class="nrow2${r.del?' isdel':''}"><div class="nname">${esc(r.item)}<span class="ncol">${esc(colName(r.col))}</span></div>${body}</div>`;};
+   return `
+  <h1 class="q">이렇게 읽었어요</h1>
+  <p class="qs">${rows.length}개 가운데 ${m.length}개는 기본 업무와 맞췄어요. 못 맞춘 ${u.length}개는 기본 업무에서 골라 주세요. 목록에 없으면 새 카드로 만들거나 삭제해요.</p>
+  ${left?`<p class="pill info" style="display:inline-block;margin:0 0 10px">아직 고르지 않은 줄 ${left}개는 새 카드(보통)로 만들어요</p>`:''}
+  <div class="nlist">${u.map(r=>row(r,false)).join('')}</div>
+  <details id="mlist" style="margin-top:14px"${CHK.mopen||CHK.edit?' open':''}><summary>맞춘 업무 ${m.length}개 보기 · 잘못 맞춘 줄은 바꿀 수 있어요</summary><div class="nlist" style="margin-top:8px">${m.map(r=>row(r,true)).join('')}</div></details>`;},
+  cta(){return `<button class="btn primary go" data-primary id="goNext">맞아요, 다음</button>`;},
+  bind(){const F=()=>(ST.pasteFix=ST.pasteFix||{});const re=()=>{save();const y=window.scrollY;render();window.scrollTo(0,y);};
+   document.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{ST.pasteLv[b.dataset.k]=parseFloat(b.dataset.v);F()[b.dataset.k]=F()[b.dataset.k]||'new';re();});
+   document.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{F()[b.dataset.pick]={to:b.dataset.to};CHK.find=null;CHK.edit=null;CHK.q='';re();});
+   document.querySelectorAll('[data-new]').forEach(b=>b.onclick=()=>{F()[b.dataset.new]='new';CHK.find=null;CHK.edit=null;re();});
+   document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{F()[b.dataset.del]='del';CHK.find=null;CHK.edit=null;re();});
+   document.querySelectorAll('[data-undo]').forEach(b=>b.onclick=()=>{delete F()[b.dataset.undo];CHK.edit=pasteResult().some(r=>r.key===b.dataset.undo&&r.auto)?b.dataset.undo:null;re();});
+   document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{CHK.edit=b.dataset.edit;CHK.find=null;re();});
+   document.querySelectorAll('[data-find]').forEach(b=>b.onclick=()=>{CHK.find=CHK.find===b.dataset.find?null:b.dataset.find;CHK.q='';re();});
+   const q=document.querySelector('.nfq');if(q){const flt=()=>{const v=norm(q.value);CHK.q=q.value;document.querySelectorAll('.nfi').forEach(i=>i.hidden=!!v&&!i.dataset.n.includes(v));document.querySelectorAll('.nfg').forEach(g=>g.hidden=![...g.querySelectorAll('.nfi')].some(i=>!i.hidden));};q.oninput=flt;flt();q.focus();}
+   const ml=$('mlist');if(ml)ml.ontoggle=()=>{CHK.mopen=ml.open;};
+   $('goNext').onclick=()=>{CHK.find=null;CHK.edit=null;CHK.mopen=false;buildCards();save();go('board');};}},
+ board:{wide:true,html(){return boardHtml();},cta(){return '';},bind(){bindBoard();}},
+ chg1:{html(){if(!CHG.to){const a=ST.active||'1안';CHG.to=['1안','2안','3안'].find(p=>!ST.plans[p]&&p!==a)||a;}const cur=cols().length,sch=ST.school;return `
+  <h1 class="q">교무실 실무사가 몇 명이 되나요?</h1>
+  <p class="qs">지금은 ${cur}명이에요. 지금 배정을 '바뀌기 전'으로 저장해 두고 새 인원에 맞춰 업무를 합치거나 나눠요.</p>
+  <div class="chips">${[1,2,3,4].map(n=>`<button class="chip" data-nn="${n}" aria-pressed="${CHG.n===n}">${n}명${n===cur?' (지금)':''}</button>`).join('')}</div>
+  <details style="margin-top:18px"><summary>학교 크기도 바뀌나요?</summary>
+   <div class="grid3"><div class="fld"><label for="cCls">학급 수</label><input type="text" id="cCls" inputmode="numeric" value="${esc(CHG.cls??sch.cls)}"></div>
+   <div class="fld"><label for="cStu">학생 수</label><input type="text" id="cStu" inputmode="numeric" value="${esc(CHG.stu??sch.stu)}"></div>
+   <div class="fld"><label for="cTch">교원 수</label><input type="text" id="cTch" inputmode="numeric" value="${esc(CHG.tch??sch.tch)}"><span class="help">학급 수만 고치면 담임과 교과전담 기준으로 교원 수를 다시 셈해요</span></div></div>
+   <div class="grid3"><div class="fld"><label for="cSpe">그중 특수학급</label><input type="text" id="cSpe" inputmode="numeric" value="${esc(CHG.spe??sch.spe)}" placeholder="0"></div></div></details>
+  <div class="fld" style="margin-top:18px"><span class="lab">결과를 어느 안에 담을까요?</span><div class="chips">${['1안','2안','3안'].map(p=>`<button class="chip" data-tp="${p}" aria-pressed="${CHG.to===p}">${p}${p===(ST.active||'1안')?' (지금 화면)':ST.plans[p]?' (덮어쓰기)':' (새로)'}</button>`).join('')}</div><span class="help">지금 화면(${ST.active||'1안'})은 그대로 남기고 다른 안에 담으면 나란히 비교할 수 있어요</span></div>`;},
+  cta(){return `<button class="btn primary go" data-primary id="goNext" ${CHG.n&&CHG.n!==cols().length?'':'disabled'}>맞아요, 다음</button>`;},
+  bind(){if(!CHG.to){const a=ST.active||'1안';CHG.to=['1안','2안','3안'].find(p=>!ST.plans[p]&&p!==a)||a;}
+   document.querySelectorAll('[data-tp]').forEach(b=>b.onclick=()=>{CHG.to=b.dataset.tp;render();});
+   document.querySelectorAll('[data-nn]').forEach(b=>b.onclick=()=>{CHG.n=+b.dataset.nn;CHG.keep=[];render();});
+   ['cCls','cStu','cTch','cSpe'].forEach(i=>$(i).addEventListener('input',()=>{CHG[i.slice(1).toLowerCase()]=$(i).value.trim();if(i==='cTch')CHG.tchSet=true;}));
+   $('goNext').onclick=()=>{if(CHG.n<cols().length){HIST.push(STEP);STEP='chg2';render();}else applyChange();};}},
+ chg2:{html(){const cur=cols();return `
+  <h1 class="q">누가 남나요?</h1>
+  <p class="qs">${CHG.n}명을 골라 주세요. 남는 사람이 지금 하던 업무는 그대로 두고(📌 고정), 떠나는 사람의 업무만 나눠요.</p>
+  <div class="choices">${cur.map(k=>{const n=ST.cards.filter(c=>c.owner===k).length,sc=r1(loads().L[k]);return `<button class="choice" data-keep="${k}" aria-pressed="${CHG.keep.includes(k)}"><span class="ic">${k==='S'?'과':k}</span><span><b>${esc(colName(k))}</b><span class="d">지금 ${n}개 · ${sc}점</span></span></button>`;}).join('')}</div>`;},
+  cta(){return `<button class="btn primary go" data-primary id="goNext" ${CHG.keep.length===CHG.n?'':'disabled'}>맞아요, 합쳐 볼게요</button>`;},
+  bind(){document.querySelectorAll('[data-keep]').forEach(b=>b.onclick=()=>{const k=b.dataset.keep;if(CHG.keep.includes(k))CHG.keep=CHG.keep.filter(x=>x!==k);else if(CHG.keep.length<CHG.n)CHG.keep.push(k);else{CHG.keep.shift();CHG.keep.push(k);}render();});
+   $('goNext').onclick=applyChange;}}
+};
+let CHG={n:0,keep:[]};
+/* ---------- 인원이 바뀔 때 ---------- */
+function beforeSnap(){const s=loads(),C=cols();return {at:new Date().toISOString(),cols:C.map(k=>({k,name:colName(k),L:r1(s.L[k]),march:ST.cards.filter(c=>c.owner===k&&c.months.includes(3)&&eff(c)>0).length,n:ST.cards.filter(c=>c.owner===k).length})),tch:r1(s.tch),ratio:Math.round(s.ratio),adm:r1(s.adm),owners:Object.fromEntries(ST.cards.map(c=>[c.id,c.owner])),cards:JSON.parse(JSON.stringify(ST.cards)),school:{...ST.school},sci:ST.sci,names:{...ST.names}};}
+function applyChange(){
+  if(CHG.to&&CHG.to!==(ST.active||'1안')){save();ST.active=CHG.to;}
+  const old=cols(),oldName=Object.fromEntries(old.map(k=>[k,colName(k)])),grow=CHG.n>old.length;
+  ST.before=beforeSnap();
+  const oldSc={...ST.school};['cls','spe','stu','tch'].forEach(k=>{if(CHG[k]!=null&&CHG[k]!=='')ST.school[k]=CHG[k];});
+  if(!CHG.tchSet&&(ST.school.cls!==oldSc.cls||ST.school.spe!==oldSc.spe||ST.school.stu!==oldSc.stu)){const d=estTch(ST.school)-estTch(oldSc);if(d)ST.school.tch=String(Math.max(1,num(oldSc.tch)+d));}
+  const keep=grow?old:old.filter(k=>CHG.keep.includes(k)),leave=old.filter(k=>!keep.includes(k));
+  ST.sci=keep.includes('S')&&CHG.n>=2?true:false;
+  ST.school.total=String(num(ST.school.adm)+CHG.n);
+  const nc=cols(),genNew=nc.filter(k=>k!=='S'),map={};let gi=0;
+  keep.forEach(k=>{if(k==='S'&&nc.includes('S'))map[k]='S';else map[k]=genNew[gi++];});
+  const names={};keep.forEach(k=>{names[map[k]]=(ST.names[k]||'').trim()||oldName[k];});
+  const fresh=nc.filter(k=>!Object.values(map).includes(k));fresh.forEach((k,i)=>{names[k]=k==='S'?'과학실무사':fresh.filter(x=>x!=='S').length>1?'새 실무사 '+(i+1):'새 실무사';});
+  nc.forEach(k=>{if(!names[k])names[k]='';});ST.names=names;
+  const res={from:leave.map(k=>oldName[k]),moved:0,tch:0,adm:0,del:0,grow};
+  ST.cards.forEach(c=>{c.auto=null;c.from=null;if(map[c.owner]){c.owner=map[c.owner];c.pinned=true;}else if(leave.includes(c.owner)){c._lv=c.owner;c.owner='~';}});
+  ST.cards.forEach(c=>{if(!c._lv)return;const lvK=c._lv;delete c._lv;
+    const fromN=oldName[lvK];c.from=fromN;c.pinned=false;
+    if(c.real===0){c.owner='없앰';c.auto='거의 하지 않아 없앰으로 제안';res.del++;return;}
+    const cl=c.cnt?classify(c):{side:'staff',lean:'교무1'};
+    if(!c.star&&!CORE(c)&&cl.side==='교사'){c.owner='교사';c.auto=fromN+'에게서 교사로 (보통 학교에서 교사 업무)';res.tch++;return;}
+    if(!c.star&&cl.side==='행정실'){c.owner='행정실';c.auto=fromN+'에게서 행정실로 (보통 학교에서 행정실 업무)';res.adm++;return;}
+    const L=loads().L;let tgt=nc.includes('S')&&cl.lean==='과학'?'S':genNew.slice().sort((a,b)=>L[a]-L[b])[0];
+    if(inB(c)&&!(nc.includes('S')&&c.cat==='과학·정보')){const has=k=>ST.cards.filter(x=>x.owner===k&&x.cat===c.cat&&x!==c).length,other=k=>ST.cards.filter(x=>x.owner===k&&inB(x)&&x.cat!==c.cat).length;
+      const best=genNew.slice().sort((a,b)=>has(b)-has(a)||other(a)-other(b)||L[a]-L[b])[0];tgt=best;}c.owner=tgt;c.auto=fromN+'에게서 '+colName(tgt)+'에게';res.moved++;});
+  if(grow){/* 새 사람에게: 무거운 사람에게서 핵심이 아닌 카드를 고르게 */
+    ST.cards.forEach(c=>{if(nc.includes(c.owner))c.pinned=false;});
+    for(let i=0;i<120;i++){const L=loads().L,hv=genNew.slice().sort((a,b)=>L[b]-L[a]),hk=hv[0],lk=hv[hv.length-1],gap=L[hk]-L[lk];if(gap<=1.5)break;
+      const mv=ST.cards.filter(c=>c.owner===hk&&!c.star&&!c.from&&!inB(c)&&eff(c)>0&&eff(c)<=gap/2+0.01&&!(CORE(c)&&hk===genNew[0])).sort((a,b)=>eff(b)-eff(a))[0];if(!mv)break;
+      mv.from=colName(hk);mv.auto=colName(hk)+'에게서 '+colName(lk)+'에게';mv.owner=lk;res.moved++;}}
+  /* 넘치면 덜어 내기: 넘어온 카드 먼저, 3월이 많으면 3월 카드 먼저 */
+  const hi=hiLimit();
+  for(let i=0;i<120;i++){const s=loads();const over=nc.find(k=>s.L[k]>hi+0.01);if(!over)break;
+    const busy=ST.cards.filter(c=>c.owner===over&&c.months.includes(3)&&eff(c)>0).length>=6;
+    const cand=ST.cards.filter(c=>c.owner===over&&!c.pinned&&!c.star&&!CORE(c)&&eff(c)>0&&shareTeacher(c)>=TEACH_OK).sort((a,b)=>(busy?(b.months.includes(3)-a.months.includes(3)):0)||shareTeacher(b)-shareTeacher(a)||eff(a)-eff(b));
+    const mv=cand[0];if(!mv)break;mv.owner='교사';mv.auto=(mv.from?mv.from+'에게서 ':'')+'교사로 ('+colName(over)+' 몫이 넘쳐서'+(busy&&mv.months.includes(3)?', 3월에 몰려서':'')+')';res.tch++;res.moved=Math.max(0,res.moved-1);}
+  if(!grow){const fromC=ST.cards.filter(c=>c.from&&eff(c)>0),lost=fromC.reduce((a,c)=>a+eff(c),0);
+    const got=()=>fromC.filter(c=>c.owner==='교사').reduce((a,c)=>a+eff(c),0);
+    for(let i=0;i<60&&lost&&got()/lost<TCH_SHARE[0];i++){const mv=fromC.filter(c=>nc.includes(c.owner)&&!c.star&&!CORE(c)&&shareTeacher(c)>=0.2).sort((a,b)=>shareTeacher(b)-shareTeacher(a)||eff(a)-eff(b))[0];if(!mv)break;
+      mv.owner='교사';mv.auto=mv.from+'에게서 교사로 (참고 학교는 빠진 사람 몫의 '+Math.round(TCH_SHARE[0]*100)+'~'+Math.round(TCH_SHARE[1]*100)+'%를 교사가 받음)';res.tch++;res.moved=Math.max(0,res.moved-1);}
+    res.lost=r1(lost);res.tchGot=r1(got());}
+  ST.cards.forEach(c=>c.cand=null);
+  { const s=loads();nc.forEach(k=>{let extra=s.L[k]-hi;if(extra<=0.01)return;
+      ST.cards.filter(c=>c.owner===k&&!c.star&&!CORE(c)&&eff(c)>0&&shareTeacher(c)>=0.2).sort((a,b)=>shareTeacher(b)-shareTeacher(a)).forEach(c=>{if(extra<=0.01)return;c.why=colName(k)+' 몫이 넘쳐 협의 필요';c.auto=(c.from?c.from+'에게서 ':'')+'조정 필요로 ('+colName(k)+' 몫이 넘쳐서)';c.owner='조정';extra-=eff(c);res.cand=(res.cand||0)+1;});});
+    res.over=nc.filter(k=>loads().L[k]>hi+0.01).map(k=>colName(k)+' '+r1(loads().L[k]-hi)+'점'); }
+  {const b=ST.before,bs=b.cols.reduce((a,x)=>a+x.L,0),s=loads(),bt=num(b.school.tch)||1,nt=num(ST.school.tch)||1;
+   res.per={sBefore:r1(bs/b.cols.length),sAfter:r1(s.staff/nc.length),tBefore:Math.round(b.tch/bt*100)/100,tAfter:Math.round(s.tch/nt*100)/100,tchB:bt,tchA:nt,nB:b.cols.length,nA:nc.length};}
+  ST.change=res;CHG={n:0,keep:[],to:null};HIST=[];STEP='board';save();render();window.scrollTo(0,0);toast((grow?'새 인원에 맞춰 나눠 ':'떠나는 사람의 업무를 나눠 ')+(ST.active||'1안')+'에 담았어요');}
+function pct(a,b){return a?Math.round((b-a)/a*100):0;}
+function perLine(ch){const p=ch.per;if(!p)return '';const sg=x=>(x>=0?'+':'')+x+'%';
+  return `<br>실무사 1인 ${p.sBefore}→${p.sAfter}점(${sg(pct(p.sBefore,p.sAfter))}, ${p.nB}→${p.nA}명) · 교사 1인 ${p.tBefore}→${p.tAfter}점(${sg(pct(p.tBefore,p.tAfter))}, 교원 ${p.tchB}→${p.tchA}명)`+(ch.lost?` · 빠진 사람 몫 ${ch.lost}점 중 교사 ${ch.tchGot}점(${Math.round(ch.tchGot/ch.lost*100)}%, 참고 학교 ${Math.round(TCH_SHARE[0]*100)}~${Math.round(TCH_SHARE[1]*100)}%)`:'')+'. 교사 점수는 이 분장표 업무만 센 값이라 늘어난 비율로 견줘요.';}
+function undoChange(){const b=ST.before;if(!b)return;ST.cards=b.cards;ST.school=b.school;ST.sci=b.sci;ST.names=b.names;ST.before=null;ST.change=null;save();render();toast('바뀌기 전으로 되돌렸어요');}
+function openBefore(){const b=ST.before,s=loads(),C=cols();if(!b)return;
+  const P=ST.change&&ST.change.asIs,mv=P?ST.change.moved:ST.cards.filter(c=>c.from).length,A=esc(ST.asIs||'1안');
+  const m=modal(`<h2>${P?A+'(붙여 넣은 그대로)과 비교':'바뀌기 전과 비교'}</h2><div class="tblwrap"><table><thead><tr><th></th><th class="num">점수</th><th class="num">업무 수</th><th class="num">3월 업무</th></tr></thead><tbody>
+   <tr><td colspan="4" class="muted" style="font-size:12px">${P?'붙여 넣은 그대로':'바뀌기 전'} (${b.cols.length}명)</td></tr>
+   ${b.cols.map(x=>`<tr><td>${esc(x.name)}</td><td class="num">${x.L}점</td><td class="num">${x.n}</td><td class="num">${x.march}</td></tr>`).join('')}
+   <tr><td>교사 몫</td><td class="num">${b.tch}점</td><td class="num" colspan="2">${b.ratio}%</td></tr>
+   <tr><td colspan="4" class="muted" style="font-size:12px">${P?'자동 조정안':'바뀐 뒤'} (${C.length}명)</td></tr>
+   ${C.map(k=>`<tr><td>${esc(colName(k))}</td><td class="num">${r1(s.L[k])}점</td><td class="num">${ST.cards.filter(c=>c.owner===k).length}</td><td class="num">${ST.cards.filter(c=>c.owner===k&&c.months.includes(3)&&eff(c)>0).length}</td></tr>`).join('')}
+   <tr><td>교사 몫</td><td class="num">${r1(s.tch)}점</td><td class="num" colspan="2">${Math.round(s.ratio)}%</td></tr>
+  </tbody></table></div><p class="note">자리가 바뀐 카드 ${mv}개. ${P?'카드에 마우스를 올리면 지금 자리와 조정안 자리가 나와요.':"카드에 '…에게서' 표시가 붙어 있어요."}</p>
+  <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn small" id="bUndo">${P?'붙여 넣은 그대로로 되돌리기':'바뀌기 전으로 되돌리기'}</button><button class="btn small" id="bClose">닫기</button></div>`);
+  m.querySelector('#bClose').onclick=()=>m.remove();twice(m.querySelector('#bUndo'),'한 번 더 누르면 되돌려요',()=>{m.remove();undoChange();});}
+function okSize(){return num(ST.school.cls)>0&&officeN()>0;}
+function plan(){if(STEP.startsWith('chg'))return ['board','chg1'].concat(CHG.n&&CHG.n<cols().length?['chg2']:[]);const p=['size'];if(officeN()>=2)p.push('sci');p.push('names','paste');if(pasteResult().some(r=>!r.match))p.push('check');p.push('board');return p;}
+function go(s){HIST.push(STEP);STEP=s;save();render();window.scrollTo(0,0);}
+function back(){if(STEP==='chg1'){STEP='board';render();return;}const p=plan();STEP=HIST.pop()||p[Math.max(0,p.indexOf(STEP)-1)];save();render();}
+function render(){closeMenu();document.body.classList.toggle('noblink',!!ST.noBlink);if(STEP==='board'&&!ST.cards)buildCards();const S=STEPS[STEP]||STEPS.size;const m=$('stage');m.className='stage'+(S.wide?' wide':'');m.innerHTML=S.html();
+  const c=S.cta();$('ctaIn').innerHTML=c;$('cta').hidden=!c;const p=plan();$('progFill').style.width=((p.indexOf(STEP)+1)/p.length*100)+'%';$('backBtn').hidden=STEP==='size';S.bind&&S.bind();}
+
+/* ---------- 보드 ---------- */
+function cardHtml(c){const e=eff(c),edited=c.lv!==c.base||c.real!==1;
+  const homeTag=c.ours?(c.home&&c.home!==c.owner&&isStaff(c.home)?`<span title="우리 학교 업무분장에서 지금 맡은 사람">지금 ${esc(colName(c.home))}</span>`:'<span title="우리 학교 업무분장에 있는 업무">우리 학교</span>'):'';
+  const adj=!!(c.from||c.auto||c.moved);
+  return `<div class="card ${colCls(c.owner)} ${e===0?'zero':''} ${adj?'adj':''}" draggable="true" data-id="${c.id}"><span class="nm">${c.star?'★ ':''}${esc(c.name)}</span>
+   <span class="meta"><span class="sc">${r1(e)}점</span>${edited?'<span class="ed" title="기본 점수에서 고쳤어요"></span>':''}${c.months.map(m=>`<span class="mo">${m}월</span>`).join('')}${c.pinned?`<span title="${c.pasted&&c.owner===c.home?'붙여 넣은 담당대로 고정했어요':'손으로 옮겨 고정됐어요'}">📌</span>`:''}${c.auto?`<span class="au" title="${esc(c.auto)}">${c.from?esc(c.from)+'에게서':'자동'}</span>`:c.from?`<span class="au">${esc(c.from)}에게서</span>`:''}${c.cand?`<span class="mo" title="${esc(c.cand)}">덜어 낼 후보</span>`:''}${c.why&&c.owner==='조정'?`<span class="why">${esc(c.why)}</span>`:''}${c.owner==='조정'&&c.cnt?`<span title="참고 학교 12곳의 담당">보통 ${esc(whoShort(c))}</span>`:''}${coOK(c)?`<span class="co" title="같이 맡기">+ ${esc(colName(c.co.k))} ${Math.round(c.co.p*100)}%</span>`:''}${homeTag}${c.src==='split'?'<span>나눔</span>':''}</span>
+   <button class="dots" data-menu="${c.id}" aria-label="${esc(c.name)} 설정">⋯</button></div>`;}
+function whoShort(c){const a=c.cnt?c.cnt.all:{};const st=Math.round(staffSum(a)),t=Math.round(a['교사']||0),ad=Math.round(a['행정실']||0);return [st?'실무사 '+st:'',t?'교사 '+t:'',ad?'행정실 '+ad:''].filter(Boolean).join(' · ')+'곳';}
+function ghostHtml(c){return `<div class="card ghost ${colCls(c.co.k)}" data-id="${c.id}"><span class="nm">${esc(c.name)}</span><span class="meta"><span class="sc">${r1(shareOf(c,c.co.k))}점</span><span class="co">${esc(colName(c.owner))} 주담당 · 지원 ${Math.round(c.co.p*100)}%</span></span><button class="dots" data-menu="${c.id}" aria-label="${esc(c.name)} 설정">⋯</button></div>`;}
+function groupCards(list){const by={};list.forEach(c=>{(by[c.cat]=by[c.cat]||[]).push(c);});return Object.entries(by).map(([k,v])=>`<div class="catlab">${esc(k)}</div><div class="cards">${v.map(cardHtml).join('')}</div>`).join('');}
+function zoneHtml(k,sub,inner){const list=ST.cards.filter(c=>c.owner===k),s=loads();const sc=isStaff(k)?s.L[k]:k==='교사'?s.tch:k==='행정실'?s.adm:k==='늘봄'?s.nb:k==='조정'?s.adj:0;const gh=ST.cards.filter(c=>coOK(c)&&c.co.k===k);
+  return `<section class="zone ${colCls(k)}" data-zone="${k}"><h3>${esc(colName(k))}<span class="sc">${k==='없앰'?'':r1(sc)+'점 · '}${list.length}개</span></h3><div class="zsub">${sub}</div>${inner??groupCards(list)}${gh.length?`<div class="catlab">같이 맡는 업무 (지원)</div><div class="cards">${gh.map(ghostHtml).join('')}</div>`:''}${isStaff(k)||k==='교사'?`<button class="addbtn" data-add="${k}">+ 업무 추가</button>`:''}</section>`;}
+function boardHtml(){
+  const s=loads(),hi=hiLimit(),C=cols();
+  const meter=(v,lo,hi2,max,over)=>`<div class="meter"><span class="band" style="left:${lo/max*100}%;width:${(hi2-lo)/max*100}%"></span><i class="${over?'over':''}" style="width:${Math.min(100,v/max*100)}%"></i></div>`;
+  const march=k=>ST.cards.filter(c=>c.owner===k&&c.months.includes(3)&&eff(c)>0).length;
+  const boxes=C.map(k=>{const v=s.L[k],over=v>hi+0.01;return `<div class="sbox"><div class="k">${esc(colName(k))}</div><div class="v">${r1(v)}<small>점</small>${over?'<span class="pill warn">보통보다 많아요</span>':v<RG().lo?'<span class="pill info">여유 있어요</span>':'<span class="pill ok">보통 범위</span>'}</div>${meter(v,RG().lo,hi,30,over)}<div class="t">보통 학교 1인 ${RG().lo}~${r1(hi)}점 · 3월 업무 ${march(k)}개</div></div>`;}).join('');
+  const rOver=s.ratio>RG().rHi,rLow=s.ratio<RG().rLo;
+  const rbox=`<div class="sbox"><div class="k">교사가 맡는 몫</div><div class="v">${Math.round(s.ratio)}<small>% · ${r1(s.tch)}점</small>${rOver?'<span class="pill warn">보통보다 많아요</span>':rLow?'<span class="pill info">보통보다 적어요</span>':'<span class="pill ok">보통 범위</span>'}</div>${meter(s.ratio,RG().rLo,RG().rHi,100,rOver)}<div class="t">보통 학교 ${RG().rLo}~${RG().rHi}% · 교원 ${esc(ST.school.tch||'?')}명 · 학생 수 계수 ×${r1(studentFactor())}</div></div>`;
+  const plans=Object.keys(ST.plans||{});
+  const gen=C.filter(k=>k!=='S').length;
+  const note=gen===1&&!C.includes('S')?'교무실 실무사가 1명이면 실무사 몫과 교사 몫을 둘 다 보통 범위에 맞추기 어려워요. ':'';
+  return `
+  <h1 class="q" style="margin-top:14px">${ST.change&&ST.change.asIs?'참고 학교 방식으로 다시 놓은 자동 조정안이에요':ST.before?(ST.change&&ST.change.grow?'새 인원에 맞춰 업무를 나눴어요':'바뀐 인원에 맞춰 업무를 합쳤어요'):ST.asIs===(ST.active||'1안')?'우리 학교 분장을 붙여 넣은 그대로예요':'보통 학교 기준으로 먼저 놓았어요'}</h1>
+  <p class="lede">${note}카드를 끌어 옮기거나 ⋯에서 점수를 고쳐 보세요. 옮긴 카드는 📌 고정돼요. <span class="adjkey"></span>주황 테두리가 깜빡이는 카드는 자리를 조정한 카드예요. 점수는 공인된 값이 아니라 대략 비교용이에요.</p>
+  <div class="toolbar">
+ <button class="btn small primary" id="chg">인원이 바뀌어요</button>
+   <button class="btn small" id="reAuto" title="📌 고정 카드는 그대로 두고 나머지만 다시 놓아요">다시 자동 배정</button>
+   <button class="btn small" id="reset">자동 배정으로 되돌리기</button>
+   <button class="btn small" id="blink">${ST.noBlink?'깜빡임 켜기':'깜빡임 끄기'}</button>
+   <span class="sp"></span>
+   <span class="chips plantabs" role="tablist" aria-label="안 고르기">${['1안','2안','3안'].map(p=>`<button class="chip" role="tab" data-plan="${p}" aria-pressed="${(ST.active||'1안')===p}" title="${ST.plans[p]?'저장됨 · 누르면 이 안으로 바꿔요':'비어 있음 · 누르면 지금 화면을 복사해 시작해요'}">${p}${ST.plans[p]?'':' +'}</button>`).join('')}</span>
+   ${plans.length>1?`<button class="btn small" id="cmp">안 비교 (${plans.length})</button>`:''}
+   <button class="btn small primary" id="hwpx">한글로 받기</button>
+   <button class="btn small" id="print">인쇄</button>
+   <button class="btn small" id="exp">내보내기</button>
+   <button class="btn small" id="imp">불러오기</button><input type="file" id="impF" accept=".json" class="sr">
+  </div>
+  ${ST.asIs&&ST.asIs===(ST.active||'1안')&&!ST.change?`<div class="found" style="background:var(--accent-soft);color:var(--ink);margin:0 0 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span>${esc(ST.asIs)}은 붙여 넣은 그대로예요. 붙인 업무 ${ST.cards.filter(c=>c.pasted&&c.owner===c.home).length}개는 📌 고정했고, 분장표에 없거나 교사·실무사 분장표에 모두 있는 업무 ${ST.cards.filter(c=>c.owner==='조정').length}개는 조정 필요 칸에 모았어요. 여기서 직접 고치거나 자동 조정안을 다른 안에 만들어 비교해 보세요.</span><span style="flex:1"></span><button class="btn small primary" id="bProp">자동 조정안 만들기</button></div>`:''}
+  ${ST.change&&ST.change.asIs?`<div class="found" style="background:var(--accent-soft);color:var(--ink);margin:0 0 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span>${esc(ST.asIs||'1안')}(붙여 넣은 그대로)에서 카드 ${ST.change.moved}개를 옮긴 자동 조정안이에요. 옮긴 카드는 주황 테두리로 깜빡여요. 참고 학교가 나누는 방식대로 놓은 것이라 우리 학교 사정에 맞게 다시 옮겨 보세요.</span><span style="flex:1"></span><button class="btn small" id="bCmp">${esc(ST.asIs||'1안')}과 비교</button><button class="btn small" id="bDone">알림 닫기</button></div>`:ST.change?`<div class="found" style="background:var(--accent-soft);color:var(--ink);margin:0 0 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span>${ST.change.grow?`새 인원에 맞춰 카드 ${ST.change.moved}개를 옮겼어요.`:`${esc(ST.change.from.join(', '))}의 업무를 나눴어요: 남는 사람에게 ${ST.change.moved}개 · 교사로 ${ST.change.tch}개 · 행정실 ${ST.change.adm}개 · 없앰 제안 ${ST.change.del}개.`} 남는 사람이 하던 업무는 📌 고정했어요.${perLine(ST.change)}${ST.change.over&&ST.change.over.length?` 그래도 보통보다 많아요(${esc(ST.change.over.join(', '))}). 협의할 업무 ${ST.change.cand||0}개를 조정 필요 칸으로 옮겼어요.`:''}</span><span style="flex:1"></span><button class="btn small" id="bCmp">바뀌기 전과 비교</button><button class="btn small" id="bDone">알림 닫기</button></div>`:''}
+  <div class="summary">${boxes}${rbox}</div>
+  <div class="staff" style="grid-template-columns:repeat(${C.length},1fr)">${C.map(k=>zoneHtml(k,k==='S'?'과학·정보 업무를 맡아요':'교무실 업무를 나눠 맡아요')).join('')}</div>
+  ${zoneHtml('조정','바로 옮기기 어려운 업무를 모아 두고 협의해서 나눠요. 여기 점수는 실무사와 교사 어느 쪽에도 넣지 않아요. 보통 계획·학생 관리는 교사가, 운영 지원은 실무사가 맡아요')}
+  <div class="lower">
+   ${zoneHtml('교사','교사 한 사람씩이 아니라 교사 전체가 맡는 몫으로 봐요')}
+   <div class="side">
+    ${zoneHtml('행정실',`행정실 실무사 ${num(ST.school.adm)}명은 분장에서 빼요. 넘길 때는 행정실과 먼저 협의하세요`)}
+    ${zoneHtml('늘봄','방과후·늘봄 업무는 늘봄실무사가 맡아 계산에서 빼요',`<details><summary>카드 ${ST.cards.filter(c=>c.owner==='늘봄').length}개 펼치기</summary>${groupCards(ST.cards.filter(c=>c.owner==='늘봄'))}</details>`)}
+    ${zoneHtml('없앰','우리 학교에서 하지 않는 업무. 계산에서 빠지고 기록은 남아요')}
+   </div>
+  </div>
+  <details class="set"><summary>계산 기준 고치기</summary>
+   <div class="setgrid">
+    <label>실무사 1인 보통 범위<br><input data-set="lo" value="${RG().lo}"> ~ <input data-set="hi" value="${RG().hi}"> 점</label>
+    <label>학교가 작을 때 상한 올림(최대, 학생 수 계수 0.5에서 전부)<br><input data-set="bump" value="${ST.set.bump}"> 점 · 지금 상한 ${r1(hiLimit())}점</label>
+    <label>교사 몫 보통 범위<br><input data-set="rLo" value="${RG().rLo}"> ~ <input data-set="rHi" value="${RG().rHi}"> %</label>
+    <label>기준 학생 수 (학교 크기 보정)<br><input data-set="baseStu" value="${ST.set.baseStu}"> 명 · 지금 보정 ×${r1(studentFactor())}</label>
+   </div>
+   <p class="note">${RG().manual?'보통 범위를 직접 정했어요. [기본값으로]를 누르면 다시 참고 학교로 계산해요.':'보통 범위는 참고 학교 12곳이 지금 화면에 남은 업무(없앰·삭제한 업무 빼고, 고친 점수 그대로)를 어떻게 나눴는지로 다시 셈한 가운데 절반이에요. 업무를 지우면 범위도 함께 바뀌어요.'} 학교 크기 보정은 반은 고정, 반만 학생 수에 따라 바뀌어요(0.5 + 0.5 × 학생 수 ÷ 기준 학생 수, 0.5~1.5배). 학급 수와 교원 수는 학생 수를 따라 늘고 주니 보결·교과서 같은 업무도 같은 계수를 써요.</p>
+   <button class="btn small" id="setDef" style="margin-top:8px">기본값으로</button>
+  </details>`;}
+function bindBoard(){
+  document.querySelectorAll('.card').forEach(el=>{el.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',el.dataset.id);el.classList.add('dragging');hintZones(el.dataset.id);});
+    el.addEventListener('dragend',()=>{el.classList.remove('dragging');document.querySelectorAll('.zone').forEach(z=>z.classList.remove('over','hint1'));});});
+  document.querySelectorAll('.zone').forEach(z=>{z.addEventListener('dragover',e=>{e.preventDefault();z.classList.add('over');});z.addEventListener('dragleave',()=>z.classList.remove('over'));
+    z.addEventListener('drop',e=>{e.preventDefault();moveCard(e.dataTransfer.getData('text/plain'),z.dataset.zone);});});
+  document.querySelectorAll('[data-menu]').forEach(b=>b.onclick=e=>{e.stopPropagation();openMenu(b.dataset.menu,b);});
+  document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>openAdd(b.dataset.add));
+  $('chg').onclick=()=>{CHG={n:0,keep:[],to:null};HIST=['board'];STEP='chg1';render();window.scrollTo(0,0);};
+  $('bCmp')&&($('bCmp').onclick=openBefore);$('bProp')&&($('bProp').onclick=makeProposal);$('bDone')&&($('bDone').onclick=()=>{ST.change=null;save();render();});
+  $('blink').onclick=()=>{ST.noBlink=!ST.noBlink;save();render();};
+  $('reAuto').onclick=()=>{autoAssign(true);save();render();toast('📌 고정 카드는 그대로 두고 다시 놓았어요');};
+  twice($('reset'),'한 번 더 누르면 되돌려요',()=>{ST.cards.forEach(c=>{c.moved=false;c.from=null;});autoAssign(false);save();render();toast('자동 배정으로 되돌렸어요');});
+  document.querySelectorAll('[data-plan]').forEach(b=>b.onclick=()=>switchPlan(b.dataset.plan));
+  $('cmp')&&($('cmp').onclick=openCompare);
+  $('hwpx').onclick=downloadHwpx;
+  $('print').onclick=()=>window.print();$('exp').onclick=exportJson;$('imp').onclick=()=>$('impF').click();$('impF').onchange=importJson;
+  document.querySelectorAll('[data-set]').forEach(i=>i.addEventListener('change',()=>{const k=i.dataset.set;if(['lo','hi','rLo','rHi'].includes(k)&&!ST.set.manual){const r=RG();Object.assign(ST.set,{lo:r.lo,hi:r.hi,rLo:r.rLo,rHi:r.rHi,manual:true});}ST.set[k]=num(i.value);save();render();}));
+  $('setDef').onclick=()=>{ST.set={...DEF_SET,manual:false};save();render();};}
+function twice(btn,msg,fn){const orig=btn.textContent;btn.onclick=()=>{if(!btn.dataset.sure){btn.dataset.sure=1;btn.textContent=msg;setTimeout(()=>{btn.dataset.sure='';btn.textContent=orig;},2500);return;}fn();};}
+function hintZones(id){const c=ST.cards.find(x=>x.id===id);if(!c||!c.cnt)return;const {side,lean}=classify(c);
+  const k=side==='staff'?(cols().includes('S')&&lean==='과학'?'S':cols()[0]):side;const z=document.querySelector(`.zone[data-zone="${k}"]`);if(z)z.classList.add('hint1');}
+function moveCard(id,zone){const c=ST.cards.find(x=>x.id===id);if(!c||!zone||c.owner===zone){render();return;}if(c.co){if(c.co.k===zone)c.co={k:c.owner,p:Math.round((1-c.co.p)*100)/100};else if(!(isStaff(zone)||zone==='교사'))c.co=null;}if(zone!=='조정')c.why=null;c.owner=zone;c.pinned=true;c.auto=null;c.cand=null;c.moved=true;save();const y=window.scrollY;render();window.scrollTo(0,y);toast(`${c.name.slice(0,14)} → ${colName(zone)}`);}
+function switchPlan(p){const cur=ST.active||'1안';if(p===cur)return;save();
+  if(ST.plans[p]){restorePlan(ST.plans[p]);ST.active=p;save();render();toast(p+'으로 바꿨어요');}
+  else{ST.active=p;save();render();toast(`${cur}을 복사해 ${p}을 시작했어요`);}}
+function restorePlan(pl){ST.cards=JSON.parse(JSON.stringify(pl.cards));if(pl.school)ST.school={...pl.school};if(pl.sci!==undefined)ST.sci=pl.sci;if(pl.names)ST.names={...pl.names};ST.before=pl.before?JSON.parse(JSON.stringify(pl.before)):null;ST.change=pl.change?{...pl.change}:null;}
+function snap(){const s=loads();return {cols:cols().map(k=>({k,name:colName(k),L:r1(s.L[k]),march:ST.cards.filter(c=>c.owner===k&&c.months.includes(3)&&eff(c)>0).length,n:ST.cards.filter(c=>c.owner===k).length})),adj:ST.cards.filter(c=>c.from||c.auto||c.moved).length,del:ST.cards.filter(c=>c.owner==='없앰').length,school:{...ST.school},sci:ST.sci,names:{...ST.names},before:ST.before||null,change:ST.change||null,at:new Date().toISOString(),L:Object.fromEntries(Object.entries(s.L).map(([k,v])=>[k,r1(v)])),tch:r1(s.tch),ratio:Math.round(s.ratio),adm:r1(s.adm),cards:JSON.parse(JSON.stringify(ST.cards))};}
+
+/* ---------- ⋯ 메뉴 ---------- */
+function closeMenu(){if(menuEl){menuEl.remove();menuEl=null;}}
+document.addEventListener('click',e=>{if(menuEl&&e.target.isConnected&&!menuEl.contains(e.target))closeMenu();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeMenu();const mb=document.querySelector('.modal-back');if(mb)mb.remove();}});
+function whoText(c){if(!c.cnt)return '직접 만든 업무예요';const a=c.cnt.all,st=r1(staffSum(a)),parts=[];if(st)parts.push('실무사 '+st);['교사','행정실','늘봄'].forEach(k=>{if(a[k])parts.push(k+' '+r1(a[k]));});return '보통 학교 12곳: '+parts.join(' · ');}
+let descEdit=false,menuView='main';
+function baseDesc(c){const id=refId(c);return (id&&BMAP[id]&&BMAP[id].desc)||'';}
+function cardDesc(c){return c.desc!=null?c.desc:baseDesc(c);}
+function descBody(c){const t=cardDesc(c),edited=c.desc!=null&&c.desc!==baseDesc(c);
+  if(descEdit)return `<textarea class="dta" id="mDescTa" placeholder="하는 일: …&#10;바쁜 시기: …&#10;결과물: …">${esc(t)}</textarea><div class="row" style="margin-top:6px"><button class="btn small primary" id="mDescSave">저장</button><button class="btn small" id="mDescCancel">그만두기</button></div>`;
+  return (t?`<div class="dl">${t.split('\n').filter(l=>l.trim()).map(l=>{const i=l.indexOf(': ');return i>0&&i<12?`<div><b>${esc(l.slice(0,i))}</b>${esc(l.slice(i+2))}</div>`:`<div>${esc(l)}</div>`;}).join('')}</div>`:'<p class="mhint">설명이 아직 없어요. 고치기를 눌러 우리 학교 방식으로 적어 두세요.</p>')
+    +`<div class="row" style="margin-top:6px"><button class="btn small" id="mDescEdit">고치기</button>${edited&&baseDesc(c)?'<button class="btn link" id="mDescDef">기본 설명으로</button>':''}</div>`
+    +`<p class="mhint">${edited?'우리 학교에 맞게 고친 설명이에요. ':''}기본 설명은 경기도교육청 2026 학교 업무매뉴얼(초등) 기준이에요. 쪽수는 인쇄 쪽수, (추정)은 매뉴얼에 없는 내용, (경남 사례)는 경상남도교육청 학교업무 도움자료로 보탠 내용이에요.</p>`;}
+function openMenu(id,btn){if(openMenu._id!==id){descEdit=false;menuView='main';}openMenu._id=id;closeMenu();const c=ST.cards.find(x=>x.id===id);if(!c)return;
+  const sib=c.splitOf?ST.cards.filter(x=>x.splitOf===c.splitOf):[];
+  const dests=[...cols(),'교사','조정','행정실','늘봄','없앰'].filter(k=>k!==c.owner);
+  const coDests=(isStaff(c.owner)||c.owner==='교사')?[...cols(),'교사'].filter(k=>k!==c.owner):[];
+  const ch=(attr,val,on,label)=>`<button class="chip" ${attr}="${val}" aria-pressed="${on}">${label}</button>`;
+  const DOT={A:'--c1',B:'--c2',C:'--c3',S:'--cs','교사':'--tch','행정실':'--adm','늘봄':'--nb','조정':'--warn','없앰':'--line-strong'};
+  const dot=k=>`<span class="dot" style="background:var(${DOT[k]||'--muted'})"></span>`;
+  const mv=(k)=>`<button class="chip mto" data-to="${k}">${dot(k)}${esc(colName(k))}</button>`;
+  const main=dests.filter(k=>isStaff(k)||k==='교사'||k==='조정'),etc=dests.filter(k=>!main.includes(k));
+  const back=t=>`<button class="mback" data-view="main">‹ ${esc(c.name)}</button><div class="mvt">${t}</div>`;
+  const nav=(v,t,tag)=>`<button class="mnav" data-view="${v}"><span>${t}</span><span class="mtag">${tag||''} ›</span></button>`;
+  const dsc=cardDesc(c),dEd=c.desc!=null&&c.desc!==baseDesc(c),eEd=c.lv!==c.base||c.real!==1;
+  const busy=c.months.length?c.months.map(n=>n+'월').join(' '):(c.freq||'수시');
+  let body='';
+  if(menuView==='desc')body=back('무슨 일인가요')+descBody(c);
+  else if(menuView==='co')body=back('같이 맡기 · 주담당 '+esc(colName(c.owner)))+`<div class="chips">${coDests.map(k=>ch('data-co',k,!!(c.co&&c.co.k===k),dot(k)+esc(colName(k))+' 지원')).join('')}</div>
+     ${coOK(c)?`<div class="lab" style="margin-top:10px">지원 몫</div><div class="chips">${[0.2,0.3,0.5,0.7].map(p=>ch('data-cop',p,c.co.p===p,Math.round(p*100)+'%')).join('')}</div><button class="btn link" id="mCoOff" style="margin-top:6px">같이 맡기 풀기</button>`:'<p class="mhint">보통 계획·학생 관리는 교사, 운영 지원은 실무사가 맡아요</p>'}`;
+  else if(menuView==='edit')body=back('점수·달 고치기')+`<div class="lab">무게 · 기본 ${c.base}점</div><div class="chips">${LV.map(([n,l])=>ch('data-lv',n,c.lv===n,l+' '+n)).join('')}</div>
+     <div class="row" style="margin-top:6px">직접 <input type="number" step="0.05" min="0" id="mLv" value="${c.lv}"> 점 ${c.lv!==c.base?'<button class="btn link" id="mDef">기본값으로</button>':''}</div>
+     <div class="lab" style="margin-top:12px">우리 학교에서는 실제로</div><div class="chips">${REAL.map(([n,l])=>ch('data-real',n,c.real===n,l)).join('')}</div>
+     <div class="lab" style="margin-top:12px">바쁜 달</div><div class="chips mo">${[3,4,5,6,7,8,9,10,11,12,1,2].map(n=>ch('data-mo',n,c.months.includes(n),n)).join('')}</div>
+     <div class="lab" style="margin-top:12px">표시</div><div class="chips">${ch('id','mStar',c.star,'★ 핵심 업무')}${ch('id','mStu',c.stu,'학교 크기 영향')}${ch('id','mPin',c.pinned,'📌 고정')}</div>`;
+  else if(menuView==='more')body=back('이름·나누기·삭제')+`<div class="lab">이름</div><input type="text" id="mName" value="${esc(c.name)}">
+     <div class="lab" style="margin-top:12px">나누기</div><div class="row"><button class="btn small" data-split="2">2개로</button><button class="btn small" data-split="3">3개로</button>${sib.length>1?'<button class="btn small" id="mJoin">다시 합치기</button>':''}</div><div id="splitForm"></div>
+     <div class="mdel"><button class="danger" id="mDel">삭제</button><span class="mhint">하지 않는 업무는 없앰으로 옮기면 기록이 남아요</span></div>`;
+  else body=`<div class="mh">${esc(c.name)}</div><div class="ms">${esc(c.cat)} · 지금 ${dot(c.owner)}${esc(colName(c.owner))} 담당${coOK(c)?' · '+esc(colName(c.co.k))+' 지원 '+Math.round(c.co.p*100)+'%':''}</div>
+     <div class="msum"><div><b>${r1(eff(c))}점</b>무게</div><div><b>${esc(busy)}</b>바쁜 달</div><div><b>${c.cnt?esc(whoShort(c)||'-'):'직접 만듦'}</b>보통 학교</div></div>
+     <div class="lab">누구에게 옮길까요</div><div class="chips">${main.map(mv).join('')}</div>
+     ${etc.length?`<div class="chips metc">${etc.map(mv).join('')}</div>`:''}
+     <div class="mnavs">${nav('desc','무슨 일인가요',dsc?(dEd?'고침':'경기 기준'):'비어 있음')}${coDests.length?nav('co','같이 맡기',coOK(c)?Math.round(c.co.p*100)+'%':''):''}${nav('edit','점수·달 고치기',eEd?'고침':'')}${nav('more','이름·나누기·삭제','')}</div>`;
+  const m=document.createElement('div');m.className='menu';m.innerHTML=body;
+  document.body.appendChild(m);menuEl=m;
+  const r=btn.getBoundingClientRect();let left=r.right+window.scrollX-360;left=Math.max(8,Math.min(left,window.scrollX+document.documentElement.clientWidth-368));m.style.left=left+'px';const mh=m.offsetHeight,below=window.innerHeight-r.bottom,above=r.top-70;const top=(below<mh+12&&above>below)?Math.max(window.scrollY+66,r.top+window.scrollY-mh-4):r.bottom+window.scrollY+4;m.style.top=top+'px';
+  const upd=fn=>{fn();save();const y=window.scrollY;render();window.scrollTo(0,y);const nb=document.querySelector(`[data-menu="${id}"]`);if(nb)openMenu(id,nb);};
+  const q=s=>m.querySelector(s)||{};
+  const reopen=()=>{const nb=document.querySelector(`[data-menu="${id}"]`);openMenu(id,nb||btn);};
+  m.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{menuView=b.dataset.view;descEdit=false;reopen();});
+  q('#mDescEdit')&&(q('#mDescEdit').onclick=()=>{descEdit=true;upd(()=>{});setTimeout(()=>{const ta=document.querySelector('#mDescTa');ta&&ta.focus();},0);});
+  q('#mDescCancel')&&(q('#mDescCancel').onclick=()=>{descEdit=false;upd(()=>{});});
+  q('#mDescSave')&&(q('#mDescSave').onclick=()=>{const v=q('#mDescTa').value.replace(/\r/g,'').trim();descEdit=false;upd(()=>{c.desc=(v===baseDesc(c))?null:v;if(c.desc===null)delete c.desc;});toast('업무 설명을 저장했어요');});
+  q('#mDescDef')&&(q('#mDescDef').onclick=()=>upd(()=>{delete c.desc;}));
+  m.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>upd(()=>c.lv=parseFloat(b.dataset.lv)));
+  q('#mLv').onchange=e=>upd(()=>c.lv=Math.max(0,num(e.target.value)));
+  q('#mDef')&&(q('#mDef').onclick=()=>upd(()=>c.lv=c.base));
+  m.querySelectorAll('[data-real]').forEach(b=>b.onclick=()=>upd(()=>c.real=parseFloat(b.dataset.real)));
+  m.querySelectorAll('[data-mo]').forEach(b=>b.onclick=()=>upd(()=>{const n=+b.dataset.mo;c.months=c.months.includes(n)?c.months.filter(x=>x!==n):[...c.months,n].sort((a,b)=>((a+9)%12)-((b+9)%12));}));
+  q('#mStar').onclick=()=>upd(()=>c.star=!c.star);q('#mStu').onclick=()=>upd(()=>c.stu=!c.stu);q('#mPin').onclick=()=>upd(()=>c.pinned=!c.pinned);
+  q('#mName').onchange=e=>upd(()=>c.name=e.target.value.trim()||c.name);
+  m.querySelectorAll('[data-to]').forEach(b=>b.onclick=()=>{closeMenu();moveCard(c.id,b.dataset.to);});
+  m.querySelectorAll('[data-co]').forEach(b=>b.onclick=()=>upd(()=>{const k=b.dataset.co;if(c.co&&c.co.k===k)c.co=null;else c.co={k,p:c.co?c.co.p:0.3};c.moved=true;}));
+  m.querySelectorAll('[data-cop]').forEach(b=>b.onclick=()=>upd(()=>{c.co.p=parseFloat(b.dataset.cop);}));
+  q('#mCoOff')&&(q('#mCoOff').onclick=()=>upd(()=>{c.co=null;}));
+  m.querySelectorAll('[data-split]').forEach(b=>b.onclick=()=>{const n=+b.dataset.split,each=Math.round(c.lv/n*100)/100;
+    const sugg=/학교운영위원회|학운위/.test(c.name)&&n===2?['학운위 구성','학운위 운영']:/지킴이/.test(c.name)&&n===3?['지킴이 채용','지킴이 봉사료 지급','지킴이 정산']:Array.from({length:n},(_,i)=>c.name+' '+(i+1));
+    q('#splitForm').innerHTML=`<div style="margin-top:6px">${sugg.map(s=>`<div class="row" style="margin-bottom:4px"><input type="text" class="sp-n" style="flex:1" value="${esc(s)}"><input type="number" step="0.05" class="sp-v" value="${each}"> 점</div>`).join('')}<div class="row"><button class="btn small primary" id="spGo">나누기</button><span id="spSum" class="muted" style="font-size:11.5px"></span></div></div>`;
+    m.querySelectorAll('.sp-v').forEach(i=>i.oninput=()=>{const t=[...m.querySelectorAll('.sp-v')].reduce((a,i)=>a+num(i.value),0);q('#spSum').textContent=Math.abs(t-c.lv)>0.01?`합계 ${r1(t)}점 · 원래 ${c.lv}점`:'';});
+    q('#spGo').onclick=()=>{const names=[...m.querySelectorAll('.sp-n')].map(i=>i.value.trim()),vals=[...m.querySelectorAll('.sp-v')].map(i=>num(i.value));
+      const grp=c.splitOf||c.id,idx=ST.cards.indexOf(c),orig=c.origName||c.name;
+      const parts=names.map((nm,i)=>({...JSON.parse(JSON.stringify(c)),id:c.id+'_'+i+Date.now().toString(36).slice(-3),name:nm||(orig+' '+(i+1)),lv:vals[i],base:vals[i],splitOf:grp,origName:orig,origBase:c.origBase??c.base,src:'split'}));
+      ST.cards.splice(idx,1,...parts);closeMenu();save();render();toast(`${n}개로 나눴어요`);};});
+  q('#mJoin')&&(q('#mJoin').onclick=()=>{const idx=ST.cards.indexOf(sib[0]),tot=Math.round(sib.reduce((a,x)=>a+x.lv,0)*100)/100;
+    const j={...JSON.parse(JSON.stringify(sib[0])),id:sib[0].splitOf,name:sib[0].origName,lv:tot,base:sib[0].origBase??tot,months:[...new Set(sib.flatMap(x=>x.months))],src:sib[0].cnt?'base':'custom'};delete j.splitOf;delete j.origName;delete j.origBase;
+    ST.cards=ST.cards.filter(x=>!sib.includes(x));ST.cards.splice(idx,0,j);closeMenu();save();render();toast('다시 합쳤어요');});
+  const del=q('#mDel');del.onclick=()=>{if(!del.dataset.sure){del.dataset.sure=1;del.textContent='한 번 더 누르면 지워요';return;}ST.cards=ST.cards.filter(x=>x!==c);closeMenu();save();render();toast('지웠어요');};}
+
+/* ---------- 업무 추가 ---------- */
+function modal(html){const b=document.createElement('div');b.className='modal-back';b.innerHTML=`<div class="modal">${html}</div>`;document.body.appendChild(b);b.addEventListener('click',e=>{if(e.target===b)b.remove();});return b;}
+function openAdd(zone){const cats=[...new Set(ST.cards.map(c=>c.cat))];let lv=1;
+  const b=modal(`<h2>업무 추가</h2><p class="muted" style="font-size:13.5px;margin:0 0 12px">${esc(colName(zone))} 칸에 새 카드를 만들어요</p>
+   <div class="fld"><label for="aName">업무 이름</label><input type="text" id="aName" placeholder="예: 학교 소식지 발송"><span id="aSim"></span></div>
+   <div class="fld"><label for="aCat">성격</label><input type="text" id="aCat" list="aCats" placeholder="예: 교무행정"><datalist id="aCats">${cats.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
+   <div class="fld"><span class="lab">무게</span><div class="chips" id="aLv">${LV.map(([n,l])=>`<button class="chip" data-v="${n}" aria-pressed="${n===1}">${l}</button>`).join('')}</div></div>
+   <div class="row" style="justify-content:flex-end"><button class="btn" id="aNo">닫기</button><button class="btn primary" id="aGo" disabled>만들기</button></div>`);
+  const nm=b.querySelector('#aName');nm.focus();
+  nm.oninput=()=>{b.querySelector('#aGo').disabled=!nm.value.trim();let best=null,bs=0;const core=t=>norm(t).replace(/업무|관리|지원|및|처리/g,'');const nv=core(nm.value);ST.cards.forEach(c=>{let d=dice(nm.value,c.name);const nc=core(c.name);if(nv.length>=2&&(nc.includes(nv)||nv.includes(nc)))d=Math.max(d,0.6);if(d>bs){bs=d;best=c;}});
+    b.querySelector('#aSim').innerHTML=best&&bs>=0.45?`<span class="pill warn">비슷한 카드가 있어요</span> <span class="help">${esc(best.name)} (${esc(colName(best.owner))}) · 같은 업무면 그 카드를 옮겨 주세요</span>`:'';};
+  b.querySelectorAll('#aLv .chip').forEach(x=>x.onclick=()=>{lv=parseFloat(x.dataset.v);b.querySelectorAll('#aLv .chip').forEach(y=>y.setAttribute('aria-pressed',y===x));});
+  b.querySelector('#aNo').onclick=()=>b.remove();
+  b.querySelector('#aGo').onclick=()=>{ST.cards.push({id:'c'+Date.now().toString(36),name:nm.value.trim(),cat:b.querySelector('#aCat').value.trim()||'직접 추가',base:lv,lv,real:1,months:[],stu:false,star:false,cnt:null,home:isStaff(zone)?zone:null,owner:zone,pinned:true,auto:null,ours:false,src:'custom'});b.remove();save();render();toast('카드를 만들었어요');};}
+
+/* ---------- 안 비교 ---------- */
+function planRows(){const P=ST.plans,keys=['1안','2안','3안'].filter(k=>P[k]);return keys.map(k=>{const p=P[k];return {k,staff:(p.cols||[]).map(x=>`${x.name} ${x.L}점`).join(', '),tch:p.tch,ratio:p.ratio,adm:p.adm,march:(p.cols||[]).map(x=>x.march).join(' / '),n:(p.cols||[]).length,adj:p.adj||0,del:p.del||0};});}
+function openCompare(){const R=planRows();
+  const b=modal(`<h2>안 비교</h2><div class="tblwrap"><table><thead><tr><th>안</th><th>실무사</th><th class="num">교사 몫</th><th class="num">행정실</th><th class="num">3월 업무</th><th class="num">조정 카드</th></tr></thead><tbody>${R.map(r=>`<tr${r.k===(ST.active||'1안')?' style="background:var(--accent-soft)"':''}><td>${r.k}</td><td>${esc(r.staff)}</td><td class="num">${r.tch}점 · ${r.ratio}%</td><td class="num">${r.adm}점</td><td class="num">${esc(r.march)}</td><td class="num">${r.adj}</td></tr>`).join('')}</tbody></table></div>
+   <p class="note">위 탭에서 안을 누르면 그 안으로 바뀌어요. 색칠한 줄이 지금 화면이에요.</p>
+   <div class="row" style="margin-top:10px">${R.filter(r=>r.k!==(ST.active||'1안')).map(r=>`<button class="btn small" data-drop="${r.k}">${r.k} 지우기</button>`).join('')}<span style="flex:1"></span><button class="btn small" id="cClose">닫기</button></div>`);
+  b.querySelector('#cClose').onclick=()=>b.remove();
+  b.querySelectorAll('[data-drop]').forEach(x=>twice(x,'한 번 더 누르면 지워요',()=>{delete ST.plans[x.dataset.drop];save();b.remove();render();}));}
+
+/* ---------- 한글 한 장 ---------- */
+const UL=t=>'\uE000'+t+'\uE001';
+function shortNames(v,mark,k){const cut=n=>{let d=0,o='';for(const ch of n){if(ch==='(')d++;else if(ch===')')d=Math.max(0,d-1);else if(!d)o+=ch;}return o.replace(/[,.]\s*$/,'').trim()||n;};const cnt={};v.forEach(c=>{const k=cut(c.name);cnt[k]=(cnt[k]||0)+1;});const short=n=>cnt[cut(n)]>1||cut(n).length<4?n:cut(n);
+  return v.map(c=>{const t=(c.star?'★':'')+short(c.name)+(c.months.includes(3)?'(3월)':'')+(coOK(c)?(k&&c.co.k===k?`(${colName(c.owner)} 주담당, 지원 ${Math.round(c.co.p*100)}%)`:`(+${colName(c.co.k)} ${Math.round(c.co.p*100)}%)`):'');return mark&&mark(c)?UL(t):t;}).join(', ');}
+const movedHere=c=>!!(c.from||c.moved||c.auto);
+function catRows(list,withScore,k){const by={};list.forEach(c=>{(by[c.cat]=by[c.cat]||[]).push(c);});
+  return Object.entries(by).map(([cat,v])=>{const cut=n=>{let d=0,o='';for(const ch of n){if(ch==='(')d++;else if(ch===')')d=Math.max(0,d-1);else if(!d)o+=ch;}return o.replace(/[,.]\s*$/,'').trim()||n;};const cnt={};v.forEach(c=>{const k=cut(c.name);cnt[k]=(cnt[k]||0)+1;});const short=n=>cnt[cut(n)]>1||cut(n).length<4?n:cut(n);const names=shortNames(v,movedHere,k);const row=[cat,{t:names,al:'l'}];if(withScore)row.push(String(r1(v.reduce((a,c)=>a+(k?shareOf(c,k):eff(c)),0))));return row;});}
+function hwpxBlocks(){const B=ENG.B,s=loads(),C=cols(),d=new Date();const today=`${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}.`;
+  const R=planRows();const blocks=[B.title('교무실 실무사 업무 분장안'+(R.length>1?' ('+(ST.active||'1안')+')':'')),B.c(`${today} · ${ST.school.cls}학급 · 학생 ${ST.school.stu||'?'}명 · 교원 ${ST.school.tch}명 · 실무사 ${num(ST.school.total)}명(행정실 ${num(ST.school.adm)}명 제외, 교무실 ${officeN()}명)`,'note'),B.sp()];
+  blocks.push(B.tbl([30,14,14,14],[['구분','점수','보통 범위','비고'],...C.map(k=>[colName(k),r1(s.L[k])+'점',`${RG().lo}~${r1(hiLimit())}점`,`3월 업무 ${ST.cards.filter(c=>c.owner===k&&c.months.includes(3)&&eff(c)>0).length}개`]),['교사 몫',r1(s.tch)+'점',`${RG().rLo}~${RG().rHi}%`,`교사 비율 ${Math.round(s.ratio)}%`]],{head:1}));
+  if(R.length>1){const P=ST.plans,keys=R.map(r=>r.k),base=keys[0];
+    const labOf=(pl,c)=>{const col=(pl.cols||[]).find(x=>x.k===c.owner);return col?col.name:(BIN[c.owner]||c.owner);};
+    const baseMap={};(P[base].cards||[]).forEach(c=>baseMap[c.id]=labOf(P[base],c));
+    const holders=[];keys.forEach(k=>(P[k].cols||[]).forEach(x=>{if(!holders.includes(x.name))holders.push(x.name);}));['교사','조정 필요','행정실','없앰'].forEach(h=>holders.push(h));
+    const cell=(k,h)=>{const pl=P[k],list=(pl.cards||[]).filter(c=>c.owner!=='늘봄'&&labOf(pl,c)===h&&(h==='없앰'||c.lv*c.real>0));if(!list.length)return '';
+      const moved=c=>k!==base&&baseMap[c.id]!==undefined&&baseMap[c.id]!==h||k!==base&&baseMap[c.id]===undefined;
+      if(h==='교사'){const show=list.filter(c=>moved(c)||!c.cnt||classify(c).side!=='교사'),rest=list.length-show.length;return shortNames(show,moved)+(rest?(show.length?', ':'')+`그 밖에 보통 학교처럼 교사가 맡는 ${rest}개`:'');}
+      return shortNames(list,moved);};
+    const rows=holders.map(h=>[h,...keys.map(k=>cell(k,h))]).filter(r=>r.slice(1).some(Boolean)).map(r=>r.map((t,i)=>i?{t,al:'l'}:t));
+    blocks.push(B.h('안 비교 · 업무 분장'));
+    blocks.push(B.tbl([12,...keys.map(()=>Math.floor(88/keys.length))],[['담당',...keys.map(k=>k+(k===(ST.active||'1안')?' (아래 자세히)':''))],...rows],{head:1,split:true}));
+    blocks.push(B.note(`밑줄: ${base}과 담당이 달라진 업무. 점수는 아래 ${ST.active||'1안'} 자세히에만 적었어요.`));blocks.push(B.sp());}
+  if(ST.change&&ST.change.per)blocks.push(B.note(perLine(ST.change).replace(/<br>/g,'').replace(/<[^>]+>/g,'')));
+  if(ST.before)blocks.push(B.note(`바뀌기 전: ${ST.before.cols.map(x=>x.name+' '+x.L+'점').join(', ')} · 교사 몫 ${ST.before.ratio}% → 바뀐 뒤 ${Math.round(s.ratio)}%`));
+  blocks.push(B.sp());
+  C.forEach(k=>{const list=ST.cards.filter(c=>(c.owner===k||coOK(c)&&c.co.k===k)&&eff(c)>0);blocks.push(B.h(`${colName(k)} (${r1(s.L[k])}점)`));blocks.push(B.tbl([14,62,8],[['성격','업무','점수'],...catRows(list,true,k)],{head:1,split:true}));blocks.push(B.sp());});
+  {const adjL=ST.cards.filter(c=>c.owner==='조정');if(adjL.length){blocks.push(B.h(`협의가 필요한 업무 (${adjL.length}개 · ${r1(loads().adj)}점)`));blocks.push(B.tbl([30,14,24,16],[['업무','보통 학교','왜 협의하나','정한 담당'],...adjL.map(c=>[{t:c.name,al:'l'},c.cnt?whoShort(c):'',{t:c.why||'',al:'l'},''])],{head:1,split:true}));blocks.push(B.note('정한 담당 칸은 협의한 뒤 적어요. 같이 맡으면 주담당과 지원 비율을 함께 적어요.'));blocks.push(B.sp());}}
+  const tAll=ST.cards.filter(c=>c.owner==='교사'),tDiff=tAll.filter(c=>c.pinned||c.auto||c.ours||!c.cnt||classify(c).side!=='교사');
+  if(tAll.length){blocks.push(B.h(`교사가 맡는 업무 (${tAll.length}개)`));if(tDiff.length)blocks.push(B.tbl([14,70],[['성격','실무사에서 넘어오거나 보통 학교와 다른 업무'],...catRows(tDiff,false)],{head:1,split:true}));blocks.push(B.note(`그 밖의 ${tAll.length-tDiff.length}개는 보통 학교에서도 교사가 맡는 업무예요.`));blocks.push(B.sp());}
+  [['행정실','행정실로 협의할 업무'],['없앰','우리 학교에서 하지 않는 업무']].forEach(([k,t])=>{const list=ST.cards.filter(c=>c.owner===k);if(!list.length)return;blocks.push(B.h(`${t} (${list.length}개)`));blocks.push(B.tbl([14,70],[['성격','업무'],...catRows(list,false)],{head:1,split:true}));blocks.push(B.sp());});
+  blocks.push(B.note('※ ★ 핵심 업무, (3월) 바쁜 달, 밑줄 자리를 조정한 업무. 점수는 참고 학교 12곳의 분장을 네 단계로 다시 매긴 대략 비교용 값이에요. 방과후·늘봄 업무는 늘봄실무사가 맡아 빼요.'));
+  return blocks;}
+async function downloadHwpx(){const btn=$('hwpx'),t=btn.textContent;btn.disabled=true;btn.innerHTML='<span class="spin"></span> 만드는 중…';
+  try{const blob=await ENG.hwpx(hwpxBlocks(),'실무사 업무 분장안',{noFill:true,pageNum:true});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='실무사_업무조정안.hwpx';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000);toast('한글 파일을 받았어요');}
+  catch(e){console.error(e);toast('한글 파일을 만들지 못했어요');}finally{btn.disabled=false;btn.textContent=t;}}
+
+/* ---------- 파일 ---------- */
+function exportJson(){const blob=new Blob([JSON.stringify(ST,null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='실무사_업무조정.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
+function importJson(e){const f=e.target.files[0];if(!f)return;f.text().then(t=>{const s=JSON.parse(t);if(s.v!==2||!s.cards)throw 0;migrate(s);ST={...fresh(),...s,set:{...DEF_SET,...(s.set||{})}};ST.active=ST.active||'1안';STEP='board';save();render();toast('불러왔어요');}).catch(()=>toast('이 도구에서 내보낸 파일이 아니에요'));}
+twice($('forget'),'한 번 더 누르면 모두 지워요',()=>{localStorage.removeItem(KEY);ST=fresh();HIST=[];STEP='size';render();toast('지웠어요');});
+$('backBtn').onclick=back;
+$('homeBtn').onclick=()=>{if(ST.cards){STEP='board';render();}};
+$('ver').textContent=`${APP.name} v${APP.version} · ${APP.date}`;
+document.addEventListener('keydown',e=>{if(e.key!=='Enter'||menuEl||document.querySelector('.modal-back'))return;const t=e.target;if(t.tagName==='TEXTAREA'||t.tagName==='BUTTON')return;const p=document.querySelector('[data-primary]');if(p&&!p.disabled){e.preventDefault();p.click();}});
+render();
+</script>
+</body>
+</html>
